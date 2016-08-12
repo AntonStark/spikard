@@ -1,7 +1,7 @@
-.terminal {
+textarea#terminal {
     position: absolute;
-    top: 50px;
-    left: 100px;
+    top: 100px;
+    left: 250px;
     z-index: 1;
     background-color: black;
     opacity: 0.9;
@@ -10,6 +10,4 @@
     min-width: 475px;
     min-height: 200px;
     font: normal 10pt/12pt Liberation Mono;
-
-    scrollbar-base-color: #ff0000;
 }

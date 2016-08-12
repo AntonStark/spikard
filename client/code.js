@@ -1,8 +1,8 @@
-var term = document.getElementsByClassName('terminal')[0];
+var term = document.getElementById("terminal");
 
 term.onmousedown = function (e) {
     if (!e.ctrlKey) {
-        return;
+        return true;
     }
 
     var coords = getCoords(term);
@@ -49,8 +49,32 @@ function getCoords(elem) { // кроме IE8-
 
 term.onkeydown = function (e) {
     if (e.keyCode == 13) {
-        e.preventDefault();
         //parseComand
+        $('#console').submit();
         term.value += "\n?>:";
+        return false;
     }
 };
+
+$('#console').submit(function () {
+    send(document.getElementById('terminal').value);
+    return false;
+});
+
+function send (data) {
+    /*$.ajax({
+        data: data,
+        url:'http://localhost:8000',
+        success: function(data) {
+            document.getElementById('result').innerHTML+='result:'+data+'<br>';
+        }
+    });*/
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST','http://localhost:8000',true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4)
+            document.getElementById('result').innerHTML+='result:'+xhr.readyState+xhr.responseText+'<br>';
+    };
+    xhr.send(data);
+    return false;
+}
