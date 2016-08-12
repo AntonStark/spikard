@@ -46,7 +46,7 @@ public:
         return;
     }
     
-    bool ask(string, vector<string>);
+    void ask(string, vector<string>);
     void ifaceCfg();
 };
 
@@ -133,31 +133,31 @@ void DiaryPlugin::methodsCfg()
     return;
 }
 
-bool DiaryPlugin::ask(string cmdName, vector<string> cmdArgs)
+void DiaryPlugin::ask(string cmdName, vector<string> cmdArgs)
 {
-    auto it = methods.find(cmdName);
-    if (it != methods.end())
-    {
-        (this->*(it->second))(cmdArgs);
-        return true;
-    }
-    else
-        return false;
+    (this->*methods[cmdName])(cmdArgs);
+    return;
 }
 
 void DiaryPlugin::ifaceCfg()
 {
-    string temp;
+    BaseModule* mod = this;
+    while (mod->getParent())
+        mod = mod->getParent();
+    Core* root = static_cast<Core*>(mod);
+    
+    string pseudo;
     stringstream hear;
     streambuf *backup;
+    
     backup = cout.rdbuf();
     cout.rdbuf(hear.rdbuf());
-    auto it = methods.begin();
-    while (it != methods.end()) {
-        (this->*(it->second))(vector<string>({"*"}));
-        getline(hear, temp);
-        IFace.insert(make_pair(temp, it->first));
-        it++;
+    auto mt = methods.begin();
+    while (mt != methods.end()) {
+        (this->*(mt->second))(vector<string>({"*"}));   //перехватываем ключевое слово для функции
+        getline(hear, pseudo);
+        root->coreIface.add(pseudo, mt->first, this);
+        mt++;
     }
     cout.rdbuf(backup);
     return;

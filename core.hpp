@@ -47,7 +47,7 @@ public:
             modules.back()->destroy();
     }
 
-    ModuleInfo getModuleInfo() const;
+    ModuleInfo getModuleInfo() const {return info;}
     BaseModule* const getParent() const {return parent;}
     void registerModule(BaseModule* some)
     {
@@ -63,9 +63,8 @@ public:
             modules.erase(it);
         return;
     }
-    bool find(std::string, std::vector<std::string>);
-    virtual bool ask(std::string, std::vector<std::string>) = 0;
-    std::map<std::string, std::string> IFace;
+    //bool find(std::string, std::vector<std::string>);
+    virtual void ask(std::string, std::vector<std::string>) = 0;
     void ifaceRefresh();
     virtual void ifaceCfg() = 0;
 };
@@ -87,6 +86,23 @@ public:
 
     BaseModule* create(BaseModule*);
     void destroy(BaseModule*);
+};
+
+/*class comand {
+    BaseModule* module;
+    void (BaseModule::*fun)(std::vector<std::string>);
+};*/
+
+class IFace
+{
+private:
+    std::map<std::string, BaseModule*> index;
+    std::map<std::string, std::string> iface;
+public:
+    void add(std::string, std::string, BaseModule*);
+    void clear();
+    BaseModule* where(std::string);
+    std::string operator[] (std::string);
 };
 
 class Core;
@@ -120,9 +136,11 @@ public:
         }
     }
 
-    bool ask(std::string, std::vector<std::string>);
+    void ask(std::string, std::vector<std::string>);
     void call(std::string, std::vector<std::string>);
     std::string user() const {return userName;}
+    
+    IFace coreIface;
 };
 
 

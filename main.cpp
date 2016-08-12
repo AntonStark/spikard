@@ -6,6 +6,8 @@
 #include <dlfcn.h>
 #include <vector>
 #include <map>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #include "core.hpp"
 
@@ -17,7 +19,13 @@ void parseComand(string, string&, vector<string>&);
 int main() {
     printHelloMsg();
     Core core;
+    
     while (true) {
+/*auto o = core.IFace.begin();
+while (o != core.IFace.end()) {
+    cout<<o->first<<'~'<<o->second<<endl;
+    o++;
+}*/
         cout<<core.user()<<">: ";
         string line, cmdName;
         vector<string> cmdArgs;
@@ -27,7 +35,7 @@ int main() {
         parseComand(line, cmdName, cmdArgs);
         try 
         {
-            core.call(core.IFace[cmdName], cmdArgs);
+            core.call(core.coreIface[cmdName], cmdArgs);
         }
         catch (exit_ex)
         {

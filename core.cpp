@@ -19,35 +19,16 @@ public:
     virtual ~sh_obj_err() {}
 };
 
-bool BaseModule::find(string cmdName, vector<string> cmdArgs)
-{//обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
-    for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
-    {
-        if (*rit != this)
-        {
-            if ( (*rit)->find(cmdName, cmdArgs)) return true;
-        }
-        else
-        {
-            if ( (*rit)->ask(cmdName, cmdArgs)) return true;
-        }
-    }
-    return false;
-}
-
 void BaseModule::ifaceRefresh()
-{//обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
-    IFace.clear();
+{
+    if (getParent() == NULL) //запущена для ядра
+        static_cast<Core*>(this)->coreIface.clear();
+    //обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
     for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
-    {
         if (*rit != this)
-        {
              (*rit)->ifaceRefresh();
-             IFace.insert((*rit)->IFace.begin(), (*rit)->IFace.end());
-        }
         else
             (*rit)->ifaceCfg();
-    }
     return;
 }
 
@@ -109,6 +90,38 @@ void SharedObject::destroy(BaseModule* that)
     return;
 }
 
+void IFace::add(std::string keyWord, std::string funName, BaseModule* contain)
+{   
+    //пока подход упрощённый. если это funName уже встречается (пусть в другом модуле),
+    //то запись не добавляется. если уже используется keyWord, то keyWord=keyWord+funName         
+    if (auto fn = index.find(funName) != index.end() )
+        return;
+    if (auto kw = iface.find(keyWord) != iface.end() )
+        keyWord = keyWord + "_in_" + contain->getModuleInfo().name;
+    index.insert(make_pair(funName, contain));
+    iface.insert(make_pair(keyWord, funName));
+}
+
+void IFace::clear()
+{
+    index.clear();
+    iface.clear();
+}
+
+BaseModule* IFace::where(std::string funName)
+{
+    return index[funName];
+}
+
+std::string IFace::operator[] (std::string keyWord)
+{
+    auto kw = iface.find(keyWord);
+    if (kw == iface.end() )
+        throw no_fun_ex();
+    else 
+        return kw->second;
+}
+
 /**ядро**/
 void Core::methodsCfg()
 {
@@ -120,27 +133,9 @@ void Core::methodsCfg()
     methods.insert(make_pair("getMan", &Core::getMan));
 }
 
-void Core::ifaceCfg()
-{
-    string temp;
-    stringstream hear;
-    streambuf *backup;
-    backup = cout.rdbuf();
-    cout.rdbuf(hear.rdbuf());
-    auto it = methods.begin();
-    while (it != methods.end()) {
-        (this->*(it->second))(vector<string>({"*"}));
-        getline(hear, temp);
-        IFace.insert(make_pair(temp, it->first));
-        it++;
-    }
-    cout.rdbuf(backup);
-    return;
-}
-
 void Core::noreload_init()
 {
-    noreload.insert(make_pair("вход",this));
+    noreload.insert(make_pair("logIn",this));
     //...
     return;
 }
@@ -155,35 +150,45 @@ Core::Core() :
     ifaceRefresh();
 }
 
-bool Core::ask(string cmdName, vector<string> cmdArgs)
+void Core::ifaceCfg()
 {
-    auto it = methods.find(cmdName);
-    if (it != methods.end())
-    {
-        (this->*(it->second))(cmdArgs);
-        return true;
+    BaseModule* mod = this;
+    while (mod->getParent())
+        mod = mod->getParent();
+    Core* root = static_cast<Core*>(mod);
+    
+    string pseudo;
+    stringstream hear;
+    streambuf *backup;
+    
+    backup = cout.rdbuf();
+    cout.rdbuf(hear.rdbuf());
+    auto mt = methods.begin();
+    while (mt != methods.end()) {
+        (this->*(mt->second))(vector<string>({"*"}));   //перехватываем ключевое слово для функции
+        getline(hear, pseudo);
+        root->coreIface.add(pseudo, mt->first, this);
+        mt++;
     }
-    else
-        return false;
+    cout.rdbuf(backup);
+    return;
+}
+
+void Core::ask(string cmdName, vector<string> cmdArgs)
+{
+    (this->*methods[cmdName])(cmdArgs);
 }
 
 void Core::call(string cmdName, vector<string> cmdArgs)
 {
     map<string, BaseModule*>::iterator it = noreload.find(cmdName); //сначала проверяем словарь неперегружаемых команд
+    BaseModule* target;
     if (it != noreload.end())
-    {
-        if (it->second->ask(cmdName, cmdArgs)) //прицельный запрос
-            return;
-        else
-            throw no_fun_ex();
-    }
+        target = it->second;
     else
-    {
-        if (find(cmdName, cmdArgs))  //поиск по древу модулей
-            return;
-        else
-            throw no_fun_ex();
-    }
+        target = coreIface.where(cmdName);
+    target->ask(cmdName, cmdArgs);
+    return;
 }
 
 /*****функционал_ядра*****************/
