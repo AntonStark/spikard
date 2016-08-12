@@ -16,40 +16,34 @@ void parseComand(string, string&, vector<string>&);
 
 int main() {
     printHelloMsg();
-    try
-    {
-        Core core("comands.list");
-        while (true) {
-            cout<<core.user()<<">: ";
-            string line, cmdName;
-            vector<string> cmdArgs;
-            getline(cin, line);
-            parseComand(line, cmdName, cmdArgs);
-            try 
-            {
-                core.call(cmdName, cmdArgs);
-            }
-            catch (exit_ex)
-            {
-                break;
-            }
-            catch (no_fun_ex)
-            {
-                cout<<"Неизвестная команда."<<endl;
-            }
+    Core core;
+    while (true) {
+        cout<<core.user()<<">: ";
+        string line, cmdName;
+        vector<string> cmdArgs;
+        getline(cin, line);
+        if (line.size() == 0)
+            continue;
+        parseComand(line, cmdName, cmdArgs);
+        try 
+        {
+            core.call(core.IFace[cmdName], cmdArgs);
         }
-    }
-    catch (no_cfg_file)
-    {
-        cout<<"Отстутствует конфиг-файл команд \"comands.list\"."<<endl;
-        return 1;
+        catch (exit_ex)
+        {
+            break;
+        }
+        catch (no_fun_ex)
+        {
+            cout<<"Неизвестная команда."<<endl;
+        }
     }
     return 0;
 }
 
 void printHelloMsg() {
     cout<<"Это черновой вариант ядра программы для моделирования и изменения объектов."<<endl;
-    cout<<"\tВерсия программы от 26 января '16.\n\tРеализована возможность логина (лог действий и дневник) и главное меню."<<endl;
+    cout<<"\tВерсия программы от 30 января '16.\n\tРеализована возможность логина (лог действий и дневник) и главное меню."<<endl;
     cout<<"Для вывода списка доступных команд введите <помощь>"<<endl;
     return;
 }

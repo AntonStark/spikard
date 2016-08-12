@@ -1,6 +1,6 @@
 using namespace std;
 
-ModuleInfo coreInfo("Феникс", "Хи", "21.01.16");
+ModuleInfo coreInfo("Феникс", "Фи", "30.01.16");
 
 class no_cfg_file {};
 class exit_ex {};
@@ -20,7 +20,7 @@ public:
 };
 
 bool BaseModule::find(string cmdName, vector<string> cmdArgs)
-{//обычный обход дерева подключенныx от потомков к родителям, от последних к первым
+{//обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
     for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
     {
         if (*rit != this)
@@ -33,6 +33,22 @@ bool BaseModule::find(string cmdName, vector<string> cmdArgs)
         }
     }
     return false;
+}
+
+void BaseModule::ifaceRefresh()
+{//обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
+    IFace.clear();
+    for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
+    {
+        if (*rit != this)
+        {
+             (*rit)->ifaceRefresh();
+             IFace.insert((*rit)->IFace.begin(), (*rit)->IFace.end());
+        }
+        else
+            (*rit)->ifaceCfg();
+    }
+    return;
 }
 
 SharedObject::SharedObject(const std::string& fullPath, int flags)
@@ -74,14 +90,14 @@ SharedObject::~SharedObject()
 }
 
 BaseModule* SharedObject::create(BaseModule* _parent)
-{   //закидываем указатель на созданный элемент в items return *(pair.first)
+{//закидываем указатель на созданный элемент в items return *(pair.first)
     BaseModule* plug = (*createPlugin)(_parent, this);
     return *(items.insert(plug).first);
 }
 
 void SharedObject::destroy(BaseModule* that)
 {
-    std::set<BaseModule*>::iterator it = items.find(that);
+    set<BaseModule*>::iterator it = items.find(that);
     if (it != items.end())
     {
         that->getParent()->deregisterModule(that);
@@ -93,6 +109,35 @@ void SharedObject::destroy(BaseModule* that)
     return;
 }
 
+/**ядро**/
+void Core::methodsCfg()
+{
+    methods.insert(make_pair("logIn", &Core::logIn));
+    methods.insert(make_pair("logOut", &Core::logOut));
+    methods.insert(make_pair("end", &Core::end));
+    methods.insert(make_pair("plugIn", &Core::plugIn));
+    methods.insert(make_pair("plugOut", &Core::plugOut));
+    methods.insert(make_pair("getMan", &Core::getMan));
+}
+
+void Core::ifaceCfg()
+{
+    string temp;
+    stringstream hear;
+    streambuf *backup;
+    backup = cout.rdbuf();
+    cout.rdbuf(hear.rdbuf());
+    auto it = methods.begin();
+    while (it != methods.end()) {
+        (this->*(it->second))(vector<string>({"*"}));
+        getline(hear, temp);
+        IFace.insert(make_pair(temp, it->first));
+        it++;
+    }
+    cout.rdbuf(backup);
+    return;
+}
+
 void Core::noreload_init()
 {
     noreload.insert(make_pair("вход",this));
@@ -100,55 +145,26 @@ void Core::noreload_init()
     return;
 }
 
-Core::Core(string cmdFile) :
+Core::Core() : 
     BaseModule(coreInfo)
 {
     userName = "?";
 
-    ifstream cmdFStr(cmdFile.c_str());
-    if (cmdFStr == NULL) {
-        throw no_cfg_file(/*this.getModuleInfo().name*/);
-    }
-    string bufC, bufM;
-    auto fnNames = {&Core::emptyComand, &Core::logIn, &Core::logOut, &Core::diary,
-                    &Core::end, &Core::plugIn, &Core::getMan, &Core::change};
-    auto it = fnNames.begin();
-    auto et = fnNames.end();
-    while (it != et) {
-        getline(cmdFStr, bufC);
-        getline(cmdFStr, bufM);
-        add(bufC, *it, bufM);
-        ++it;
-    }
-    cmdFStr.close();
-
+    methodsCfg();
     noreload_init();
+    ifaceRefresh();
 }
 
 bool Core::ask(string cmdName, vector<string> cmdArgs)
 {
-if (cmdArgs.size() == 0 || cmdArgs[0] != "?")
+    auto it = methods.find(cmdName);
+    if (it != methods.end())
     {
-        auto it = connect.find(cmdName);
-        if (it != connect.end())
-        {
-            (this->*(it->second))(cmdArgs);
-            return true;
-        }
-        else
-            return false;
+        (this->*(it->second))(cmdArgs);
+        return true;
     }
-else
-    {
-        auto it = mans.find(cmdName);
-        if (it != mans.end())
-        {
-            cout<<(it->second)<<endl;
-            return true;
-        }
-        else
-            return false;
-    }
+    else
+        return false;
 }
 
 void Core::call(string cmdName, vector<string> cmdArgs)
@@ -171,11 +187,23 @@ void Core::call(string cmdName, vector<string> cmdArgs)
 }
 
 /*****функционал_ядра*****************/
-void Core::emptyComand(vector<string> cmdArgs) {
-    return;
-}
-
-void Core::logIn(vector<string> cmdArgs) {
+void Core::logIn(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<вход> - Представиться системе. \
+Также возможен ограниченный анонимный доступ."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"вход"<<endl;
+            return;
+        }
+    }
+    
     if (ifstream("users.list") == NULL)
         ofstream("users.list");
 
@@ -285,129 +313,69 @@ void Core::logIn(vector<string> cmdArgs) {
     return;
 }
 
-void Core::logOut(vector<string> cmdArgs) {
+void Core::logOut(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<выход> - Вернуться к анонимности."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"выход"<<endl;
+            return;
+        }
+    }
+    
     userName = "?";
     return;
 }
 
-void Core::diary(vector<string> cmdArgs) {
-    char buffer[60];
-    time_t seconds = time(NULL);
-    tm *timeinfo = localtime(&seconds);
-    char format[] = "%Y, %H:%M:%S";
-    strftime(buffer, 60, format, timeinfo);
-    string date_time(buffer);
-    switch (timeinfo->tm_mon) {
-        case 0 : {
-            date_time = " января " + date_time;
-            break;
+void Core::end(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<конец> - Завершение работы программы."<<endl;
+            return;
         }
-        case 1 : {
-            date_time = " февраля " + date_time;
-            break;
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"конец"<<endl;
+            return;
         }
-        case 2 : {
-            date_time = " марта " + date_time;
-            break;
-        }
-        case 3 : {
-            date_time = " апреля " + date_time;
-            break;
-        }
-        case 4 : {
-            date_time = " мая " + date_time;
-            break;
-        }
-        case 5 : {
-            date_time = " июня " + date_time;
-            break;
-        }
-        case 6 : {
-            date_time = " июля " + date_time;
-            break;
-        }
-        case 7 : {
-            date_time = " августа " + date_time;
-            break;
-        }
-        case 8 : {
-            date_time = " сентября " + date_time;
-            break;
-        }
-        case 9 : {
-            date_time = " октября " + date_time;
-            break;
-        }
-        case 10 : {
-            date_time = " ноября " + date_time;
-            break;
-        }
-        case 11 : {
-            date_time = " декабря " + date_time;
-            break;
-        }
-        default :
-            break;
     }
-
-    date_time = to_string(timeinfo->tm_mday) + date_time;
-
-    switch (timeinfo->tm_wday) {
-        case 1 : {
-            date_time = "Понедельник, " + date_time;
-            break;
-            }
-        case 2 : {
-            date_time = "Вторник, " + date_time;
-            break;
-            }
-        case 3 : {
-            date_time = "Среда, " + date_time;
-            break;
-            }
-        case 4 : {
-            date_time = "Четверг, " + date_time;
-            break;
-            }
-        case 5 : {
-            date_time = "Пятница, " + date_time;
-            break;
-            }
-        case 6 : {
-            date_time = "Суббота, " + date_time;
-            break;
-            }
-        case 0 : {
-            date_time = "Воскресенье, " + date_time;
-            break;
-            }
-        default :
-            break;
-    }
-    ofstream userPF(userName+".diary", ios_base::app);
-    userPF<<date_time<<endl;
-    while(true) {
-        string buf;
-        getline(cin, buf);
-        if (buf == "конец_записи")
-            break;
-        userPF<<buf<<endl;
-    }
-    userPF.close();
-    return;
-}
-
-void Core::end(vector<string> cmdArgs) {
+    
     throw exit_ex();
     return;
 }
 
-void Core::plugIn(vector<string> cmdArgs) {
-    if (cmdArgs.size() == 0 || cmdArgs[0].length() == 0)
+void Core::plugIn(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<подключить [список имён]> - \
+Загрузить модули с именами из списка."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"подключить"<<endl;
+            return;
+        }
+    }
+    
+    if (cmdArgs.size() == 0)
     {
         cout<<"Пропущено имя плагина."<<endl;
         return;
     }
+    
     string pluginFullName = "./plugins/"+cmdArgs[0]+".so";
     map<string, SharedObject*>::iterator it = SO_inWork.find(pluginFullName);
     try
@@ -423,10 +391,39 @@ void Core::plugIn(vector<string> cmdArgs) {
         cout<<"Возникла ошибка при попытке подключения плагина "<<pluginFullName<<':'<<endl;
         cout<<ex.what()<<endl;
     }
+    ifaceRefresh();
     return;
 }
 
-void Core::printListOfComands(vector<string> cmdArgs) {
+void Core::plugOut(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<отключить [список имён]> - \
+Выгрузить модули с именами из списка."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"отключить"<<endl;
+            return;
+        }
+    }
+    
+    string pluginFullName = "./plugins/"+cmdArgs[0]+".so";
+    auto it = SO_inWork.find(pluginFullName);
+    if (it != SO_inWork.end()) {
+        delete it->second;
+        SO_inWork.erase(it);
+    }
+    ifaceRefresh();
+    return;
+}
+
+void Core::printListOfComands()
+{
     cout<<"Список доступных команд:"<<endl;
     cout<<"<вход>\n\t- Представиться системе."<<endl;
     cout<<"\tТакже возможен ограниченный анонимный доступ."<<endl;
@@ -440,13 +437,25 @@ void Core::printListOfComands(vector<string> cmdArgs) {
     return;
 }
 
-void Core::change(vector<string> cmdArgs) {
-    return;
-}
-
-void Core::getMan(vector<string> cmdArgs) {
+void Core::getMan(vector<string> cmdArgs)
+{ 
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<помощь [команда/модуль]> - \
+Вывод справки о команде/модуле."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"помощь"<<endl;
+            return;
+        }
+    }
+    
     if (cmdArgs.size() == 0)
-        printListOfComands(cmdArgs);
+        printListOfComands();
     else
         call(cmdArgs[0],vector<string>({"?"}));
     return;

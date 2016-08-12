@@ -4,142 +4,105 @@
 #include <algorithm>
 #include <iostream>
 #include <initializer_list>
-#include <dlfcn.h>
 
 using namespace std;
 
 void print(string some) {
     cout<<some<<endl;
 }
-class SharedObject;
+
 class DiaryPlugin : public BaseModule {
 private:
     int testValue;
     void test(vector<string> cmdArgs) {
+        if (cmdArgs.size() != 0)
+        {
+            if (cmdArgs[0] == "?") 
+            {
+                cout<<"<тест> - вызов проверочной функции"<<endl;
+                return;
+            }
+            else if (cmdArgs[0] == "*")
+            {
+                cout<<"тест"<<endl;
+                return;
+            }
+        }
+        
         cout<<testValue<<endl;
         for_each(cmdArgs.begin(), cmdArgs.end(), print);
     }
-    //void diary(vector<string> cmdArgs);
+    void diary(vector<string> cmdArgs);
 
-    map<string, void (DiaryPlugin::*)(vector<string>)> connect;
-    map<string, string> mans;
-    void add(string cmd, void (DiaryPlugin::*pFun)(vector<string>), string man)
-    {
-        connect.insert(make_pair(cmd, pFun));
-        mans.insert(make_pair(cmd, man));
-        return;
-    }
+    map<string, void (DiaryPlugin::*)(vector<string>)> methods;
+    void methodsCfg();
     SharedObject* fabric;
 public:
-    DiaryPlugin(string, BaseModule*, SharedObject*);
+    DiaryPlugin(BaseModule*, SharedObject*);
     ~DiaryPlugin() {}
     void destroy()
     {
         fabric->destroy(this);
         return;
     }
-
+    
     bool ask(string, vector<string>);
+    void ifaceCfg();
 };
 
-//******функционал плагина********
+//****функционал плагина****
 
-/*void DiaryPlugin::diary(vector<string> cmdArgs)
+void DiaryPlugin::diary(vector<string> cmdArgs)
 {
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?") 
+        {
+            cout<<"<запись> - Сделать запись в личном дневнике."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"запись"<<endl;
+            return;
+        }
+    }
+    
+    
     char buffer[60];
     time_t seconds = time(NULL);
     tm *timeinfo = localtime(&seconds);
     char format[] = "%Y, %H:%M:%S";
     strftime(buffer, 60, format, timeinfo);
     string date_time(buffer);
-    switch (timeinfo->tm_mon) {
-        case 0 : {
-            date_time = " января " + date_time;
-            break;
-        }
-        case 1 : {
-            date_time = " февраля " + date_time;
-            break;
-        }
-        case 2 : {
-            date_time = " марта " + date_time;
-            break;
-        }
-        case 3 : {
-            date_time = " апреля " + date_time;
-            break;
-        }
-        case 4 : {
-            date_time = " мая " + date_time;
-            break;
-        }
-        case 5 : {
-            date_time = " июня " + date_time;
-            break;
-        }
-        case 6 : {
-            date_time = " июля " + date_time;
-            break;
-        }
-        case 7 : {
-            date_time = " августа " + date_time;
-            break;
-        }
-        case 8 : {
-            date_time = " сентября " + date_time;
-            break;
-        }
-        case 9 : {
-            date_time = " октября " + date_time;
-            break;
-        }
-        case 10 : {
-            date_time = " ноября " + date_time;
-            break;
-        }
-        case 11 : {
-            date_time = " декабря " + date_time;
-            break;
-        }
-        default :
-            break;
-    }
 
-    date_time = to_string(timeinfo->tm_mday) + date_time;
+    map<int, string> months, days;
+    months[0] = "января";
+    months[1] = "февраля";
+    months[2] = "марта";
+    months[3] = "апреля";
+    months[4] = "мая";
+    months[5] = "июня";
+    months[6] = "июля";
+    months[7] = "августа";
+    months[8] = "сентября";
+    months[9] = "октября";
+    months[10] = "ноября";
+    months[11] = "декабря";
 
-    switch (timeinfo->tm_wday) {
-        case 1 : {
-            date_time = "Понедельник, " + date_time;
-            break;
-            }
-        case 2 : {
-            date_time = "Вторник, " + date_time;
-            break;
-            }
-        case 3 : {
-            date_time = "Среда, " + date_time;
-            break;
-            }
-        case 4 : {
-            date_time = "Четверг, " + date_time;
-            break;
-            }
-        case 5 : {
-            date_time = "Пятница, " + date_time;
-            break;
-            }
-        case 6 : {
-            date_time = "Суббота, " + date_time;
-            break;
-            }
-        case 0 : {
-            date_time = "Воскресенье, " + date_time;
-            break;
-            }
-        default :
-            break;
-    }
-    ofstream userPF(core.user()+".diary", ios_base::app);
+    days[1] = "Понедельник";
+    days[2] = "Вторник";
+    days[3] = "Среда";
+    days[4] = "Четверг";
+    days[5] = "Пятница";
+    days[6] = "Суббота";
+    days[0] = "Воскресенье";
+
+    date_time = days[timeinfo->tm_wday] +", "+ 
+                to_string(timeinfo->tm_mday) +' '+ months[timeinfo->tm_mon] +' '+ 
+                date_time;
+
+    ofstream userPF(dynamic_cast<Core*>(getParent())->user()+".diary", ios_base::app);
     userPF<<date_time<<endl;
     while(true) {
         string buf;
@@ -150,64 +113,59 @@ public:
     }
     userPF.close();
     return;
-}*/
+}
 
-//******интерфейс плагина*********
+//****интерфейс плагина****
 
-DiaryPlugin::DiaryPlugin(string cmdFile, BaseModule* _parent, SharedObject* _fabric)
+DiaryPlugin::DiaryPlugin(BaseModule* _parent, SharedObject* _fabric)
     : BaseModule(ModuleInfo("Дневник", "0.1", "21.01.16"), _parent)
 {
     testValue = 5;
 
-    ifstream cmdFStr(cmdFile.c_str());
-    if (cmdFStr == NULL) {
-        cout<<"Отсутствует конфиг файл команд модуля."<<endl;
-        exit(1);
-    }
-    string bufC, bufM;
-    auto fnNames = {&DiaryPlugin::test};
-    auto it = fnNames.begin();
-    auto et = fnNames.end();
-    while (it != et) {
-        getline(cmdFStr, bufC);
-        getline(cmdFStr, bufM);
-        add(bufC, *it, bufM);
-        ++it;
-    }
-    cmdFStr.close();
-
+    methodsCfg();
     fabric = _fabric;
+}
+
+void DiaryPlugin::methodsCfg()
+{     
+    methods.insert(make_pair("test", &DiaryPlugin::test));
+    methods.insert(make_pair("diary", &DiaryPlugin::diary));
+    return;
 }
 
 bool DiaryPlugin::ask(string cmdName, vector<string> cmdArgs)
 {
-if (cmdArgs.size() == 0 || cmdArgs[0] != "?")
+    auto it = methods.find(cmdName);
+    if (it != methods.end())
     {
-        auto it = connect.find(cmdName);
-        if (it != connect.end())
-        {
-            (this->*(it->second))(cmdArgs);
-            return true;
-        }
-        else
-            return false;
+        (this->*(it->second))(cmdArgs);
+        return true;
     }
-else
-    {
-        auto it = mans.find(cmdName);
-        if (it != mans.end())
-        {
-            cout<<(it->second)<<endl;
-            return true;
-        }
-        else
-            return false;
+    else
+        return false;
+}
+
+void DiaryPlugin::ifaceCfg()
+{
+    string temp;
+    stringstream hear;
+    streambuf *backup;
+    backup = cout.rdbuf();
+    cout.rdbuf(hear.rdbuf());
+    auto it = methods.begin();
+    while (it != methods.end()) {
+        (this->*(it->second))(vector<string>({"*"}));
+        getline(hear, temp);
+        IFace.insert(make_pair(temp, it->first));
+        it++;
     }
+    cout.rdbuf(backup);
+    return;
 }
 
 extern "C" BaseModule* create(BaseModule* _parent, SharedObject* _fabric)
 {
-    return new DiaryPlugin("diary.comands.list", _parent, _fabric);
+    return new DiaryPlugin(_parent, _fabric);
 }
 
 extern "C" void destroy(BaseModule* one)

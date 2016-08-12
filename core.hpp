@@ -1,18 +1,20 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include <map>
-#include <string>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <termios.h>
-#include <list>
+#include <algorithm>
 #include <dlfcn.h>
 #include <exception>
-#include <set>
+#include <fstream>
+#include <iostream>
 #include <initializer_list>
-#include <algorithm>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <termios.h>
+#include <vector>
+#include <sstream>
+
 
 struct ModuleInfo
 {
@@ -47,8 +49,6 @@ public:
 
     ModuleInfo getModuleInfo() const;
     BaseModule* const getParent() const {return parent;}
-    bool find(std::string, std::vector<std::string>);
-    virtual bool ask(std::string, std::vector<std::string>) = 0;
     void registerModule(BaseModule* some)
     {
         modules.push_back(some);
@@ -63,6 +63,11 @@ public:
             modules.erase(it);
         return;
     }
+    bool find(std::string, std::vector<std::string>);
+    virtual bool ask(std::string, std::vector<std::string>) = 0;
+    std::map<std::string, std::string> IFace;
+    void ifaceRefresh();
+    virtual void ifaceCfg() = 0;
 };
 
 class SharedObject
@@ -90,29 +95,22 @@ class Core : public BaseModule
 {
 private:
     std::string userName;
-    void emptyComand(std::vector<std::string>);
     void logIn(std::vector<std::string>);
     void logOut(std::vector<std::string>);
-    void diary(std::vector<std::string>);
     void end(std::vector<std::string>);
     void plugIn(std::vector<std::string>);
-    void printListOfComands(std::vector<std::string>);
-    void change(std::vector<std::string>);
+    void plugOut(std::vector<std::string>);
+    void printListOfComands();
     void getMan(std::vector<std::string>);
 
-    std::map<std::string, pCoreHandler> connect;
-    std::map<std::string, std::string> mans;
-    void add(std::string cmd, pCoreHandler pFun, std::string man) 
-    {
-        connect.insert(std::make_pair(cmd, pFun));
-        mans.insert(std::make_pair(cmd, man));
-        return;
-    }
+    std::map<std::string, pCoreHandler> methods;
+    void methodsCfg();
+    void ifaceCfg();
     std::map<std::string, BaseModule*> noreload;//защита от того, что команды будут перeгружены новыми плагинами
     void noreload_init();
     std::map<std::string, SharedObject*> SO_inWork;
 public:
-    Core(std::string);
+    Core();
     ~Core()
     {
         while (!SO_inWork.empty())
