@@ -60,7 +60,7 @@ while (y != parse.end()) {
             headers[pair[0]] = pair[1];
             it++;
         }
-        if (it == parse.end()) 
+        if (it != parse.end()) 
         {
             it++;
             if (it != parse.end()) 
@@ -78,7 +78,8 @@ while (y != parse.end()) {
         headers(other.headers),
         content(other.content),
         body(other.body) {}
-    XHR& operator= (XHR other) {
+    XHR& operator= (XHR other)
+    {
         startLine = other.startLine;
         headers = other.headers;
         content = other.content;
@@ -114,10 +115,17 @@ while (y != parse.end()) {
     }
     void setB(string source) 
     {
+cout<<"source="<<source<<endl;
         body = source;
-        stringstream ss; ss << source.length(); string len = ss.str();
-        setH("Content-Length", len);
+        stringstream ss; ss << body.length(); string len = ss.str();
+/*int i = 0;
+while(len[i++] != string::npos)
+cout<<(len[i]=='\0'?'~':len[i]);*/
+cout<<"len="<<len<<"<>"<<body.length()<<endl;
+        //setH("Content-Length", len);
         content = true;
+if(content)
+cout<<"body="<<endl<<body<<endl;
     }
     vector<string> getL() const 
     {
@@ -127,6 +135,7 @@ while (y != parse.end()) {
     {
         return body;
     }
+    
 };
 
 void printHelloMsg();
@@ -207,26 +216,29 @@ cout<<'2'<<endl;
                 {cout<<one.what()<<endl;break;}
 cout<<"Запрос:\n"<<req<<endl<<"Конец запроса."<<endl;
             vector<string> frstL = req.getL();
+//cout<<frstL[0]<<frstL[1]<<frstL[2]<<endl;
             try {
                 if (frstL[0] == "GET")
+                {
                     if (frstL[1] == "/") {
 //cout<<"Посылка корня..."<<endl;
-                        sendTextFile(client_socket, "./client/index.html");
+                        sendTextFile(client_socket, "./web/index.html");
 //cout<<"Корень послан!"<<endl;
                         continue;
                     }
                     else if (frstL[1] == "/style.css") {
-                        sendTextFile(client_socket, "./client/style.css");
+                        sendTextFile(client_socket, "./web/style.css");
                         continue;
                     }
                     else if (frstL[1] == "/code.js") {
-                        sendTextFile(client_socket, "./client/code.js");
+                        sendTextFile(client_socket, "./web/code.js");
                         continue;
                     }
                     else {
                         writeCli(client_socket, confXHR("<h1>Forbidden! ата-та</h1>"));
                         continue;
                     }
+                }
             }
             catch (sock_ex one)
                 {cout<<one.what()<<endl;break;}
@@ -270,7 +282,7 @@ cout<<'4'<<endl;
             catch (sock_ex one)
                 {cout<<one.what()<<endl;break;}
         }
-        // Закрываем соединение к клиентом
+        // Закрываем соединение с клиентом
         close(client_socket);
         
     }
@@ -329,27 +341,30 @@ while(i != result) {
         cout<<temp[i];
     ++i;
 }
-cout<<'&'<<endl;*/
-    
+cout<<'&'<<endl;
+*/    
     return XHR(buf);
 }
 
 XHR confXHR(string source) {
     XHR temp;
+cout<<source<<endl;
 //cout<<"confXHR...";
 //cout<<endl<<source<<endl;
 //cout<<'1';
 //cout.flush();
     temp.setL("HTTP/1.1", "200", "OK");
+cout<<"confXHR1/2="<<endl<<temp<<"/conf"<<endl;
 //cout<<'2';
 //cout.flush();
     temp.setH("Version", "HTTP/1.1");
     temp.setH("Content-Type", "text/html; charset=utf-8");
-    temp.setH("Access-Control-Allow-Origin", "http://localhost:63342");
+    temp.setH("Access-Control-Allow-Origin", /*"http://localhost:63342"*/"http://127.0.0.1");
 //cout<<'3'<<endl;
 //cout.flush();
+cout<<"confXHR3/4="<<endl<<temp<<"/conf"<<endl;
     temp.setB(source);
-//cout<<"confXHR="<<endl<<temp<<"/conf"<<endl;
+cout<<"confXHR="<<endl<<temp<<"/conf"<<endl;
     return temp;
 }
 
@@ -357,8 +372,9 @@ void writeCli(int client_socket, XHR source) {
         // Отправляем ответ клиенту с помощью функции send
 //cout<<source<<endl<<sizeof((const char*)source)<<endl;
     string temp(source);
-//cout<<"is:"<<temp.length()<<endl;
-//cout.flush();
+cout<<temp;
+cout<<"is:"<<temp.length()<<endl;
+cout.flush();
     int result = send(client_socket, temp.c_str(),
         temp.length(), 0);
     if (result < 0) // произошла ошибка при отправле данных          
@@ -385,8 +401,8 @@ void sendTextFile(int client_socket, string filePath) {
     }
 //cout<<"sdf"<<endl;
     XHR temp = confXHR(fileBuf.str().c_str());
-//cout<<"%"<<endl<<temp<<endl<<"%"<<endl;
-//cout.flush();
+cout<<"Отправка:"<<endl<<temp<<endl<<"конец_отправки."<<endl;
+cout.flush();
     temp.setH("Content-Type", "text/"+type+"; charset=utf-8");
     writeCli(client_socket, temp);
     return;
