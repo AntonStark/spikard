@@ -1,18 +1,31 @@
 <!DOCTYPE html>
+
 <html>
 
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <link rel="stylesheet" href="style.css">
+    <title>Phoenix system</title>
 </head>
 
 <body>
-<form id="console">
-    <textarea id="terminal" title="term">?>:</textarea>
-    <input type="submit" value="go" name="go">
-</form>
-<div id="result"></div>
-<script src="code.js"></script>
+<div id="workarea">
+    <div class="col" style="background: rgba(60, 20, 120, 0.2);" oncontextmenu="drawConMenu(event)"></div>
+</div>
+<ul id="contextmenu">
+    <li id="spliters">Разделитель
+        <ul id="contextmenu-spliters">
+            <li id="splitV" onclick="bisectionCol(document.getElementById('contextmenu').menuTarget); hideMenu();">Вертикальный</li>
+            <li id="splitH" onclick="bisectionRow(document.getElementById('contextmenu').menuTarget); hideMenu();">Горизонтальный</li>
+        </ul>
+    </li>
+    <li id="modules">Открыть модуль:
+        <ul id="contextmenu-mods">
+
+        </ul>
+    </li>
+</ul>
+<script type="text/javascript" src="code.js"></script>
 </body>
 
 </html>

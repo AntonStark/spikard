@@ -1,0 +1,13 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\begin{document}
+Множество - основное понятие математики, которое не определяется
+
+operations:
+
+	1) $A\cap B=\{a\in A| a\in B\}=\{b\in B| b\in A\}$
+	
+	2) $A\cup B=\{a|a\in A \vee a\in B\}$
+
+\end{document}

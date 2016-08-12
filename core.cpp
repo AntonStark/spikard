@@ -1,23 +1,8 @@
+#include "core.hpp"
+
 using namespace std;
 
 ModuleInfo coreInfo("Феникс", "Фи", "30.01.16");
-
-class no_cfg_file {};
-class exit_ex {};
-class no_fun_ex {};
-class sh_obj_err : public std::exception
-{
-private:
-    std::string mess;
-public:
-    sh_obj_err(const char *msg)
-        : exception(), mess(msg) {}
-    virtual const char* what() const noexcept
-    {
-        return mess.c_str();
-    }
-    virtual ~sh_obj_err() {}
-};
 
 void BaseModule::ifaceRefresh()
 {
@@ -26,7 +11,7 @@ void BaseModule::ifaceRefresh()
     //обычный обход дерева подключенныx, от потомков к родителям, от последних к первым
     for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
         if (*rit != this)
-             (*rit)->ifaceRefresh();
+            (*rit)->ifaceRefresh();
         else
             (*rit)->ifaceCfg();
     return;
@@ -94,9 +79,9 @@ void IFace::add(std::string keyWord, std::string funName, BaseModule* contain)
 {   
     //пока подход упрощённый. если это funName уже встречается (пусть в другом модуле),
     //то запись не добавляется. если уже используется keyWord, то keyWord=keyWord+funName         
-    if (auto fn = index.find(funName) != index.end() )
+    if (index.find(funName) != index.end() )
         return;
-    if (auto kw = iface.find(keyWord) != iface.end() )
+    if (iface.find(keyWord) != iface.end() )
         keyWord = keyWord + "_in_" + contain->getModuleInfo().name;
     index.insert(make_pair(funName, contain));
     iface.insert(make_pair(keyWord, funName));
@@ -108,9 +93,18 @@ void IFace::clear()
     iface.clear();
 }
 
+map<string, string> IFace::getIface() const
+{
+    return iface;
+}
+
 BaseModule* IFace::where(std::string funName)
 {
-    return index[funName];
+    auto it = index.find(funName);
+    if (it == index.end())
+        throw no_fun_ex();
+    else
+        return it->second;
 }
 
 std::string IFace::operator[] (std::string keyWord)
@@ -215,9 +209,9 @@ void Core::logIn(vector<string> cmdArgs)
     cout<<"Введите имя пользователя.\n\tПустая строка для регистрации нового участника."<<endl;
     string name, pass;
     getline(cin, name);
-    int i;
-    while((i=name.find(' ')) != string::npos)
-        name.erase(i,1);
+    unsigned long l;
+    while((l=name.find(' ')) != string::npos)
+        name.erase(l,1);
 
     if (name.length() != 0) {
         ifstream usersFile("users.list");
@@ -269,8 +263,8 @@ void Core::logIn(vector<string> cmdArgs)
             getline(cin, name);
             if (name.length() == 0)
                 return;
-            while((i=name.find(' ')) != string::npos)
-                name.erase(i,1);
+            while((l=name.find(' ')) != string::npos)
+                name.erase(l,1);
             int match = 0;
             ifstream usersFile("users.list");
             string buf, login;
@@ -357,7 +351,6 @@ void Core::end(vector<string> cmdArgs)
     userName = "?";
     
     throw exit_ex();
-    return;
 }
 
 void Core::plugIn(vector<string> cmdArgs)
