@@ -1,31 +1,113 @@
-#include <map>
-#include <vector>
-#include <string>
-#include <fstream>
-#include <initializer_list>
-
 using namespace std;
 
-extern void echo_off();
-extern void echo_on();
-extern string myHash(string);
+ModuleInfo coreInfo("Феникс", "Хи", "21.01.16");
 
+class no_cfg_file {};
 class exit_ex {};
+class no_fun_ex {};
+class sh_obj_err : public std::exception
+{
+private:
+    std::string mess;
+public:
+    sh_obj_err(const char *msg)
+        : exception(), mess(msg) {}
+    virtual const char* what() const noexcept
+    {
+        return mess.c_str();
+    }
+    virtual ~sh_obj_err() {}
+};
 
-/*void emptyComand(vector<string>);
-void logIn(vector<string>);
-void logOut(vector<string>);
-void diary(vector<string>);
-void end(vector<string>);
-void plugIn(vector<string>);
-void getMan(vector<string>);
-void change(vector<string>);*/
+bool BaseModule::find(string cmdName, vector<string> cmdArgs)
+{//обычный обход дерева подключенныx от потомков к родителям, от последних к первым
+    for (list<BaseModule*>::reverse_iterator rit = modules.rbegin(); rit != modules.rend(); rit++)
+    {
+        if (*rit != this)
+        {
+            if ( (*rit)->find(cmdName, cmdArgs)) return true;
+        }
+        else
+        {
+            if ( (*rit)->ask(cmdName, cmdArgs)) return true;
+        }
+    }
+    return false;
+}
 
-Core::Core(string cmdFile) {
+SharedObject::SharedObject(const std::string& fullPath, int flags)
+    : libHandle(NULL)
+{
+    libHandle = dlopen(fullPath.c_str(), flags);
+    if (libHandle == NULL)
+    {
+        char* err = ::dlerror();
+        if (err)
+            throw sh_obj_err(err);
+        else
+            throw sh_obj_err("");
+    }
+    ::dlerror();
+    *(void**)(&createPlugin) = dlsym(libHandle, "create");
+    const char* dlsym_error = ::dlerror();
+    if (createPlugin == NULL)
+        if (dlsym_error)
+            throw sh_obj_err(dlsym_error);
+        else
+            throw sh_obj_err("");
+    ::dlerror();
+    *(void**)(&destroyPlugin) = dlsym(libHandle, "destroy");
+    dlsym_error = ::dlerror();
+    if (destroyPlugin == NULL)
+        if (dlsym_error)
+            throw sh_obj_err(dlsym_error);
+        else
+            throw sh_obj_err("");
+}
+
+SharedObject::~SharedObject()
+{
+    while (!items.empty())
+        destroy(*items.begin());
+    if (libHandle != NULL)
+        dlclose(libHandle);
+}
+
+BaseModule* SharedObject::create(BaseModule* _parent)
+{   //закидываем указатель на созданный элемент в items return *(pair.first)
+    BaseModule* plug = (*createPlugin)(_parent, this);
+    return *(items.insert(plug).first);
+}
+
+void SharedObject::destroy(BaseModule* that)
+{
+    std::set<BaseModule*>::iterator it = items.find(that);
+    if (it != items.end())
+    {
+        that->getParent()->deregisterModule(that);
+        (*destroyPlugin)(*it);
+        items.erase(it);
+    }
+    else
+        throw sh_obj_err("Попытка уничтожения чужим деструктором.");
+    return;
+}
+
+void Core::noreload_init()
+{
+    noreload.insert(make_pair("вход",this));
+    //...
+    return;
+}
+
+Core::Core(string cmdFile) :
+    BaseModule(coreInfo)
+{
+    userName = "?";
+
     ifstream cmdFStr(cmdFile.c_str());
     if (cmdFStr == NULL) {
-        cout<<"Отсутствует конфиг-файл команд."<<endl;
-        exit(1);//Вообще-то плохо
+        throw no_cfg_file(/*this.getModuleInfo().name*/);
     }
     string bufC, bufM;
     auto fnNames = {&Core::emptyComand, &Core::logIn, &Core::logOut, &Core::diary,
@@ -35,31 +117,60 @@ Core::Core(string cmdFile) {
     while (it != et) {
         getline(cmdFStr, bufC);
         getline(cmdFStr, bufM);
-        interface.add(bufC, *it, bufM);
+        add(bufC, *it, bufM);
         ++it;
     }
     cmdFStr.close();
 
-    modules.push_front(this);
-
-    run = true;
-    userName = "?";
+    noreload_init();
 }
 
-Core::~Core() {
-    while (modules.size() > 1)
-        delete modules.back();
+bool Core::ask(string cmdName, vector<string> cmdArgs)
+{
+if (cmdArgs.size() == 0 || cmdArgs[0] != "?")
+    {
+        auto it = connect.find(cmdName);
+        if (it != connect.end())
+        {
+            (this->*(it->second))(cmdArgs);
+            return true;
+        }
+        else
+            return false;
+    }
+else
+    {
+        auto it = mans.find(cmdName);
+        if (it != mans.end())
+        {
+            cout<<(it->second)<<endl;
+            return true;
+        }
+        else
+            return false;
+    }
 }
 
-void Core::call(string cmdName, vector<string> cmdArgs) {
-    auto it = interface.connect.find(cmdName);
-    if (it == interface.connect.end())
-        cout<<"Неизвестная команда."<<endl;
-    else 
-        (this->*(it->second))(cmdArgs);
-    return;
+void Core::call(string cmdName, vector<string> cmdArgs)
+{
+    map<string, BaseModule*>::iterator it = noreload.find(cmdName); //сначала проверяем словарь неперегружаемых команд
+    if (it != noreload.end())
+    {
+        if (it->second->ask(cmdName, cmdArgs)) //прицельный запрос
+            return;
+        else
+            throw no_fun_ex();
+    }
+    else
+    {
+        if (find(cmdName, cmdArgs))  //поиск по древу модулей
+            return;
+        else
+            throw no_fun_ex();
+    }
 }
 
+/*****функционал_ядра*****************/
 void Core::emptyComand(vector<string> cmdArgs) {
     return;
 }
@@ -94,14 +205,28 @@ void Core::logIn(vector<string> cmdArgs) {
             return;
         }
         cout<<"Введите пароль."<<endl;
-        echo_off();
+        
+        static struct termios stored_settings;
+        struct termios new_settings;
+        tcgetattr(0,&stored_settings);
+        new_settings = stored_settings;
+        new_settings.c_lflag &= (~ECHO);
+        tcsetattr(0,TCSANOW,&new_settings);
         getline(cin, pass);
-        echo_on();
-        if (myHash(pass) != password)
+        tcsetattr(0,TCSANOW,&stored_settings);
+        
+        string hash(32, (char)0);
+        for (int i = 0; i < 32; ++i) {
+            for (int j = 0; j < pass.length(); ++j)
+                hash[i] += (char)((int)pass[j]*3^(j+i));
+            hash[i] = (char)((unsigned int)hash[i]%95 + 32);
+        }
+        pass = "0";
+        
+        if (hash != password)
             cout<<"Неверный пароль"<<endl;
         else
             userName = name;
-        pass = "0";
     }
 
     else {
@@ -133,22 +258,35 @@ void Core::logIn(vector<string> cmdArgs) {
                 break;
         }
         cout<<"Задайте пароль."<<endl;
-        echo_off();
-        getline(cin,pass);
-        echo_on();
-        string put = name + " " + myHash(pass);
+
+        static struct termios stored_settings;
+        struct termios new_settings;
+        tcgetattr(0,&stored_settings);
+        new_settings = stored_settings;
+        new_settings.c_lflag &= (~ECHO);
+        tcsetattr(0,TCSANOW,&new_settings);
+        getline(cin, pass);
+        tcsetattr(0,TCSANOW,&stored_settings);
+        
+        string hash(32, (char)0);
+        for (int i = 0; i < 32; ++i) {
+            for (int j = 0; j < pass.length(); ++j)
+                hash[i] += (char)((int)pass[j]*3^(j+i));
+            hash[i] = (char)((unsigned int)hash[i]%95 + 32);
+        }
         pass = "0";
+
+        string put = name + " " + hash;
         cout<<"Добавление нового пользователя..."<<endl;
         ofstream usersFile("users.list", ios_base::app);
         usersFile<<put<<endl;
         usersFile.close();
     }
-
     return;
 }
 
 void Core::logOut(vector<string> cmdArgs) {
-    this->userName = "?";
+    userName = "?";
     return;
 }
 
@@ -260,13 +398,31 @@ void Core::diary(vector<string> cmdArgs) {
 }
 
 void Core::end(vector<string> cmdArgs) {
-    //run = false;
     throw exit_ex();
     return;
 }
 
 void Core::plugIn(vector<string> cmdArgs) {
-    //СДЕЛАТЬ ПОДКЛЮЧЕНИЕ ПЛАГИНОВ
+    if (cmdArgs.size() == 0 || cmdArgs[0].length() == 0)
+    {
+        cout<<"Пропущено имя плагина."<<endl;
+        return;
+    }
+    string pluginFullName = "./plugins/"+cmdArgs[0]+".so";
+    map<string, SharedObject*>::iterator it = SO_inWork.find(pluginFullName);
+    try
+    {
+        if (it == SO_inWork.end())
+            SO_inWork.insert(
+                make_pair(pluginFullName, new SharedObject(pluginFullName, RTLD_LAZY))
+                );
+        registerModule(SO_inWork[pluginFullName]->create(this));
+    }
+    catch (sh_obj_err ex)
+    {
+        cout<<"Возникла ошибка при попытке подключения плагина "<<pluginFullName<<':'<<endl;
+        cout<<ex.what()<<endl;
+    }
     return;
 }
 
@@ -277,6 +433,7 @@ void Core::printListOfComands(vector<string> cmdArgs) {
     cout<<"<выход>\n\t- Вернуться к анонимности."<<endl;
     cout<<"<запись>\n\t- Сделать запись в личном дневнике."<<endl;
     cout<<"<конец>\n\t- Завершение работы программы."<<endl;
+    cout<<"<отключить [список имён]>\n\t- Выигрузить модули из списка."<<endl;
     cout<<"<подключить [список имён]>\n\t- Чтобы загрузить модули из списка,\n\tдоступно автодополнение."<<endl;
     cout<<"<помощь [имя команды]>\n\t- Вывод справки о команде."<<endl;
     cout<<"<править [имя модуля]>\n\t- Для изменения модуля (в том числе подключенного)."<<endl;
@@ -291,6 +448,6 @@ void Core::getMan(vector<string> cmdArgs) {
     if (cmdArgs.size() == 0)
         printListOfComands(cmdArgs);
     else
-        cout<<interface.mans[cmdArgs[0]]<<endl;
+        call(cmdArgs[0],vector<string>({"?"}));
     return;
 }
