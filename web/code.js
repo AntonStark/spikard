@@ -1,3 +1,5 @@
+"use strict";
+
 var term = document.getElementById("terminal");
 
 term.onmousedown = function (e) {
@@ -47,34 +49,35 @@ function getCoords(elem) { // кроме IE8-
 
 }
 
-term.onkeydown = function (e) {
-    if (e.keyCode == 13) {
-        //parseComand
-        $('#console').submit();
-        term.value += "\n?>:";
-        return false;
-    }
+var xhr = new XMLHttpRequest();
+xhr.onreadystatechange = function () {
+    if (xhr.readyState == 4)
+        document.getElementById('terminal').value += xhr.responseText + "?>:";
+    return false;
 };
 
-$('#console').submit(function () {
-    send(document.getElementById('terminal').value);
-    return false;
-});
+/*var soc = new WebSocket("ws://localhost:8000");
+soc.onmessage = function(event) {
+    document.getElementById('terminal').value += event.data;
+};*/
 
-function send (data) {
-    /*$.ajax({
-        data: data,
-        url:'http://localhost:8000',
-        success: function(data) {
-            document.getElementById('result').innerHTML+='result:'+data+'<br>';
-        }
-    });*/
-    var xhr = new XMLHttpRequest();
+function termPost(data) {
     xhr.open('POST','http://localhost:8000',true);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState == 4)
-            document.getElementById('result').innerHTML+='result:'+xhr.readyState+xhr.responseText+'<br>';
-    };
     xhr.send(data);
-    return false;
 }
+
+var con = document.getElementById('console');
+con.onsubmit = function () {
+    termPost(terminal.value);
+    return false;
+};
+
+term.onkeydown = function (e) {
+    if (e.keyCode == 13) {
+        var lines = term.value.split('\n');
+        //parseComand
+
+        termPost(lines.pop());
+        //return false;
+    }
+};
