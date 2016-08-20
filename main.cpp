@@ -270,7 +270,8 @@ cout<<"C"<<flush;
         int userId;
         Core *localCore;
         XHR work;
-        if (userIdStr.length() == 0) {
+        if (userIdStr.length() == 0)
+        {
             srand (time(NULL));
             userId = rand() % 0xffffffff;
             {

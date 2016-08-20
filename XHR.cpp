@@ -19,6 +19,18 @@ void lineToWords(std::string line, std::string split, std::vector<std::string>& 
     return;
 }
 
+void myToLower(std::string& source)
+{
+    std::locale loc;
+    std::string::iterator it = source.begin(), e = source.end();
+    while (it != e)
+    {
+        *it = std::tolower(*it, loc);
+        ++it;
+    }
+    return;
+}
+
 XHR::XHR(std::string source)
 {
     std::vector<std::string> parse;
@@ -33,7 +45,12 @@ XHR::XHR(std::string source)
     {
         std::vector<std::string> pair;
         lineToWords(*it, ": ", pair);
-        headers[pair[0]] = pair[1];
+        if (pair.size() == 2)
+        {
+            myToLower(pair[0]);
+            myToLower(pair[1]);
+            headers[pair[0]] = pair[1];
+        }
         it++;
     }
 
