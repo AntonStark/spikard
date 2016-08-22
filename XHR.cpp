@@ -1,4 +1,4 @@
-#include "XHR.h"
+#include "XHR.hpp"
 
 void lineToWords(std::string line, std::string split, std::vector<std::string>& words)
 {

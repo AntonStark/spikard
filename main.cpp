@@ -18,7 +18,8 @@
 #include <atomic>
 
 #include "core.hpp"
-#include "XHR.h"
+#include "XHR.hpp"
+#include "InnerRequest.hpp"
 
 using namespace std;
 
@@ -252,25 +253,22 @@ cout<<"A"<<flush;
 
 cout<<"B"<<flush;
         int localClient_socket = hin.front().first;
-        XHR localReq(hin.front().second);
+        XHR localHTMLReq(hin.front().second);
         hin.pop();
         if (hin.size() == 0)
             newIn = false;
 cout<<"C"<<flush;
         lockerI.unlock();
 
-        string cookie = localReq.getH("Cookie");
-        string userIdStr;
-        if (cookie.find("user-id=") != string::npos)
-            userIdStr = cookie.substr(
-                                            cookie.find("user-id=")+8,
-                                            cookie.find(";", cookie.find("user-id=")+8) - (cookie.find("user-id=")+8));
-        else
-            userIdStr = "";
+cerr<<"$$__REQUEST:__$$\n"<<static_cast<std::string>(localHTMLReq)<<"\n$$__END__$$\n";
+        InnerRequest localInnerReq(localHTMLReq.getB());    //сняли обёртку HTML-запроса
+        string userIdStr = localInnerReq.getH("user-id");
+
         int userId;
         Core *localCore;
-        XHR work;
-        if (userIdStr.length() == 0)
+        InnerRequest answer;
+
+        if (userIdStr.length() == 0)    //запрос от нового пользователя, присваиваем идентификатор
         {
             srand (time(NULL));
             userId = rand() % 0xffffffff;
@@ -282,11 +280,9 @@ cout<<"C"<<flush;
                 cores[userId] = localCore;
             }
             stringstream t; t<<userId; userIdStr = t.str();
-            work.setH("Set-Cookie", "user-id="+userIdStr+"; expires=Fri, 1 Jul 2016 03:59:59 GMT; path=/; domain=http://localhost:63342");
-            work.setH("withCredentials", "true");
-            work.setH("Access-Control-Allow-Credentials", "true");
+            answer.setH("user-id",userIdStr);
         }
-        else
+        else    //уже есть user-id
         {
             userId = atoi(userIdStr.c_str());
             {
@@ -298,27 +294,20 @@ cout<<"C"<<flush;
                     continue; //В такую погоду свои дома сидят, телевизор смотрют. Только чужие шастают. Не будем дверь открывать!
                 }
                 else
+                {
                     localCore = cit->second;
+                    answer.setH("user-id",userIdStr);
+                }
             }
         }
 
         stringstream hear;
         streambuf *backup;
         backup = cout.rdbuf();
-cerr<<"$$"<<(string)localReq<<"$$\n";
         cout.rdbuf(hear.rdbuf());
-        if (localReq.getL()[0] == "POST")
-        {
-            string cmdName;
-            vector<string> cmdArgs;
-            string reqStr = localReq.getB();
-            parseComand(reqStr, cmdName, cmdArgs);
-            try
-            { localCore->call(cmdName, cmdArgs); }
-            catch (no_fun_ex)
-            { }
-        }
-        else if (localReq.getL()[0] == "GET" && localReq.getL()[1] == "/interface")
+
+        string reqStr = localInnerReq.getB();
+        if (reqStr == "getInterface")
         {
             map<string, string> localIFace = localCore->coreIface.getIface();
             auto ifit = localIFace.begin();
@@ -328,17 +317,30 @@ cerr<<"$$"<<(string)localReq<<"$$\n";
                 ++ifit;
             }
         }
+        else
+        {
+            string cmdName;
+            vector<string> cmdArgs;
+            parseComand(reqStr, cmdName, cmdArgs);
+            try
+            { localCore->call(cmdName, cmdArgs); }
+            catch (no_fun_ex)
+            { }
+        }
+
         cout.rdbuf(backup);
 
 /*++requests;
 stringstream t; t<<requests; string re = t.str();
-XHR work = confXHR('['+re+"] Got: "+localReq.getB());*/
+XHR transmit = confXHR('['+re+"] Got: "+localHTMLReq.getB());*/
 cout<<'@'<<hear.str()<<'@'<<flush;
-        confXHR(work, hear.str());
+        answer.setB(hear.str());
+        XHR transmit;
+        confXHR(transmit, answer);  //обратно оборачиваем в XHR и отправляем
 
 cout<<"D"<<flush;
         unique_lock<mutex> lockerO(commonOutQueue_mutex);
-        hout.push( make_pair(localClient_socket, (string)work));
+        hout.push( make_pair(localClient_socket, transmit) );
 cout<<"E"<<flush;
         newOut = true;
         lockerO.unlock();

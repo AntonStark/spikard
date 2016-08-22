@@ -7,6 +7,7 @@
 #include <sstream>
 
 void lineToWords(std::string, std::string, std::vector<std::string>&);
+void myToLower(std::string&);
 
 class XHR {
 private:
@@ -48,7 +49,7 @@ public:
         content = true;
     }
     std::vector<std::string> getL() const
-    {return startLine;}
+        {return startLine;}
     std::string getH(std::string that)
     {
         std::map<std::string, std::string>::iterator it = headers.find(that);
