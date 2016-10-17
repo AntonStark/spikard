@@ -2,7 +2,6 @@
 #include <string>
 #include <fstream>
 #include <ctime>
-#include <termios.h>
 #include <dlfcn.h>
 #include <vector>
 #include <map>
@@ -17,19 +16,13 @@
 #include <condition_variable>
 #include <atomic>
 
+#include "fcgiapp.h"
+
 #include "core.hpp"
-#include "XHR.hpp"
 #include "InnerRequest.hpp"
 
 using namespace std;
 
-mutex commonInQueue_mutex;
-mutex commonOutQueue_mutex;
-condition_variable input;
-atomic<bool> newIn(false);
-condition_variable output;
-atomic<bool> newOut(false);
-atomic<bool> done(false);
 mutex cores_mutex;
 
 class sock_ex : public exception
@@ -49,52 +42,28 @@ public:
 void printHelloMsg();
 void parseComand(string, string&, vector<string>&);
 
-void readCli(int, string&);
-void writeCli(int, string);
-void sendTextFile(int, string);
+void reqHandler(map<int, Core*>&);
 
-int initServer(int);
+void FcgiToInnerReq(FCGX_Stream*, InnerRequest&);
 
-void sender(queue<pair<int, string> >&);
-void reqHandler(queue<pair<int, string> >&, queue<pair<int, string> >&, map<int, Core*>&);
+int socketId;
 
 int main() {
     printHelloMsg();
     map<int, Core*> cores;
 
-    int listen_socket = initServer(8000);
-
-    queue<pair<int, string> > commonInQueue;
-    queue<pair<int, string> > commonOutQueue;
-
-    thread senderTh(sender, ref(commonOutQueue));
-    thread workerTh(reqHandler, ref(commonInQueue), ref(commonOutQueue), ref(cores));
-
-    while (true) {
-        int client_socket = accept(listen_socket, NULL, NULL);
-        if (client_socket < 0)
-            {cout<<"accept failed"<<endl;break;}
-cout<<'x'<<flush;
-        string req;
-        try
-            {readCli(client_socket, req);}
-        catch (sock_ex one)
-            {cout<<one.what()<<endl;close(client_socket);continue;}
-        {
-cout<<'y'<<flush;
-            unique_lock<mutex> locker(commonInQueue_mutex);
-            commonInQueue.push( make_pair(client_socket, req));
-cout<<'z'<<flush;
-            newIn = true;
-            input.notify_one();
-cout<<'o'<<flush;
-        }
+    int queueLen = 10;
+    FCGX_Init();
+    socketId = FCGX_OpenSocket("127.0.0.1:8000", queueLen);
+    if (socketId < 0)
+    {
+        //ошибка при открытии сокета
+        return 1;
     }
-    close(listen_socket);
-    done = true;
+
+    thread workerTh(reqHandler, ref(cores));
 
     workerTh.join();
-    senderTh.join();
 
     return 0;
 }
@@ -109,7 +78,7 @@ void printHelloMsg()
 
 void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
 {
-    int s = line.find(' ');
+    unsigned long s = line.find(' ');
     if (s == string::npos) {
         cmdName = line;
         return;
@@ -128,176 +97,69 @@ void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
     return;
 }
 
-void readCli(int client_socket, string& dest)
+void reqHandler(map<int, Core*>& cores)
 {
-    const int max_client_buffer_size = 1024;
-    char buf[max_client_buffer_size];
+    int rc;
+    FCGX_Request request;
 
-    int result = recv(client_socket, buf, max_client_buffer_size, 0);
-    if (result < 0) // ошибка получения данных
-        throw sock_ex("recv failed");
-    else if (result == 0) // соединение закрыто клиентом
-        throw sock_ex("connection closed");
-    buf[result] = '\0';
-
-    dest = buf;
-    return;
-}
-
-void writeCli(int client_socket, string source)
-{
-        // Отправляем ответ клиенту с помощью функции send
-//     string temp(source);
-    ssize_t result = send(client_socket, source.c_str(),
-        source.length(), 0);
-    if (result < 0) // произошла ошибка при отправле данных          
-        throw sock_ex("send failed");
-    return;
-}
-
-void sendTextFile(int client_socket, string filePath)
-{
-    size_t dot = filePath.find_last_of('.');
-    string type = filePath.substr(dot+1);
-    ifstream file(filePath.c_str(), ifstream::in);
-    if (!file.good())
+    if (FCGX_InitRequest(&request, socketId, 0) != 0)
+    {
+        //ошибка при инициализации структуры запроса
+        cerr << "Не удаётся инициализировать FCGX_Request" << endl;
         return;
+    }
+    cout << "FCGX_Request инициализирован" << endl;
 
-    stringstream fileBuf;
-    string buf;
     while (true)
     {
-        getline(file, buf);
-        fileBuf<<buf;
-        if (!file.eof())
-            fileBuf<<endl;
-        else
+        rc = FCGX_Accept_r(&request);
+        if (rc < 0)
+        {
+            //ошибка при получении запроса
+            cerr << "Не удаётся принять запрос" << endl;
             break;
-    }
-
-    XHR temp = confXHR(fileBuf.str().c_str());
-    temp.setH("Content-Type", "text/"+type+"; charset=utf-8");
-    writeCli(client_socket, temp);
-    return;
-}
-
-int initServer(int onPort) {
-    //КОНФИГУРИРУЕМ И СОЗДАЁМ СОКЕТ
-    int listen_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_socket < 0)
-        {perror("Cannot create a socket");exit(1);}
-
-    //ЗАПОЛНЯЕМ ИНФУ О СЕБЕ
-    struct sockaddr_in myaddr;
-    memset(&myaddr, 0, sizeof(struct sockaddr_in));
-    myaddr.sin_family = AF_INET;
-    myaddr.sin_port = htons(onPort);        // Port to listen
-    myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    int res = bind(listen_socket, (struct sockaddr*) &myaddr, sizeof(myaddr));
-    if (res < 0)
-        {perror("Cannot bind a socket");exit(1);}
-
-    //ЗАПУСКАЕМ ОЖИДАНИЕ КЛИЕНТА
-    struct linger linger_opt = { 1, 0 }; // Linger active, timeout 0
-    setsockopt(listen_socket, SOL_SOCKET, SO_LINGER, &linger_opt, sizeof(linger_opt));
-    res = listen(listen_socket, 1);    // "1" is the maximal length of the queue
-    if (res < 0)
-        {perror("Cannot listen");exit(1);}
-
-    /*   
-    //ИНФА КЛИЕНТА
-    struct sockaddr_in peeraddr;
-    socklen_t peeraddr_len = sizeof(peeraddr);
-    int s1 = accept(listen_socket, (struct sockaddr*) &peeraddr, &peeraddr_len);
-    if (s1 < 0) 
-        {perror("Cannot accept");exit(1);}
-    */
-    return listen_socket;
-}
-
-void sender(queue<pair<int, string> >& toSend)
-{
-    while (!done)
-    {
-cout<<'a'<<flush;
-        unique_lock<mutex> locker(commonOutQueue_mutex);
-        while (!newOut)
-            output.wait(locker);
-
-cout<<'b'<<flush;
-        while (toSend.size() > 0)
-        {
-cout<<'c'<<flush;
-            writeCli(toSend.front().first, toSend.front().second);
-cout<<'d'<<flush;
-            close(toSend.front().first);
-cout<<'e'<<flush;
-            toSend.pop();
         }
-cout<<'f'<<flush;
-        newOut = false;
-    }
-    return;
-}
+        cout << "Запрос принят" << endl;
 
-//static int requests = 0;
+        InnerRequest cliRequest, cliRespond;
+        FcgiToInnerReq(request.in, cliRequest);
 
-void reqHandler(queue<pair<int, string> >& hin, queue<pair<int, string> >& hout, map<int, Core*>& cores)
-{
-    while (!done)
-    {
-cout<<"A"<<flush;
-        unique_lock<mutex> lockerI(commonInQueue_mutex);
-        while (!newIn)
-            input.wait(lockerI);
-
-cout<<"B"<<flush;
-        int localClient_socket = hin.front().first;
-        XHR localHTMLReq(hin.front().second);
-        hin.pop();
-        if (hin.size() == 0)
-            newIn = false;
-cout<<"C"<<flush;
-        lockerI.unlock();
-
-cerr<<"$$__REQUEST:__$$\n"<<static_cast<std::string>(localHTMLReq)<<"\n$$__END__$$\n";
-        InnerRequest localInnerReq(localHTMLReq.getB());    //сняли обёртку HTML-запроса
-        string userIdStr = localInnerReq.getH("user-id");
-
-        int userId;
         Core *localCore;
-        InnerRequest answer;
-
-        if (userIdStr.length() == 0)    //запрос от нового пользователя, присваиваем идентификатор
+        string userIdStr = cliRequest.getH("user-id");
+        if (userIdStr.size() == 0)
         {
-            srand (time(NULL));
+            cerr << "В запрсое нет заголовка \"user-id\"" << endl;
+            continue;
+        }
+        int userId = atoi(userIdStr.c_str());
+        if (userId == 0)
+        {
+            srand ((unsigned int)time(NULL));
             userId = rand() % 0xffffffff;
             {
                 unique_lock<mutex> lockerC(cores_mutex);
                 localCore = new Core();
+                //если такой userId уже занят, берём следующий
                 while (cores.find(userId) != cores.end())
                     ++userId;
                 cores[userId] = localCore;
             }
             stringstream t; t<<userId; userIdStr = t.str();
-            answer.setH("user-id",userIdStr);
+            cliRespond.setH("user-id", userIdStr);
         }
         else    //уже есть user-id
         {
-            userId = atoi(userIdStr.c_str());
             {
                 unique_lock<mutex> lockerC(cores_mutex);
                 auto cit = cores.find(userId);
                 if (cit == cores.end())
                 {
-                    //прислан ошибочный id, по-хорошему нужно сообщать об ошибке.
-                    continue; //В такую погоду свои дома сидят, телевизор смотрют. Только чужие шастают. Не будем дверь открывать!
+                    //прислан ошибочный id
+                    cerr << "Ошибочный \"user-id\"" << endl;
+                    continue;
                 }
-                else
-                {
-                    localCore = cit->second;
-                    answer.setH("user-id",userIdStr);
-                }
+                localCore = cit->second;
+                cliRespond.setH("user-id",userIdStr);
             }
         }
 
@@ -305,47 +167,34 @@ cerr<<"$$__REQUEST:__$$\n"<<static_cast<std::string>(localHTMLReq)<<"\n$$__END__
         streambuf *backup;
         backup = cout.rdbuf();
         cout.rdbuf(hear.rdbuf());
-
-        string reqStr = localInnerReq.getB();
-        if (reqStr == "getInterface")
-        {
-            map<string, string> localIFace = localCore->coreIface.getIface();
-            auto ifit = localIFace.begin();
-            while (ifit != localIFace.end())
-            {
-                cout << ifit->first << ':' << ifit->second << endl;
-                ++ifit;
-            }
-        }
-        else
-        {
-            string cmdName;
-            vector<string> cmdArgs;
-            parseComand(reqStr, cmdName, cmdArgs);
-            try
-            { localCore->call(cmdName, cmdArgs); }
-            catch (no_fun_ex)
-            { }
-        }
-
+        string reqStr = cliRequest.getB();
+        string cmdName;
+        vector<string> cmdArgs;
+        parseComand(reqStr, cmdName, cmdArgs);
+        try
+        { localCore->call(cmdName, cmdArgs); }
+        catch (no_fun_ex)
+        { cerr << "Обращение к несуществующей функции" << endl; }
         cout.rdbuf(backup);
+        cliRespond.setB(hear.str());
 
-/*++requests;
-stringstream t; t<<requests; string re = t.str();
-XHR transmit = confXHR('['+re+"] Got: "+localHTMLReq.getB());*/
-cout<<'@'<<hear.str()<<'@'<<flush;
-        answer.setB(hear.str());
-        XHR transmit;
-        confXHR(transmit, answer);  //обратно оборачиваем в XHR и отправляем
-
-cout<<"D"<<flush;
-        unique_lock<mutex> lockerO(commonOutQueue_mutex);
-        hout.push( make_pair(localClient_socket, transmit) );
-cout<<"E"<<flush;
-        newOut = true;
-        lockerO.unlock();
-        output.notify_one();
-cout<<"F"<<flush;
+        FCGX_PutS("Content-type: text/html\r\n", request.out);
+        FCGX_PutS("\r\n", request.out);
+        FCGX_PutS(cliRespond.toStr().c_str(), request.out);
+        FCGX_Finish_r(&request);
     }
+    return;
+}
+
+void FcgiToInnerReq(FCGX_Stream* fin, InnerRequest& target)
+{
+    stringstream source;
+    char line[1024];
+    while (FCGX_GetLine(line, 1024, fin) != nullptr)
+        source << line;
+    source << flush;
+//std::cerr<<"Check-in:\n"<<source.str()<<std::endl;
+
+    target.configure(source.str());
     return;
 }

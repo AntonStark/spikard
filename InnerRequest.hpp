@@ -3,6 +3,9 @@
 
 #include "XHR.hpp"
 
+void lineToWords(std::string, std::string, std::vector<std::string>&);
+void myToLower(std::string&);
+
 class InnerRequest
 {
 private:
@@ -11,7 +14,7 @@ private:
     std::string body;
 public:
     InnerRequest() {}
-    InnerRequest(std::string);
+    //InnerRequest(std::string);
     InnerRequest(const InnerRequest& other) :
             headers(other.headers),
             content(other.content),
@@ -24,7 +27,6 @@ public:
         return *this;
     }
     ~InnerRequest() {}
-    operator std::string() const;
 
     void setH(std::string key, std::string value)
         {headers[key] = value;}
@@ -54,6 +56,8 @@ public:
     {
         return headers.end();
     };
+    std::string toStr() const;
+    void configure(std::string);
 };
 
 #endif //INNER_REQUEST_HPP
