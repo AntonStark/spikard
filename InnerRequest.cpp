@@ -71,11 +71,7 @@ void InnerRequest::configure(std::string source)
     {
         it++;
         if (it != parse.end())
-        {
             body = *it;
             content = true;
-        }
-        else
-            content = false;
     }
 }

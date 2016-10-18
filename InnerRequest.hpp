@@ -16,8 +16,10 @@ private:
     bool content;
     std::string body;
 public:
-    InnerRequest() {}
-    //InnerRequest(std::string);
+    InnerRequest() :
+            headers(),
+            content(false),
+            body() {}
     InnerRequest(const InnerRequest& other) :
             headers(other.headers),
             content(other.content),

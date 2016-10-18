@@ -119,7 +119,7 @@ void reqHandler(map<int, Core*>& cores)
             cerr << "Не удаётся принять запрос" << endl;
             break;
         }
-        cout << "Запрос принят" << endl;
+        cout << "Принят запрос от id=";
 
         InnerRequest cliRequest, cliRespond;
         FcgiToInnerReq(request.in, cliRequest);
@@ -132,8 +132,10 @@ void reqHandler(map<int, Core*>& cores)
             continue;
         }
         int userId = atoi(userIdStr.c_str());
+        cout << userId << endl;
         if (userId == 0)
         {
+            bad_id: ;
             srand ((unsigned int)time(NULL));
             userId = rand() % 0xffffffff;
             {
@@ -146,6 +148,7 @@ void reqHandler(map<int, Core*>& cores)
             }
             stringstream t; t<<userId; userIdStr = t.str();
             cliRespond.setH("user-id", userIdStr);
+            cout << "Присвоен id=" << userId << endl;
         }
         else    //уже есть user-id
         {
@@ -156,7 +159,7 @@ void reqHandler(map<int, Core*>& cores)
                 {
                     //прислан ошибочный id
                     cerr << "Ошибочный \"user-id\"" << endl;
-                    continue;
+                    goto bad_id;
                 }
                 localCore = cit->second;
                 cliRespond.setH("user-id",userIdStr);
@@ -168,13 +171,26 @@ void reqHandler(map<int, Core*>& cores)
         backup = cout.rdbuf();
         cout.rdbuf(hear.rdbuf());
         string reqStr = cliRequest.getB();
-        string cmdName;
-        vector<string> cmdArgs;
-        parseComand(reqStr, cmdName, cmdArgs);
-        try
-        { localCore->call(cmdName, cmdArgs); }
-        catch (no_fun_ex)
-        { cerr << "Обращение к несуществующей функции" << endl; }
+        if (reqStr == "getInterface")
+        {
+            map<string, string> localIFace = localCore->coreIface.getIface();
+            auto ifit = localIFace.begin();
+            while (ifit != localIFace.end())
+            {
+                cout << ifit->first << ':' << ifit->second << endl;
+                ++ifit;
+            }
+        }
+        else
+        {
+            string cmdName;
+            vector<string> cmdArgs;
+            parseComand(reqStr, cmdName, cmdArgs);
+            try
+            { localCore->call(cmdName, cmdArgs); }
+            catch (no_fun_ex)
+            { cerr << "Обращение к несуществующей функции" << endl; }
+        }
         cout.rdbuf(backup);
         cliRespond.setB(hear.str());
 
