@@ -1,7 +1,10 @@
 #ifndef INNER_REQUEST_HPP
 #define INNER_REQUEST_HPP
 
-#include "XHR.hpp"
+#include <string>
+#include <vector>
+#include <map>
+#include <sstream>
 
 void lineToWords(std::string, std::string, std::vector<std::string>&);
 void myToLower(std::string&);

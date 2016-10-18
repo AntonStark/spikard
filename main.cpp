@@ -128,7 +128,7 @@ void reqHandler(map<int, Core*>& cores)
         string userIdStr = cliRequest.getH("user-id");
         if (userIdStr.size() == 0)
         {
-            cerr << "В запрсое нет заголовка \"user-id\"" << endl;
+            cerr << "В запросе нет заголовка \"user-id\"" << endl;
             continue;
         }
         int userId = atoi(userIdStr.c_str());
