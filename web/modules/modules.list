@@ -1,2 +1,0 @@
-<li id="add_module" onclick="add_module();hideMenu();">Новый модуль</li> add_module.js add_module.css
-<li id="terminal" onclick="terminal();hideMenu();">Терминал</li> terminal.js terminal.css
