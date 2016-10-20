@@ -5,8 +5,25 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <iostream>
 
 void lineToWords(std::string, std::string, std::vector<std::string>&);
+std::vector<std::string> lineToWords(std::string, std::string);
+
+class bad_req_ex : public std::exception
+{
+private:
+    std::string mess;
+public:
+    bad_req_ex(const char *msg)
+            : exception(), mess(msg) {}
+    virtual const char* what() const noexcept
+    {
+        return mess.c_str();
+    }
+    virtual ~bad_req_ex() {}
+};;
+
 void myToLower(std::string&);
 
 class InnerRequest
@@ -24,6 +41,7 @@ public:
             headers(other.headers),
             content(other.content),
             body(other.body) {}
+
     InnerRequest& operator= (const InnerRequest other)
     {
         headers = other.headers;
@@ -31,6 +49,7 @@ public:
         body = other.body;
         return *this;
     }
+
     ~InnerRequest() {}
 
     void setH(std::string key, std::string value)
@@ -39,18 +58,24 @@ public:
     {
         body = source;
 
-        int sourceLen = 0;
-        auto it = body.begin(), e = body.end();
+        unsigned long sourceLen = 0;
+
+        // Так измеряется длина в символах, не байтах
+        /*auto it = body.begin(), e = body.end();
         while (it != e)
         {
             if ( (*it & 0xc0) != 0x80 ) //Магия! "Count all first-bytes (the ones that don't match 10xxxxxx)."
                 ++sourceLen;
             it++;
-        }
+        }*/
+
+        // Так измеряется длина в байтах
+        sourceLen = body.length();
         std::stringstream ss; ss << sourceLen; std::string len = ss.str();
         setH("length", len);
         content = true;
     }
+
     std::string getH(std::string that) const
     {
         std::map<std::string, std::string>::const_iterator it = headers.find(that);
@@ -62,14 +87,6 @@ public:
     std::string getB() const
         {return body;}
 
-    std::map<std::string, std::string>::iterator firstH()
-    {
-        return headers.begin();
-    };
-    std::map<std::string, std::string>::iterator lastH()
-    {
-        return headers.end();
-    };
     std::string toStr() const;
     void configure(std::string);
 };

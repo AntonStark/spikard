@@ -122,15 +122,18 @@ void reqHandler(map<int, Core*>& cores)
         cout << "Принят запрос от id=";
 
         InnerRequest cliRequest, cliRespond;
-        FcgiToInnerReq(request.in, cliRequest);
+        try
+        { FcgiToInnerReq(request.in, cliRequest); }
+        catch (bad_req_ex ex)
+        { cerr << "Неправильный запрос: " << ex.what() << "!;" << endl; continue; }
 
         Core *localCore;
         string userIdStr = cliRequest.getH("user-id");
-        if (userIdStr.size() == 0)
+        /*if (userIdStr.size() == 0)
         {
             cerr << "В запросе нет заголовка \"user-id\", отброшено." << endl;
             continue;
-        }
+        }*/
         int userId = atoi(userIdStr.c_str());
         cout << userId << "; " << flush;
         if (userId == 0)
@@ -216,7 +219,6 @@ void FcgiToInnerReq(FCGX_Stream* fin, InnerRequest& target)
     while (FCGX_GetLine(line, 1024, fin) != nullptr)
         source << line;
     source << flush;
-//std::cerr<<"Check-in:\n"<<source.str()<<std::endl;
 
     target.configure(source.str());
     return;

@@ -19,6 +19,13 @@ void lineToWords(std::string line, std::string split, std::vector<std::string>& 
     return;
 }
 
+inline std::vector<std::string> lineToWords(std::string line, std::string split)
+{
+    std::vector<std::string> words;
+    lineToWords(line, split, words);
+    return words;
+}
+
 void myToLower(std::string& source)
 {
     std::locale loc;
@@ -51,14 +58,14 @@ std::string InnerRequest::toStr() const
 
 void InnerRequest::configure(std::string source)
 {
-    std::vector<std::string> parse;
-    lineToWords(source, ";", parse);
+    std::vector<std::string> parse = lineToWords(source, ";;");
+    std::vector<std::string> head = lineToWords(parse[0], ";");
 
-    std::vector<std::string>::iterator it = parse.begin();
-    while (it != parse.end() && *it != "")
+    auto it = head.begin();
+    auto e = head.end();
+    while (it != e)
     {
-        std::vector<std::string> pair;
-        lineToWords(*it, ": ", pair);
+        std::vector<std::string> pair = lineToWords(*it, ": ");
         if (pair.size() != 2)
             break;
         myToLower(pair[0]);
@@ -67,11 +74,26 @@ void InnerRequest::configure(std::string source)
         it++;
     }
 
-    if (it != parse.end())
+    if (parse.size() > 1)
     {
-        it++;
-        if (it != parse.end())
-            body = *it;
-            content = true;
+        std::stringstream _body;
+        auto pit = parse.begin()+1, pe = parse.end()-1;
+        while (pit != pe)
+        {
+            _body << *pit << ";;";
+            pit++;
+        }
+        _body << *pit;
+
+        body = _body.str();
+        content = true;
     }
+
+    if (getH("user-id") == "")
+        throw bad_req_ex("нет заголовка \"user-id\"");
+    if (getH("length")  == "")
+        throw bad_req_ex("нет заголовка \"length\"");
+    if (content &&  atoi(getH("length").c_str()) != body.length() )
+        throw bad_req_ex("getH(\"length\")!=body.length()");
+    return;
 }
