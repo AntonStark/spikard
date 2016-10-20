@@ -38,13 +38,22 @@ public:
     void setB(std::string source)
     {
         body = source;
-        std::stringstream ss; ss << body.length(); std::string len = ss.str();
+
+        int sourceLen = 0;
+        auto it = body.begin(), e = body.end();
+        while (it != e)
+        {
+            if ( (*it & 0xc0) != 0x80 ) //Магия! "Count all first-bytes (the ones that don't match 10xxxxxx)."
+                ++sourceLen;
+            it++;
+        }
+        std::stringstream ss; ss << sourceLen; std::string len = ss.str();
         setH("length", len);
         content = true;
     }
-    std::string getH(std::string that)
+    std::string getH(std::string that) const
     {
-        std::map<std::string, std::string>::iterator it = headers.find(that);
+        std::map<std::string, std::string>::const_iterator it = headers.find(that);
         if (it == headers.end() || it->second == "")
             return "";
         else

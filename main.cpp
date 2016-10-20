@@ -128,11 +128,11 @@ void reqHandler(map<int, Core*>& cores)
         string userIdStr = cliRequest.getH("user-id");
         if (userIdStr.size() == 0)
         {
-            cerr << "В запросе нет заголовка \"user-id\"" << endl;
+            cerr << "В запросе нет заголовка \"user-id\", отброшено." << endl;
             continue;
         }
         int userId = atoi(userIdStr.c_str());
-        cout << userId << endl;
+        cout << userId << "; " << flush;
         if (userId == 0)
         {
             bad_id: ;
@@ -148,7 +148,7 @@ void reqHandler(map<int, Core*>& cores)
             }
             stringstream t; t<<userId; userIdStr = t.str();
             cliRespond.setH("user-id", userIdStr);
-            cout << "Присвоен id=" << userId << endl;
+            cout << "Присвоен id=" << userId << "; " << flush;
         }
         else    //уже есть user-id
         {
@@ -158,7 +158,7 @@ void reqHandler(map<int, Core*>& cores)
                 if (cit == cores.end())
                 {
                     //прислан ошибочный id
-                    cerr << "Ошибочный \"user-id\"" << endl;
+                    cerr << "Ошибочный \"user-id\"!;" << flush;
                     goto bad_id;
                 }
                 localCore = cit->second;
@@ -166,11 +166,11 @@ void reqHandler(map<int, Core*>& cores)
             }
         }
 
+        string reqStr = cliRequest.getB();
         stringstream hear;
         streambuf *backup;
         backup = cout.rdbuf();
         cout.rdbuf(hear.rdbuf());
-        string reqStr = cliRequest.getB();
         if (reqStr == "getInterface")
         {
             map<string, string> localIFace = localCore->coreIface.getIface();
@@ -186,10 +186,16 @@ void reqHandler(map<int, Core*>& cores)
             string cmdName;
             vector<string> cmdArgs;
             parseComand(reqStr, cmdName, cmdArgs);
+
+            cerr << "Вызов: [" << cmdName << "] {";
+            for (string arg : cmdArgs)
+                cerr << arg << ", ";
+            cerr << "};" << flush;
+
             try
             { localCore->call(cmdName, cmdArgs); }
             catch (no_fun_ex)
-            { cerr << "Обращение к несуществующей функции" << endl; }
+            { cerr << "Обращение к несуществующей функции!;" << flush; }
         }
         cout.rdbuf(backup);
         cliRespond.setB(hear.str());
@@ -198,6 +204,7 @@ void reqHandler(map<int, Core*>& cores)
         FCGX_PutS("\r\n", request.out);
         FCGX_PutS(cliRespond.toStr().c_str(), request.out);
         FCGX_Finish_r(&request);
+        cout << endl << flush;
     }
     return;
 }
