@@ -186,7 +186,7 @@ void Core::call(string cmdName, vector<string> cmdArgs)
 }
 
 /*****функционал_ядра*****************/
-void Core::logIn(vector<string> cmdArgs)
+/*void Core::logIn(vector<string> cmdArgs)
 {
     if (cmdArgs.size() != 0)
     {
@@ -310,6 +310,129 @@ void Core::logIn(vector<string> cmdArgs)
         usersFile.close();
     }
     return;
+}*/
+
+int getUserHashByName(string& name, string& hash)
+{
+    int match = 0;
+    ifstream usersFile("users.list");
+    string buf, login;
+    while (!usersFile.eof()) {
+        getline(usersFile, buf);
+        login = buf.substr(0, buf.find(' '));
+        if (login == name) {
+            match = 1;
+            hash = buf.substr(buf.find(' ')+1);
+            break;
+        }
+    }
+    usersFile.close();
+    return match;
+}
+int getUserHashByName(string& name)
+{
+    string temp;
+    return getUserHashByName(name, temp);
+}
+void addUserAcc(string name, string hash)
+{
+    string put = name + " " + hash;
+    ofstream usersFile("users.list", ios_base::app);
+    usersFile << put << endl;
+    usersFile.close();
+    return;
+}
+void Core::logIn(vector<string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?")
+        {
+            cout<<"<вход> - Представиться системе. \
+Также возможен ограниченный анонимный доступ."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout<<"вход"<<endl;
+            return;
+        }
+    }
+
+    switch (cmdArgs.size())
+    {
+        //Запрос имени пользователя
+        case 0:
+        {
+            cout << user() << flush;
+            return;
+        }
+        //Проверка существования данного имени пользователя
+        case 1:
+        {
+            int found = getUserHashByName(cmdArgs[0]);
+
+            cout << found << flush;
+            return;
+        }
+        //Что-то ни то ни сё
+        case 2:
+        {
+            cout << -1 << ':' << "Неверный формат данных для входа." << flush;
+            return;
+        }
+        //Регистрация или вход (гарантированно >=3 аргументов)
+        default:
+        {
+            if (!(cmdArgs[0] == "0" || cmdArgs[0] == "1"))
+            {
+                cout << -1 << ':' << "Неверный формат данных для входа." << flush;
+                return;
+            }
+            //Вход
+            if (cmdArgs[0] == "0")
+            {
+                string hashFormBase;
+                int found = getUserHashByName(cmdArgs[1], hashFormBase);
+                if (found == 0)
+                {
+                    cout << -1 << ':' << "Пользователь с таким именем не найден." << flush;
+                    return;
+                }
+                else
+                {
+                    if (cmdArgs[2] != hashFormBase)
+                    {
+                        cout << -1 << ':' << "Неверный пароль." << flush;
+                        return;
+                    }
+                    else
+                    {
+                        userName = cmdArgs[1];
+                        cout << 0 << ':' << "Вход выполнен." << flush;
+                        return;
+                    }
+                }
+            }
+            //Регистрация
+            else
+            {
+                int found = getUserHashByName(cmdArgs[1]);
+                if (found == 1)
+                {
+                    cout << -1 << ':' << "Пользователь с таким именем уже сществует." << flush;
+                    return;
+                }
+                else
+                {
+                    addUserAcc(cmdArgs[1], cmdArgs[2]);
+                    userName = cmdArgs[1];
+                    cout << 0 << ':' << "Регистрация успешна." << flush;
+                    return;
+                }
+            }
+        }
+    }
 }
 
 void Core::logOut(vector<string> cmdArgs)
