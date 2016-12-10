@@ -16,84 +16,52 @@ protected:
     { out << name; }
 public:
     const std::string name;
-public:
     Symbol(std::string& _name)
     { name = _name; }
     virtual ~Symbol() {};
 
-    virtual void print(std::ostream& out) const = 0;
+    virtual void print(std::ostream& out = std::cout) const = 0;
     string& getName() const
     { return name; }
 };
 
-class Map : public Symbol
+class Map
 {
 public:
     const unsigned arity;
 };
 
-class Predicate : public Map
+class Predicate : public Map, public Symbol
 {
 public:
     void print(std::ostream& out) const
     { Symbol::defPrintf(out); }
 };
 
-class Function : public Map
+class Function : public Map, public Symbol
 {
 public:
     void print(std::ostream& out) const
     { Symbol::defPrintf(out); }
 };
 
-class Variable : public Symbol
+template <typename argsT, unsigned n_args>
+class ParenSymbol : public Symbol, public Map
 {
 public:
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
-};
+    argsT* args[n_args];
 
-class Constant : public Symbol
-{
-public:
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
-};
-//TODO возможно следует определить Variable и Constant как потомков
-// Term, чтобы использовать указатели на них единообразно с указателями на Term, а не городить конструкторы приведения
-
-class LOperation : public Symbol
-{
-public:
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
-};
-
-class Quantifier : public Symbol
-{
-public:
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
-};
-
-class ParenSymbol : public Map
-{
-//protected:
-public:
-
-    Symbol* args[arity];
-
-    ParenSymbol(string _name, std::vector<Symbol*> _args) :
-            Symbol(_name)
+    ParenSymbol(std::vector<argsT*> _args)
     {
-        arity = _args.size();
+        arity = n_args;
+        static_assert(_args.size() == arity,
+                      "Кол-во аргументов в конструкторе ParenSymbol не соответствует его арности");
         for (unsigned i = 0; i < arity; ++i)
             args[i] = _args[i];
     }
 
     virtual void print(ostream& out) const override
     {
-        Symbol::print(out);
         out << '(';
         for (unsigned i = 0; i < arity; ++i)
         { out << args[i]->print() << ','; }
@@ -101,15 +69,69 @@ public:
     }
 };
 
-class Term : public Symbol
+class Terms : public Symbol
+{
+
+};
+
+class Variable : public Terms
 {
 public:
-    Term(Variable var) :
+    void print(std::ostream& out) const
+    { Symbol::defPrintf(out); }
+};
+
+class Constant : public Terms
+{
+public:
+    void print(std::ostream& out) const
+    { Symbol::defPrintf(out); }
+};
+
+class Term : public Terms, protected Function, protected ParenSymbol<Terms, Function::arity>
+{
+public:
+    /*Term(Variable var) :
             Symbol(var.getName()) {}
     Term(Constant c) :
             Symbol(c.getName()) {}
     Term(Function* func, std::vector<Term*> _args) :
-            ParenSymbol(func->getName(), _args) {}
+            ParenSymbol(func->getName(), _args) {}*/
+
+};
+
+class Formula : public Symbol
+{
+public:
+    enum class LOperation {NOT, AND, OR, THAN};
+    Formula(Formula::LOperation oper, Formula arg)
+    {
+
+    }
+    Formula(Formula::LOperation oper, Formula arg1, Formula arg2)
+    {
+
+    }
+};
+
+class Atom : public Formula, protected Predicate, protected ParenSymbol<Predicate, Predicate::arity>
+{
+
+};
+
+/*class LOperation : public Symbol
+{
+public:
+    void print(std::ostream& out) const
+    { Symbol::defPrintf(out); }
+};*/
+
+class Quantifier : public Symbol
+{
+public:
+    Variable* argument;
+    void print(std::ostream& out) const
+    { Symbol::defPrintf(out); }
 };
 
 #endif //TEST_BUILD_LOGIC_HPP
