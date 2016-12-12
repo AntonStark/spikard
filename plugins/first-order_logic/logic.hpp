@@ -100,38 +100,36 @@ public:
 
 };
 
-class Formula : public Symbol
-{
-public:
-    enum class LOperation {NOT, AND, OR, THAN};
-    Formula(Formula::LOperation oper, Formula arg)
-    {
 
-    }
-    Formula(Formula::LOperation oper, Formula arg1, Formula arg2)
-    {
-
-    }
-};
-
-class Atom : public Formula, protected Predicate, protected ParenSymbol<Predicate, Predicate::arity>
+class Modifier : public Symbol
 {
 
 };
 
-/*class LOperation : public Symbol
-{
-public:
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
-};*/
+enum class LOperation : public Modifier
+{NOT, AND, OR, THAN};
 
-class Quantifier : public Symbol
+class Quantifier : public Modifier
 {
 public:
     Variable* argument;
     void print(std::ostream& out) const
     { Symbol::defPrintf(out); }
+};
+
+class Formula : public Symbol
+{
+public:
+    Formula *arg1, *arg2;
+    Modifier* conn;
+
+    Formula(Modifier* oper, Formula arg1, Formula arg2 = nullptr)
+            : arg1(arg), conn(oper), arg2(arg2) {}
+};
+
+class Atom : public Formula, protected Predicate, protected ParenSymbol<Predicate, Predicate::arity>
+{
+
 };
 
 #endif //TEST_BUILD_LOGIC_HPP
