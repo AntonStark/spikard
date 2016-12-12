@@ -12,13 +12,13 @@
 class Symbol
 {
 protected:
-    void defPrintf(std::ostream&)
+    void defPrint(std::ostream&)
     { out << name; }
 public:
     const std::string name;
     Symbol(std::string& _name)
-    { name = _name; }
-    virtual ~Symbol() {};
+            : name(_name) {}
+    virtual ~Symbol() {}
 
     virtual void print(std::ostream& out = std::cout) const = 0;
     string& getName() const
@@ -29,42 +29,60 @@ class Map
 {
 public:
     const unsigned arity;
+    Map(unsigned _arity)
+            : arity(_arity) {}
+    virtual ~Map() {}
 };
 
 class Predicate : public Map, public Symbol
 {
 public:
+    Predicate(std::string& _name, unsigned _arity)
+            : Symbol(_name),
+              Map(_arity) {}
+    Predicate(Predicate& one)
+            : Symbol(one.name),
+              Map(one.arity) {}
+
     void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
+    { Symbol::defPrint(out); }
+
+    Atom operator() (std::vector<Terms*> _args)
+    { return Atom::Atom(this, _args); }
 };
 
 class Function : public Map, public Symbol
 {
 public:
+    Function(std::string& _name, unsigned _arity)
+            : Symbol(_name),
+              Map(_arity) {}
+    Function(Function& one)
+            : Symbol(one.name),
+              Map(one.arity) {}
+
     void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
+    { Symbol::defPrint(out); }
+
+    Term operator() (std::vector<Terms*> _args)
+    { return Term::Term(this, _args); }
 };
 
-template <typename argsT, unsigned n_args>
-class ParenSymbol : public Symbol, public Map
+class ParenSymbol : public Symbol
 {
 public:
-    argsT* args[n_args];
+    std::vector<Terms*> args;
 
-    ParenSymbol(std::vector<argsT*> _args)
-    {
-        arity = n_args;
-        static_assert(_args.size() == arity,
-                      "Кол-во аргументов в конструкторе ParenSymbol не соответствует его арности");
-        for (unsigned i = 0; i < arity; ++i)
-            args[i] = _args[i];
-    }
+    ParenSymbol(std::vector<Terms*> _args)
+            : args(_args) {}
 
     virtual void print(ostream& out) const override
     {
         out << '(';
-        for (unsigned i = 0; i < arity; ++i)
-        { out << args[i]->print() << ','; }
+        for (unsigned i = 0; i < args.size()-1; ++i)
+            out << args[i]->print() << ',';
+        if (!args.empty())
+            out << args.back()->print();
         out << ')';
     }
 };
@@ -88,18 +106,17 @@ public:
     { Symbol::defPrintf(out); }
 };
 
-class Term : public Terms, protected Function, protected ParenSymbol<Terms, Function::arity>
+class Term : public Terms, protected Function, protected ParenSymbol
 {
 public:
-    /*Term(Variable var) :
-            Symbol(var.getName()) {}
-    Term(Constant c) :
-            Symbol(c.getName()) {}
-    Term(Function* func, std::vector<Term*> _args) :
-            ParenSymbol(func->getName(), _args) {}*/
-
+    Term(Function* f, std::vector<Terms*> _args)
+            : Function(*f),
+              ParenSymbol(_args)
+    {
+        static_assert(_args.size() == arity,
+                      "Кол-во аргументов терма не соответствует арности его функционального символа");
+    }
 };
-
 
 class Modifier : public Symbol
 {
@@ -127,9 +144,15 @@ public:
             : arg1(arg), conn(oper), arg2(arg2) {}
 };
 
-class Atom : public Formula, protected Predicate, protected ParenSymbol<Predicate, Predicate::arity>
+class Atom : public Formula, protected Predicate, protected ParenSymbol
 {
-
+    Atom(Predicate* p, std::vector<Terms*> _args)
+            : Predicate(*p),
+              ParenSymbol(_args)
+    {
+        static_assert(_args.size() == arity,
+                      "Кол-во аргументов атома не соответствует арности его предикатного символа");
+    }
 };
 
 #endif //TEST_BUILD_LOGIC_HPP
