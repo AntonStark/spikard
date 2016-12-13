@@ -120,28 +120,62 @@ public:
 
 class Modifier : public Symbol
 {
-
+public:
+    virtual bool isQuantifier() = 0;
+    virtual bool isLOperation() = 0;
+    virtual unsigned getType() = 0;
+    virtual ~Modifier() {}
 };
 
-enum class LOperation : public Modifier
-{NOT, AND, OR, THAN};
+class LOperation : public Modifier
+{
+public:
+    enum class LType {NOT = 0, AND, OR, THAN};
+    LType type;
+    LOperation(LOperation::LType _type)
+            : Modifier(),
+              type(_type) {}
+
+    bool isQuantifier() override { return false;}
+    bool isLOperation() override { return true;}
+    unsigned getType() override { return type;}
+};
 
 class Quantifier : public Modifier
 {
 public:
+    enum class QType {FORALL = 0, EXISTS};
+    QType type;
     Variable* argument;
-    void print(std::ostream& out) const
-    { Symbol::defPrintf(out); }
+    Quantifier(QType _type, Variable* _arg)
+            : Modifier(),
+              type(_type),
+              argument(_arg) {}
+
+    bool isQuantifier() override { return true;}
+    bool isLOperation() override { return false;}
+    unsigned getType() override { return type;}
+
+    /*void print(std::ostream& out) const
+    { Symbol::defPrintf(out); }*/
 };
 
 class Formula : public Symbol
 {
 public:
     Formula *arg1, *arg2;
-    Modifier* conn;
+    Modifier* mod;
 
-    Formula(Modifier* oper, Formula arg1, Formula arg2 = nullptr)
-            : arg1(arg), conn(oper), arg2(arg2) {}
+    Formula(Modifier* _mod, Formula* arg1, Formula* arg2 = nullptr)
+            : arg1(arg), mod(_mod), arg2(arg2)
+    {
+        static_assert( (mod->isLOperation() && (mod->getType() == 0)) && arg2 == nullptr,
+                       "Отрицание - унарная операция");
+        static_assert( (mod->isLOperation() && (mod->getType() != 0)) && arg2 != nullptr,
+                       "Только отрицание - унарная операция");
+        static_assert(mod->isQuantifier() && arg2 == nullptr,
+                      "При добавлении квантора не должно быть второй формулы");
+    }
 };
 
 class Atom : public Formula, protected Predicate, protected ParenSymbol
