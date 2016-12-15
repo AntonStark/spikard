@@ -11,11 +11,9 @@
 
 class Symbol
 {
-protected:
-    void defPrint(std::ostream& out) const
-    { out << name; }
-public:
+private:
     const std::string name;
+public:
     Symbol() {}
     Symbol(const std::string& _name)
             : name(_name) {}
@@ -23,36 +21,41 @@ public:
             : name(one.name) {}
     virtual ~Symbol() {}
 
-    virtual void print(std::ostream& out = std::cout) const = 0;
-    std::string getName() const
-    { return name; }
+    virtual void print(std::ostream& out = std::cout) const;
+    virtual std::string getName() const; //TODO Использование этого метода при множественном наследовании вызывает неоднозначности
+    bool operator== (const Symbol& one) const;
 };
 
 class Map
 {
-public:
+private:
     const unsigned arity;
+public:
     Map(unsigned _arity)
             : arity(_arity) {}
+    Map(Map& one)
+            : arity(one.arity) {}
     virtual ~Map() {}
+
+    unsigned getArity() const;
+    bool operator== (const Map& one) const;
 };
 
 /*class Terms;
 class Term;
 class Atom;*/
 class Predicate : public Symbol, public Map
-        {
+{
 public:
     Predicate(const std::string& _name, unsigned _arity)
             : Symbol(_name),
               Map(_arity) {}
     Predicate(Predicate& one)
-            : Symbol(one.name),
-              Map(one.arity) {}
+            : Symbol(one),
+              Map(one) {}
     virtual ~Predicate() {}
 
-    void print(std::ostream& out = std::cout) const override
-    { Symbol::defPrint(out); }
+    bool operator== (const Predicate& one) const;
 
     /*const Atom& operator() (std::vector<Terms*> _args);
     { return Atom::Atom(this, _args); }*/
@@ -65,12 +68,11 @@ public:
             : Symbol(_name),
               Map(_arity) {}
     Function(Function& one)
-            : Symbol(one.name),
-              Map(one.arity) {}
+            : Symbol(one),
+              Map(one) {}
     virtual ~Function() {}
 
-    void print(std::ostream& out = std::cout) const override
-    { Symbol::defPrint(out); }
+    bool operator== (const Function& one) const;
 
     /*const Term& operator() (std::vector<Terms*> _args);
     { return Term::Term(this, _args); }*/
@@ -79,11 +81,10 @@ public:
 class Terms : public Symbol
 {
 public:
-    Terms() {}
+    Terms()
+            : Symbol() {}
     Terms(const std::string& _name)
             : Symbol(_name) {}
-    /*virtual void print(std::ostream& out = std::cout) const override
-    { Symbol::defPrint(out); }*/
     virtual ~Terms() {}
 };
 
@@ -93,8 +94,6 @@ public:
     Variable(const std::string& _name)
             : Terms(_name) {}
     virtual ~Variable() {}
-    void print(std::ostream& out = std::cout) const override
-    { Symbol::defPrint(out); }
 };
 
 class Constant : public Terms
@@ -103,28 +102,19 @@ public:
     Constant(const std::string& _name)
             : Terms(_name) {}
     virtual ~Constant() {}
-    void print(std::ostream& out = std::cout) const override
-    { Symbol::defPrint(out); }
 };
 
 class ParenSymbol : public Symbol
 {
-public:
+private:
     std::vector<Terms*> args;
-
+public:
     ParenSymbol(std::vector<Terms*> _args)
-            : args(_args) {}
+            : Symbol(),
+              args(_args) {}
     virtual ~ParenSymbol() {}
 
-    virtual void print(std::ostream& out = std::cout) const override
-    {
-        out << '(';
-        for (unsigned i = 0; i < args.size()-1; ++i)
-        { args[i]->print(out); out << ", "; }
-        if (!args.empty())
-            args.back()->print(out);
-        out << ')';
-    }
+    virtual void print(std::ostream& out = std::cout) const override;
 };
 
 class Term : public Terms, protected Function, protected ParenSymbol
@@ -140,19 +130,16 @@ public:
     }
     virtual ~Term() {}
 
-    virtual void print(std::ostream& out = std::cout) const override
-    {
-        Function::print(out);
-        ParenSymbol::print(out);
-    }
+    std::string getName() const override;
+    virtual void print(std::ostream& out = std::cout) const override;
 };
 
-class Modifier : public Symbol
+class Modifier : public virtual Symbol
 {
 public:
-    virtual bool isQuantifier() = 0;
-    virtual bool isLOperation() = 0;
-    virtual unsigned getType() = 0;
+    virtual bool isQuantifier() const = 0;
+    virtual bool isLOperation() const = 0;
+    virtual unsigned getType() const = 0;
     virtual ~Modifier() {}
 };
 
@@ -160,59 +147,47 @@ class LOperation : public Modifier
 {
 public:
     enum class LType {NOT = 0, AND, OR, THAN};
-    LType type;
+private:
+    const LType type;
+public:
     LOperation(LOperation::LType _type)
             : Modifier(),
               type(_type) {}
     virtual ~LOperation() {}
 
-    bool isQuantifier() override { return false;}
-    bool isLOperation() override { return true;}
-    unsigned getType() override { return static_cast<unsigned>(type);}
+    bool isQuantifier() const override { return false;}
+    bool isLOperation() const override { return true;}
+    unsigned getType() const override { return static_cast<unsigned>(type);}
 
-    void print(std::ostream& out = std::cout) const override
-    {
-        switch (type)
-        {
-            case LType::NOT : { out << "\\not"; break; }
-            case LType::AND : { out << "\\and"; break; }
-            case LType::OR  : { out << "\\or";  break; }
-            case LType::THAN: { out << "\\than";break; }
-        }
-    }
+    void print(std::ostream& out = std::cout) const override;
 };
 
 class Quantifier : public Modifier
 {
 public:
     enum class QType {FORALL = 0, EXISTS};
-    QType type;
-    Variable* arg;
+private:
+    const QType type;
+    const Variable* arg;
+public:
     Quantifier(QType _type, Variable* _arg)
             : Modifier(),
               type(_type), arg(_arg) {}
     virtual ~Quantifier() {}
 
-    bool isQuantifier() override { return true;}
-    bool isLOperation() override { return false;}
-    unsigned getType() override { return static_cast<unsigned>(type);}
+    bool isQuantifier() const override { return true;}
+    bool isLOperation() const override { return false;}
+    unsigned getType() const override { return static_cast<unsigned>(type);}
 
-    void print(std::ostream& out = std::cout) const override
-    {
-        if (type == QType::FORALL)
-            out << "\\forall";
-        else
-            out << "\\exists";
-        arg->print(out);
-    }
+    void print(std::ostream& out = std::cout) const override;
 };
 
-class Formula : public Symbol
+class Formula : public virtual Symbol
 {
-public:
+private:
     Formula *arg1, *arg2;
     Modifier* mod;
-
+public:
     Formula()
             : arg1(nullptr), mod(nullptr), arg2(nullptr) {}
     Formula(Modifier* _mod, Formula* arg1, Formula* arg2 = nullptr)
@@ -228,29 +203,7 @@ public:
     }
     virtual ~Formula() {}
 
-    void print(std::ostream& out = std::cout) const override
-    {
-        if (!arg1)
-            return;
-        if (mod)
-        {
-            if (arg2)
-            {
-                arg1->print(out);
-                mod->print(out);
-                mod->print(out);
-            }
-            else
-            {
-                mod->print(out);
-                arg1->print(out);
-            }
-        }
-        else
-        {
-            arg1->print(out);
-        }
-    }
+    void print(std::ostream& out = std::cout) const override;
 };
 
 class Atom : public Formula, protected Predicate, protected ParenSymbol
@@ -261,17 +214,13 @@ public:
               Predicate(*p),
               ParenSymbol(_args)
     {
-        arg1 = this;
        /* static_assert(args.size() == arity,
                       "Кол-во аргументов атома не соответствует арности его предикатного символа");*/
     }
     virtual ~Atom() {}
 
-    void print(std::ostream& out = std::cout) const override
-    {
-        Predicate::print(out);
-        ParenSymbol::print(out);
-    }
+    std::string getName() const override;
+    void print(std::ostream& out = std::cout) const override;
 };
 
 /*const Atom& Predicate::operator() (std::vector<Terms*> _args)
