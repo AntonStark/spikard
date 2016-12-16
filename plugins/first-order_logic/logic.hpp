@@ -9,20 +9,39 @@
 #include <iostream>
 #include <vector>
 
-class Symbol
+class Printable
+{
+public:
+    virtual ~Printable() {}
+
+    virtual void print(std::ostream& out = std::cout) const = 0;
+};
+
+class Named
 {
 private:
     const std::string name;
 public:
-    Symbol() {}
-    Symbol(const std::string& _name)
+    Named(const std::string& _name)
             : name(_name) {}
-    Symbol(Symbol& one)
+    Named(Named& one)
             : name(one.name) {}
+    ~Named() {}
+
+    std::string getName() const;
+    bool operator== (const Named& one) const;
+};
+
+class Symbol : public virtual Printable, protected Named
+{
+public:
+    Symbol(const std::string& _name)
+            : Named(_name) {}
+    Symbol(Symbol& one)
+            : Named(one) {}
     virtual ~Symbol() {}
 
-    virtual void print(std::ostream& out = std::cout) const;
-    virtual std::string getName() const; //TODO Использование этого метода при множественном наследовании вызывает неоднозначности
+    void print(std::ostream& out = std::cout) const override;
     bool operator== (const Symbol& one) const;
 };
 
@@ -78,40 +97,35 @@ public:
     { return Term::Term(this, _args); }*/
 };
 
-class Terms : public Symbol
+class Terms : public virtual Printable
 {
 public:
-    Terms()
-            : Symbol() {}
-    Terms(const std::string& _name)
-            : Symbol(_name) {}
     virtual ~Terms() {}
 };
 
-class Variable : public Terms
+class Variable : public Terms, public Symbol
 {
 public:
     Variable(const std::string& _name)
-            : Terms(_name) {}
+            : Symbol(_name) {}
     virtual ~Variable() {}
 };
 
-class Constant : public Terms
+class Constant : public Terms, public Symbol
 {
 public:
     Constant(const std::string& _name)
-            : Terms(_name) {}
+            : Symbol(_name) {}
     virtual ~Constant() {}
 };
 
-class ParenSymbol : public Symbol
+class ParenSymbol : public virtual Printable
 {
 private:
     std::vector<Terms*> args;
 public:
     ParenSymbol(std::vector<Terms*> _args)
-            : Symbol(),
-              args(_args) {}
+            : args(_args) {}
     virtual ~ParenSymbol() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
@@ -121,8 +135,7 @@ class Term : public Terms, protected Function, protected ParenSymbol
 {
 public:
     Term(Function* f, std::vector<Terms*> _args)
-            : Terms(),
-              Function(*f),
+            : Function(*f),
               ParenSymbol(_args)
     {
        /* static_assert(args.size() == arity,
@@ -130,11 +143,10 @@ public:
     }
     virtual ~Term() {}
 
-    std::string getName() const override;
     virtual void print(std::ostream& out = std::cout) const override;
 };
 
-class Modifier : public virtual Symbol
+class Modifier : public virtual Printable
 {
 public:
     virtual bool isQuantifier() const = 0;
@@ -151,8 +163,7 @@ private:
     const LType type;
 public:
     LOperation(LOperation::LType _type)
-            : Modifier(),
-              type(_type) {}
+            : type(_type) {}
     virtual ~LOperation() {}
 
     bool isQuantifier() const override { return false;}
@@ -171,8 +182,7 @@ private:
     const Variable* arg;
 public:
     Quantifier(QType _type, Variable* _arg)
-            : Modifier(),
-              type(_type), arg(_arg) {}
+            : type(_type), arg(_arg) {}
     virtual ~Quantifier() {}
 
     bool isQuantifier() const override { return true;}
@@ -182,7 +192,7 @@ public:
     void print(std::ostream& out = std::cout) const override;
 };
 
-class Formula : public virtual Symbol
+class Formula : public virtual Printable
 {
 private:
     Formula *arg1, *arg2;
@@ -191,8 +201,7 @@ public:
     Formula()
             : arg1(nullptr), mod(nullptr), arg2(nullptr) {}
     Formula(Modifier* _mod, Formula* arg1, Formula* arg2 = nullptr)
-            : Symbol(),
-              arg1(arg1), mod(_mod), arg2(arg2)
+            : arg1(arg1), mod(_mod), arg2(arg2)
     {
         /*static_assert( (mod->isLOperation() && (mod->getType() == 0)) && arg2 == nullptr,
                        "Отрицание - унарная операция");
@@ -219,7 +228,6 @@ public:
     }
     virtual ~Atom() {}
 
-    std::string getName() const override;
     void print(std::ostream& out = std::cout) const override;
 };
 

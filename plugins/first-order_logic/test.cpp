@@ -12,7 +12,7 @@ int main(void)
 
     Function f2("mul", 2);
     Term t2(&f2, {&t1, &t1});
-    cout << t2.getName() << endl;
+//    cout << t2.getName() << endl;
 
     Constant n("0");
     Predicate p1(">=", 2);

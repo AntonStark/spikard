@@ -4,15 +4,14 @@
 
 #include "logic.hpp"
 
-std::string Symbol::getName() const
+std::string Named::getName() const
 { return name; }
-std::string Term::getName() const
-{ return Function::getName(); }
-std::string Atom::getName() const
-{ return Predicate::getName(); }
+
+unsigned Map::getArity() const
+{ return arity; }
 
 void Symbol::print(std::ostream &out) const
-{ out << name; }
+{ out << getName(); }
 void ParenSymbol::print(std::ostream &out) const
 {
     out << '(';
@@ -69,17 +68,17 @@ void Formula::print(std::ostream &out) const
         arg1->print(out);
     }
 }
+
 void Atom::print(std::ostream &out) const
 {
     Predicate::print(out);
     ParenSymbol::print(out);
 }
 
-unsigned Map::getArity() const
-{ return arity; }
-
-bool Symbol::operator==(const Symbol &one) const
+bool Named::operator==(const Named &one) const
 { return (name == one.name); }
+bool Symbol::operator==(const Symbol &one) const
+{ return (this->Named::operator==)(one); }
 bool Map::operator==(const Map &one) const
 { return (arity == one.arity); }
 bool Predicate::operator==(const Predicate &one) const
