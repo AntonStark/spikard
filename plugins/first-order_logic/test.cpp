@@ -1,5 +1,6 @@
 #include <sstream>
 #include "logic.hpp"
+#include "signature.hpp"
 
 using namespace std;
 
@@ -34,7 +35,10 @@ int main(void)
     cout << ss.str();
 
     cout << "add == mul? " << (f1 == f2) << endl;
-//    Predicate ad("add", 2);
-//    cout << "f:add == p:add? " << (f1 == ad) << endl; //OK, сравнивать Function и Predicate нельзя
+
+    Signature signature({{">=",2}, {"=",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
+    cout<<flush;cerr<<flush;
+
+//    Formula formula("\\forall a")
     return 0;
 }

@@ -4,6 +4,12 @@
 
 #include "logic.hpp"
 
+std::ostream& operator<< (std::ostream& os, const Printable& pr)
+{
+    pr.print(os);
+    return os;
+}
+
 std::string Named::getName() const
 { return name; }
 
@@ -30,18 +36,18 @@ void LOperation::print(std::ostream &out) const
 {
     switch (type)
     {
-        case LType::NOT : { out << "\\not"; break; }
-        case LType::AND : { out << "\\and"; break; }
-        case LType::OR  : { out << "\\or";  break; }
-        case LType::THAN: { out << "\\than";break; }
+        case LType::NOT : { out << "\\lnot "; break; }
+        case LType::AND : { out << "\\land "; break; }
+        case LType::OR  : { out << "\\lor ";  break; }
+        case LType::THAN: { out << "\\Rightarrow "; break; }
     }
 }
 void Quantifier::print(std::ostream &out) const
 {
     switch (type)
     {
-        case QType::FORALL : { out << "\\forall"; break;}
-        case QType::EXISTS : { out << "\\exists"; break;}
+        case QType::FORALL : { out << "\\forall "; break;}
+        case QType::EXISTS : { out << "\\exists "; break;}
     }
     arg->print(out);
 }
@@ -49,23 +55,21 @@ void Formula::print(std::ostream &out) const
 {
     if (!arg1)
         return;
-    if (mod)
+    if (!mod)
+        arg1->print(out);
+    else
     {
-        if (arg2)
+        if (!arg2)
+        {
+            mod->print(out);
+            arg1->print(out);
+        }
+        else
         {
             arg1->print(out);
             mod->print(out);
             arg2->print(out);
         }
-        else
-        {
-            mod->print(out);
-            arg1->print(out);
-        }
-    }
-    else
-    {
-        arg1->print(out);
     }
 }
 
@@ -85,3 +89,8 @@ bool Predicate::operator==(const Predicate &one) const
 { return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
 bool Function::operator==(const Function &one) const
 { return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
+
+Formula::Formula(const std::string& foText)
+{
+//TODO распознавание формул из строки
+}

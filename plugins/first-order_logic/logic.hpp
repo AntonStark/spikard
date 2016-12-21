@@ -8,6 +8,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <stdexcept>
 
 class Printable
 {
@@ -15,6 +16,7 @@ public:
     virtual ~Printable() {}
 
     virtual void print(std::ostream& out = std::cout) const = 0;
+    friend std::ostream& operator<<(std::ostream& os, const Printable& pr);
 };
 
 class Named
@@ -32,7 +34,7 @@ public:
     bool operator== (const Named& one) const;
 };
 
-class Symbol : public virtual Printable, protected Named
+class Symbol : public virtual Printable, public Named
 {
 public:
     Symbol(const std::string& _name)
@@ -129,6 +131,13 @@ public:
     virtual ~ParenSymbol() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
+
+    class nArg_arity_error : public std::invalid_argument
+    {
+    public:
+        nArg_arity_error()
+                : std::invalid_argument("Кол-во аргументов не соответствует арности символа.\n") {}
+    };
 };
 
 class Term : public Terms, protected Function, protected ParenSymbol
@@ -138,8 +147,8 @@ public:
             : Function(*f),
               ParenSymbol(_args)
     {
-       /* static_assert(args.size() == arity,
-                      "Кол-во аргументов терма не соответствует арности его функционального символа");*/
+        if (_args.size() != f->getArity())
+            throw nArg_arity_error();
     }
     virtual ~Term() {}
 
@@ -198,18 +207,18 @@ private:
     Formula *arg1, *arg2;
     Modifier* mod;
 public:
-    Formula()
-            : arg1(nullptr), mod(nullptr), arg2(nullptr) {}
+    Formula() : arg1(nullptr), mod(nullptr), arg2(nullptr) {}
     Formula(Modifier* _mod, Formula* arg1, Formula* arg2 = nullptr)
             : arg1(arg1), mod(_mod), arg2(arg2)
     {
-        /*static_assert( (mod->isLOperation() && (mod->getType() == 0)) && arg2 == nullptr,
-                       "Отрицание - унарная операция");
-        static_assert( (mod->isLOperation() && (mod->getType() != 0)) && arg2 != nullptr,
-                       "Только отрицание - унарная операция");
-        static_assert(mod->isQuantifier() && arg2 == nullptr,
-                      "При добавлении квантора не должно быть второй формулы");*/
+        if ( (mod->isLOperation() && (mod->getType() == 0)) && arg2 != nullptr)
+            throw std::invalid_argument("Отрицание - унарная операция.\n");
+        if ( (mod->isLOperation() && (mod->getType() != 0)) && arg2 == nullptr)
+            throw std::invalid_argument("Только отрицание - унарная операция.\n");
+        if (mod->isQuantifier() && arg2 != nullptr)
+            throw std::invalid_argument("При добавлении квантора не должно быть второй формулы.\n");
     }
+    Formula (const std::string& foText);
     virtual ~Formula() {}
 
     void print(std::ostream& out = std::cout) const override;
@@ -219,12 +228,11 @@ class Atom : public Formula, protected Predicate, protected ParenSymbol
 {
 public:
     Atom(Predicate* p, std::vector<Terms*> _args)
-            : Formula(),
-              Predicate(*p),
+            : Predicate(*p),
               ParenSymbol(_args)
     {
-       /* static_assert(args.size() == arity,
-                      "Кол-во аргументов атома не соответствует арности его предикатного символа");*/
+        if(_args.size() != p->getArity())
+            throw nArg_arity_error();
     }
     virtual ~Atom() {}
 
