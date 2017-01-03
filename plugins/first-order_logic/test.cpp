@@ -22,7 +22,6 @@ int main(void)
     Formula fo(q, a);
 
     string buf = "\\forall x^{~} ";
-    Quantifier b(buf);
     Predicate eq("=", 2);
     Atom fo2(&eq, {&x, &o});
 
@@ -37,8 +36,9 @@ int main(void)
     cout << "add == mul? " << (f1 == f2) << endl;
 
     Signature signature({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
+    Interpr inter(signature);
 
-    Formula* formula = interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))", signature);
+    Formula* formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))").get();
 
 
     cout<<flush;cerr<<flush;

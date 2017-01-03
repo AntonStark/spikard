@@ -136,6 +136,17 @@ class ParenSymbol : public virtual Printable
 {
 private:
     std::vector<std::shared_ptr<Terms> > args;
+protected:
+    void argCheck(Map* f, std::vector<Terms*> _args)
+    {
+        if (_args.size() != f->getArity())
+            throw nArg_arity_error();
+    }
+    void argCheck(std::shared_ptr<Map> f, std::vector<std::shared_ptr<Terms> > _args)
+    {
+        if (_args.size() != f->getArity())
+            throw nArg_arity_error();
+    }
 public:
     ParenSymbol(std::vector<Terms*> _args)
     {
@@ -161,17 +172,13 @@ class Term : public Terms, protected Function, protected ParenSymbol
 public:
     Term(Function* f, std::vector<Terms*> _args)
             : Function(*f),
-              ParenSymbol(_args)
-    {
-        if (_args.size() != f->getArity())
-            throw nArg_arity_error();
-    }
+              ParenSymbol(_args) { argCheck(f, _args); }
     Term(const Term& one)
             : Function(one),
               ParenSymbol(one) {}
-    Term(std::pair<const std::string&, unsigned> func, std::vector<std::shared_ptr<Terms> > _args)
-            : Function(func.first, func.second),
-              ParenSymbol(_args) {}
+    Term(std::shared_ptr<Function> f, std::vector<std::shared_ptr<Terms> > _args)
+            : Function(*f.get()),
+              ParenSymbol(_args) { argCheck(f, _args); }
     virtual ~Term() {}
 
     Term* clone() const override { return (new Term(*this)); }
@@ -185,7 +192,6 @@ public:
     virtual bool isLOperation() const = 0;
     virtual unsigned getType() const = 0;
     virtual ~Modifier() {}
-    static std::shared_ptr<Modifier> makeModifier(const std::string& text);
     virtual Modifier* clone() const = 0;
 };
 
@@ -200,7 +206,7 @@ public:
             : type(_type) {}
     LOperation(const LOperation& one)
             : type(one.type) {}
-    LOperation(const std::string& foText);
+//    LOperation(const std::string& foText);
     virtual ~LOperation() {}
 
     bool isQuantifier() const override { return false;}
@@ -208,7 +214,6 @@ public:
     unsigned getType() const override { return static_cast<unsigned>(type);}
 
     void print(std::ostream& out = std::cout) const override;
-    static bool checkForNOT(const std::string& foText);
     LOperation* clone() const override { return (new LOperation(*this)); }
 };
 
@@ -224,7 +229,7 @@ public:
             : type(_type) { arg = std::make_shared<Variable>(_arg); }
     Quantifier(const Quantifier& one)
             : type(one.type) {arg = std::make_shared<Variable>(*one.arg);}
-    Quantifier(const std::string& text);
+//    Quantifier(const std::string& text);
     virtual ~Quantifier() {}
 
     bool isQuantifier() const override { return true;}
@@ -232,7 +237,6 @@ public:
     unsigned getType() const override { return static_cast<unsigned>(type);}
 
     void print(std::ostream& out = std::cout) const override;
-    static bool checkForQuant(const std::string& foText);
     Quantifier* clone() const override { return (new Quantifier(*this)); }
 };
 
@@ -270,17 +274,13 @@ class Atom : public Formulas, protected Predicate, protected ParenSymbol
 public:
     Atom(Predicate* p, std::vector<Terms*> _args)
             : Predicate(*p),
-              ParenSymbol(_args)
-    {
-        if(_args.size() != p->getArity())
-            throw nArg_arity_error();
-    }
+              ParenSymbol(_args) { argCheck(p, _args); }
     Atom(const Atom& one)
             : Predicate(one),
               ParenSymbol(one) {}
-    Atom(std::pair<const std::string&, unsigned> pred, std::vector<std::shared_ptr<Terms> > _args)
-            : Predicate(pred.first, pred.second),
-              ParenSymbol(_args) {}
+    Atom(std::shared_ptr<Predicate> p, std::vector<std::shared_ptr<Terms> > _args)
+            : Predicate(*p.get()),
+              ParenSymbol(_args) { argCheck(p, _args); }
     virtual ~Atom() {}
 
     void print(std::ostream& out = std::cout) const override;
