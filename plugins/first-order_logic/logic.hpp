@@ -9,6 +9,8 @@
 #include <iostream>
 #include <vector>
 #include <stdexcept>
+#include <memory>
+//#include "signature.hpp"
 
 class Printable
 {
@@ -26,11 +28,11 @@ private:
 public:
     Named(const std::string& _name)
             : name(_name) {}
-    Named(Named& one)
+    Named(const Named& one)
             : name(one.name) {}
     ~Named() {}
 
-    std::string getName() const;
+    std::string getName() const { return name; }
     bool operator== (const Named& one) const;
 };
 
@@ -39,7 +41,7 @@ class Symbol : public virtual Printable, public Named
 public:
     Symbol(const std::string& _name)
             : Named(_name) {}
-    Symbol(Symbol& one)
+    Symbol(const Symbol& one)
             : Named(one) {}
     virtual ~Symbol() {}
 
@@ -54,11 +56,11 @@ private:
 public:
     Map(unsigned _arity)
             : arity(_arity) {}
-    Map(Map& one)
+    Map(const Map& one)
             : arity(one.arity) {}
     virtual ~Map() {}
 
-    unsigned getArity() const;
+    unsigned getArity() const { return arity; }
     bool operator== (const Map& one) const;
 };
 
@@ -71,7 +73,7 @@ public:
     Predicate(const std::string& _name, unsigned _arity)
             : Symbol(_name),
               Map(_arity) {}
-    Predicate(Predicate& one)
+    Predicate(const Predicate& one)
             : Symbol(one),
               Map(one) {}
     virtual ~Predicate() {}
@@ -88,7 +90,7 @@ public:
     Function(const std::string& _name, unsigned _arity)
             : Symbol(_name),
               Map(_arity) {}
-    Function(Function& one)
+    Function(const Function& one)
             : Symbol(one),
               Map(one) {}
     virtual ~Function() {}
@@ -103,6 +105,7 @@ class Terms : public virtual Printable
 {
 public:
     virtual ~Terms() {}
+    virtual Terms* clone() const = 0;
 };
 
 class Variable : public Terms, public Symbol
@@ -110,7 +113,11 @@ class Variable : public Terms, public Symbol
 public:
     Variable(const std::string& _name)
             : Symbol(_name) {}
+    Variable(const Variable& one)
+            : Symbol(one) {}
     virtual ~Variable() {}
+
+    Variable* clone() const override { return (new Variable(*this)); }
 };
 
 class Constant : public Terms, public Symbol
@@ -118,15 +125,24 @@ class Constant : public Terms, public Symbol
 public:
     Constant(const std::string& _name)
             : Symbol(_name) {}
+    Constant(const Constant& one)
+            : Symbol(one) {}
     virtual ~Constant() {}
+
+    Constant* clone() const override { return (new Constant(*this)); }
 };
 
 class ParenSymbol : public virtual Printable
 {
 private:
-    std::vector<Terms*> args;
+    std::vector<std::shared_ptr<Terms> > args;
 public:
     ParenSymbol(std::vector<Terms*> _args)
+    {
+        for (auto t : _args)
+            args.push_back(std::shared_ptr<Terms>(t->clone()));
+    }
+    ParenSymbol(std::vector<std::shared_ptr<Terms> > _args)
             : args(_args) {}
     virtual ~ParenSymbol() {}
 
@@ -150,8 +166,15 @@ public:
         if (_args.size() != f->getArity())
             throw nArg_arity_error();
     }
+    Term(const Term& one)
+            : Function(one),
+              ParenSymbol(one) {}
+    Term(std::pair<const std::string&, unsigned> func, std::vector<std::shared_ptr<Terms> > _args)
+            : Function(func.first, func.second),
+              ParenSymbol(_args) {}
     virtual ~Term() {}
 
+    Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
 
@@ -162,6 +185,8 @@ public:
     virtual bool isLOperation() const = 0;
     virtual unsigned getType() const = 0;
     virtual ~Modifier() {}
+    static std::shared_ptr<Modifier> makeModifier(const std::string& text);
+    virtual Modifier* clone() const = 0;
 };
 
 class LOperation : public Modifier
@@ -169,10 +194,13 @@ class LOperation : public Modifier
 public:
     enum class LType {NOT = 0, AND, OR, THAN};
 private:
-    const LType type;
+    LType type;
 public:
     LOperation(LOperation::LType _type)
             : type(_type) {}
+    LOperation(const LOperation& one)
+            : type(one.type) {}
+    LOperation(const std::string& foText);
     virtual ~LOperation() {}
 
     bool isQuantifier() const override { return false;}
@@ -180,6 +208,8 @@ public:
     unsigned getType() const override { return static_cast<unsigned>(type);}
 
     void print(std::ostream& out = std::cout) const override;
+    static bool checkForNOT(const std::string& foText);
+    LOperation* clone() const override { return (new LOperation(*this)); }
 };
 
 class Quantifier : public Modifier
@@ -187,11 +217,14 @@ class Quantifier : public Modifier
 public:
     enum class QType {FORALL = 0, EXISTS};
 private:
-    const QType type;
-    const Variable* arg;
+    QType type;
+    std::shared_ptr<Variable> arg;
 public:
-    Quantifier(QType _type, Variable* _arg)
-            : type(_type), arg(_arg) {}
+    Quantifier(QType _type, const Variable& _arg)
+            : type(_type) { arg = std::make_shared<Variable>(_arg); }
+    Quantifier(const Quantifier& one)
+            : type(one.type) {arg = std::make_shared<Variable>(*one.arg);}
+    Quantifier(const std::string& text);
     virtual ~Quantifier() {}
 
     bool isQuantifier() const override { return true;}
@@ -199,32 +232,40 @@ public:
     unsigned getType() const override { return static_cast<unsigned>(type);}
 
     void print(std::ostream& out = std::cout) const override;
+    static bool checkForQuant(const std::string& foText);
+    Quantifier* clone() const override { return (new Quantifier(*this)); }
 };
 
-class Formula : public virtual Printable
+class Formulas : public virtual Printable
+{
+public:
+    virtual bool isAtom() const { return false;};
+    virtual ~Formulas() {};
+
+    virtual Formulas* clone() const = 0;
+};
+
+class Formula : public Formulas
 {
 private:
-    Formula *arg1, *arg2;
-    Modifier* mod;
+    std::shared_ptr<Formulas> arg1, arg2;
+    std::shared_ptr<Modifier> mod;
 public:
-    Formula() : arg1(nullptr), mod(nullptr), arg2(nullptr) {}
-    Formula(Modifier* _mod, Formula* arg1, Formula* arg2 = nullptr)
-            : arg1(arg1), mod(_mod), arg2(arg2)
-    {
-        if ( (mod->isLOperation() && (mod->getType() == 0)) && arg2 != nullptr)
-            throw std::invalid_argument("Отрицание - унарная операция.\n");
-        if ( (mod->isLOperation() && (mod->getType() != 0)) && arg2 == nullptr)
-            throw std::invalid_argument("Только отрицание - унарная операция.\n");
-        if (mod->isQuantifier() && arg2 != nullptr)
-            throw std::invalid_argument("При добавлении квантора не должно быть второй формулы.\n");
-    }
-    Formula (const std::string& foText);
+    Formula(const Formula& one)
+            : arg1(one.arg1), mod(one.mod), arg2(one.arg2) {}
+    Formula(const Modifier& _mod, const Formulas& F);
+    Formula(const LOperation& _mod, const Formulas& F1, const Formulas& F2);
+    Formula(std::shared_ptr<Modifier> _mod,
+            std::shared_ptr<Formulas> F1,
+            std::shared_ptr<Formulas> F2 = nullptr)
+            : arg1(F1), mod(_mod), arg2(F2) {}
     virtual ~Formula() {}
 
     void print(std::ostream& out = std::cout) const override;
+    Formula* clone() const override { return (new Formula(*this)); }
 };
 
-class Atom : public Formula, protected Predicate, protected ParenSymbol
+class Atom : public Formulas, protected Predicate, protected ParenSymbol
 {
 public:
     Atom(Predicate* p, std::vector<Terms*> _args)
@@ -234,9 +275,17 @@ public:
         if(_args.size() != p->getArity())
             throw nArg_arity_error();
     }
+    Atom(const Atom& one)
+            : Predicate(one),
+              ParenSymbol(one) {}
+    Atom(std::pair<const std::string&, unsigned> pred, std::vector<std::shared_ptr<Terms> > _args)
+            : Predicate(pred.first, pred.second),
+              ParenSymbol(_args) {}
     virtual ~Atom() {}
 
     void print(std::ostream& out = std::cout) const override;
+    bool isAtom() const override { return true;}
+    Atom* clone() const override { return (new Atom(*this)); }
 };
 
 /*const Atom& Predicate::operator() (std::vector<Terms*> _args)

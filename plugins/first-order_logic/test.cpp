@@ -13,21 +13,21 @@ int main(void)
 
     Function f2("mul", 2);
     Term t2(&f2, {&t1, &t1});
-//    cout << t2.getName() << endl;
 
     Constant n("0");
     Predicate p1(">=", 2);
     Atom a(&p1, {&t2, &n});
 
-    Quantifier q(Quantifier::QType::FORALL, &x);
-    Formula fo(&q, &a);
+    Quantifier q(Quantifier::QType::FORALL, x);
+    Formula fo(q, a);
 
+    string buf = "\\forall x^{~} ";
+    Quantifier b(buf);
     Predicate eq("=", 2);
     Atom fo2(&eq, {&x, &o});
 
     LOperation l(LOperation::LType::AND);
-    Formula fa(&l, &fo, &fo2);
-
+    Formula fa(l, fo, fo2);
     stringstream ss;
     fo.print(ss); ss << endl;
     fa.print(ss); ss << endl;
@@ -36,9 +36,11 @@ int main(void)
 
     cout << "add == mul? " << (f1 == f2) << endl;
 
-    Signature signature({{">=",2}, {"=",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
-    cout<<flush;cerr<<flush;
+    Signature signature({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
 
-//    Formula formula("\\forall a")
+    Formula* formula = interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))", signature);
+
+
+    cout<<flush;cerr<<flush;
     return 0;
 }

@@ -9,6 +9,7 @@
 #include <map>
 #include <list>
 #include <set>
+
 #include "logic.hpp"
 
 class Signature
@@ -65,7 +66,7 @@ public:
     { return (R.find(name) != R.end()); }
     bool checkFuncName(const std::string& name) const
     { return (F.find(name) != F.end()); }
-    bool checkConstantName(const std::string& name) const
+    bool checkConsName(const std::string &name) const
     { return (C.find(name) != C.end()); }
     nameT checkName(const std::string& name) const
     {
@@ -73,7 +74,7 @@ public:
             return nameT::predicate;
         if (checkFuncName(name))
             return nameT::function;
-        if (checkConstantName(name))
+        if (checkConsName(name))
             return nameT::constant;
         return nameT::none;
     }
@@ -96,6 +97,153 @@ public:
             throw sym_exists(name);
         C.insert(name);
     }
+
+//    std::map<std::string, std::shared_ptr<Predicate> > predStorage;
+
+    //TODO возвращать что-то более полезное, одновременно показывая что нашли, если нашли
+    std::string checkPredNameAtBegin(const std::string& source)
+    {
+        unsigned long maxLen = 0;
+        for (auto r : R)
+            if (r.first.length() > maxLen)
+                maxLen = r.first.length();
+        if (maxLen > source.length())
+            maxLen = source.length();
+        for (unsigned long i = 1; i <= maxLen; ++i)
+            if (checkPredName(source.substr(0, i)))
+                return source.substr(0, i);
+        return "";
+    }
+    std::string checkFuncNameAtBegin(const std::string& source)
+    {
+        unsigned long maxLen = 0;
+        for (auto f : F)
+            if (f.first.length() > maxLen)
+                maxLen = f.first.length();
+        if (maxLen > source.length())
+            maxLen = source.length();
+        for (unsigned long i = 1; i <= maxLen; ++i)
+            if (checkFuncName(source.substr(0, i)))
+                return source.substr(0, i);
+        return "";
+    }
+    std::string checkConsNameAtBegin(const std::string& source)
+    {
+        unsigned long maxLen = 0;
+        for (auto c : C)
+            if (c.length() > maxLen)
+                maxLen = c.length();
+        if (maxLen > source.length())
+            maxLen = source.length();
+        for (unsigned long i = 1; i <= maxLen; ++i)
+            if (checkConsName(source.substr(0, i)))
+                return source.substr(0, i);
+        return "";
+    }
+
+    ///возможные следующие квази-лексемы:
+    enum class Token {quant, loper, arglist, paren, pred, func, cons, space, literal, err};
+    /*enum class token {  tok_qu, tok_lo, tok_al, tok_pa,
+                        tok_f, tok_p, tok_c, tok_s, tok_l};*/
+    ///квантор, логическая операция, скобки перечисления, скобки выделения,
+    ///функциональный символ, предикатный символ, константный -, пробел, литерал
+    Token lexer(std::string& source, std::string& word)
+    {
+        if (source.front() == ' ')
+        {
+            word = source.substr(0, 1);
+            source.erase(source.begin());
+            return Token::space;
+        }
+        if (source[0] == '\\')
+        {
+            if (source[1] == 'f' || source[1] == 'e')
+            {
+                if ((source.compare(0, 7, "\\forall") == 0) ||
+                    (source.compare(0, 7, "\\exists") == 0))
+                {
+                    word = source.substr(0, 7);
+                    source.erase(0, 7);
+                    return Token::quant;
+                }
+            }
+            else if (source[1] == 'l' || source[1] == 'R')
+            {
+                if (source.compare(0, 5, "\\lnot") == 0)
+                {
+                    word = source.substr(0, 5);
+                    source.erase(0, 5);
+                    return Token::loper;
+                }
+                if (source.compare(0, 5, "\\land") == 0)
+                {
+                    word = source.substr(0, 5);
+                    source.erase(0, 5);
+                    return Token::loper;
+                }
+                if (source.compare(0, 4, "\\lor") == 0)
+                {
+                    word = source.substr(0, 4);
+                    source.erase(0, 4);
+                    return Token::loper;
+                }
+                if (source.compare(0, 11, "\\Rightarrow") == 0)
+                {
+                    word = source.substr(0, 11);
+                    source.erase(0, 11);
+                    return Token::loper;
+                }
+            }
+        }
+        if (source.front() == '(')
+        {
+            unsigned depth = 1, i = 1;
+            bool arglist = false;
+            while (i < source.length() && depth > 0)
+            {
+                if (source[i] == ',' && depth == 1)
+                    arglist = true;
+                if (source[i] == '(')
+                    ++depth;
+                else if (source[i] == ')')
+                    --depth;
+                ++i;
+            }
+            word = source.substr(0, i);
+            source.erase(0, i);
+            if (depth == 0)
+                if (arglist)
+                    return Token::arglist;
+                else
+                    return Token::paren;
+            else
+                return Token::err;
+        }
+        word = checkPredNameAtBegin(source);
+        if (word.length() > 0)
+        { source.erase(0, word.length()); return Token::pred; }
+        word = checkFuncNameAtBegin(source);
+        if (word.length() > 0)
+        { source.erase(0, word.length()); return Token::func; }
+        word = checkConsNameAtBegin(source);
+        if (word.length() > 0)
+        { source.erase(0, word.length()); return Token::cons; }
+
+        word = source.substr(0, 1);
+        source.erase(source.begin());
+        return Token::literal;
+    }
 };
+
+void prepareForName(std::string& _name);
+size_t findPairBracket(const std::string& source, size_t pos);
+void stripBrackets(std::string& text);
+
+Formula* interpretFormula(std::string foText, Signature& sigma);
+bool checkFBegin(const std::string& foText, Signature& sigma);
+bool checkForAtom(const std::string& text, std::string& pred, std::string& paren, Signature& sigma);
+std::vector<std::shared_ptr<Terms> > getTermsFromParen(const std::string& paren, Signature& sigma);
+inline std::shared_ptr<Formulas> makeFormulas(const std::string& source, Signature& sigma);
+bool splitByTopLevelLO(std::string source, std::string& left, LOperation::LType& type, std::string& right);
 
 #endif //TEST_BUILD_SIGNATURE_HPP

@@ -4,18 +4,25 @@
 
 #include "logic.hpp"
 
+bool Named::operator==(const Named &one) const
+{ return (name == one.name); }
+bool Symbol::operator==(const Symbol &one) const
+{ return (this->Named::operator==)(one); }
+bool Map::operator==(const Map &one) const
+{ return (arity == one.arity); }
+bool Predicate::operator==(const Predicate &one) const
+{ return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
+bool Function::operator==(const Function &one) const
+{ return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
+
+
+
+
 std::ostream& operator<< (std::ostream& os, const Printable& pr)
 {
     pr.print(os);
     return os;
 }
-
-std::string Named::getName() const
-{ return name; }
-
-unsigned Map::getArity() const
-{ return arity; }
-
 void Symbol::print(std::ostream &out) const
 { out << getName(); }
 void ParenSymbol::print(std::ostream &out) const
@@ -62,35 +69,111 @@ void Formula::print(std::ostream &out) const
         if (!arg2)
         {
             mod->print(out);
-            arg1->print(out);
+            if (arg1->isAtom())
+                arg1->print(out);
+            else
+            {
+                out<<'(';
+                arg1->print(out);
+                out<<')';
+            }
         }
         else
         {
-            arg1->print(out);
+            if (arg1->isAtom())
+                arg1->print(out);
+            else
+            {
+                out<<'(';
+                arg1->print(out);
+                out<<')';
+            }
             mod->print(out);
-            arg2->print(out);
+            if (arg2->isAtom())
+                arg2->print(out);
+            else
+            {
+                out<<'(';
+                arg2->print(out);
+                out<<')';
+            }
         }
     }
 }
-
 void Atom::print(std::ostream &out) const
 {
     Predicate::print(out);
     ParenSymbol::print(out);
 }
 
-bool Named::operator==(const Named &one) const
-{ return (name == one.name); }
-bool Symbol::operator==(const Symbol &one) const
-{ return (this->Named::operator==)(one); }
-bool Map::operator==(const Map &one) const
-{ return (arity == one.arity); }
-bool Predicate::operator==(const Predicate &one) const
-{ return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
-bool Function::operator==(const Function &one) const
-{ return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
 
-Formula::Formula(const std::string& foText)
+
+Formula::Formula(const Modifier& _mod, const Formulas& F)
 {
-//TODO распознавание формул из строки
+    if (_mod.isLOperation() && (_mod.getType() != 0) )
+        throw std::invalid_argument("Использована не унарная операция.\n");
+
+    mod = std::shared_ptr<Modifier>(_mod.clone());
+    arg1 = std::shared_ptr<Formulas>(F.clone());
+    arg2 = nullptr;
+}
+Formula::Formula(const LOperation& _mod, const Formulas& F1, const Formulas& F2)
+{
+    if (_mod.getType() == 0)
+        throw std::invalid_argument("Отрицание - не бинарная операция.\n");
+
+    mod = std::shared_ptr<Modifier>(_mod.clone());
+    arg1 = std::shared_ptr<Formulas>(F1.clone());
+    arg2 = std::shared_ptr<Formulas>(F2.clone());
+}
+
+
+
+
+LOperation::LOperation(const std::string& text)
+{
+    if (text.compare(0, 5, "\\lnot") == 0)
+    { type = LOperation::LType::NOT; }
+    else if (text.compare(0, 5, "\\land") == 0)
+    { type = LOperation::LType::AND; }
+    else if (text.compare(0, 4, "\\lor") == 0)
+    { type = LOperation::LType::OR; }
+    else if (text.compare(0, 11, "\\Rightarrow") == 0)
+    { type = LOperation::LType::THAN; }
+    else
+        throw std::invalid_argument("Ошибка в LOperation(str) [str = " + text + "]\n");
+}
+Quantifier::Quantifier(const std::string& text)
+{
+    if (text.compare(0, 7, "\\forall") == 0)
+    { type = Quantifier::QType::FORALL; }
+    else if (text.compare(0, 7, "\\exists") == 0)
+    { type = Quantifier::QType::EXISTS; }
+    else
+        throw std::invalid_argument("Ошибка в Quantifier(str) [str = " + text + "]\n");
+
+    std::string temp = text.substr(7);
+    //TODO эту группу методов тоже следует перенести в библиотеку сигнатуры
+//    Named::prepareForName(temp);
+    arg = std::make_shared<Variable>(temp);
+}
+std::shared_ptr<Modifier> Modifier::makeModifier(const std::string& text)
+{
+    if (Quantifier::checkForQuant(text))
+    { return std::make_shared<Quantifier>(text); }
+    else if (LOperation::checkForNOT(text))
+    { return std::make_shared<LOperation>(text); }
+    else
+    { throw std::invalid_argument("Ошибка в makeModifier(str) [str = " + text + "]\n");}
+}
+
+
+
+
+bool LOperation::checkForNOT(const std::string& foText)
+{ return (foText.compare(0, 5, "\\lnot") == 0); }
+bool Quantifier::checkForQuant(const std::string& foText)
+{
+    return (foText.compare(0, 7, "\\forall") == 0 ||
+            foText.compare(0, 7, "\\exists") == 0);
 }
