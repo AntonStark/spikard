@@ -7,10 +7,9 @@
 
 #include <string>
 #include <iostream>
-#include <vector>
+#include <list>
 #include <stdexcept>
 #include <memory>
-//#include "signature.hpp"
 
 class Printable
 {
@@ -26,10 +25,8 @@ class Named
 private:
     const std::string name;
 public:
-    Named(const std::string& _name)
-            : name(_name) {}
-    Named(const Named& one)
-            : name(one.name) {}
+    Named(const std::string& _name) : name(_name) {}
+    Named(const Named& one) : name(one.name) {}
     ~Named() {}
 
     std::string getName() const { return name; }
@@ -39,10 +36,8 @@ public:
 class Symbol : public virtual Printable, public Named
 {
 public:
-    Symbol(const std::string& _name)
-            : Named(_name) {}
-    Symbol(const Symbol& one)
-            : Named(one) {}
+    Symbol(const std::string& _name) : Named(_name) {}
+    Symbol(const Symbol& one) : Named(one) {}
     virtual ~Symbol() {}
 
     void print(std::ostream& out = std::cout) const override;
@@ -54,10 +49,8 @@ class Map
 private:
     const unsigned arity;
 public:
-    Map(unsigned _arity)
-            : arity(_arity) {}
-    Map(const Map& one)
-            : arity(one.arity) {}
+    Map(unsigned _arity) : arity(_arity) {}
+    Map(const Map& one) : arity(one.arity) {}
     virtual ~Map() {}
 
     unsigned getArity() const { return arity; }
@@ -71,11 +64,9 @@ class Predicate : public Symbol, public Map
 {
 public:
     Predicate(const std::string& _name, unsigned _arity)
-            : Symbol(_name),
-              Map(_arity) {}
+            : Symbol(_name), Map(_arity) {}
     Predicate(const Predicate& one)
-            : Symbol(one),
-              Map(one) {}
+            : Symbol(one), Map(one) {}
     virtual ~Predicate() {}
 
     bool operator== (const Predicate& one) const;
@@ -88,11 +79,9 @@ class Function : public Symbol, public Map
 {
 public:
     Function(const std::string& _name, unsigned _arity)
-            : Symbol(_name),
-              Map(_arity) {}
+            : Symbol(_name), Map(_arity) {}
     Function(const Function& one)
-            : Symbol(one),
-              Map(one) {}
+            : Symbol(one), Map(one) {}
     virtual ~Function() {}
 
     bool operator== (const Function& one) const;
@@ -111,10 +100,8 @@ public:
 class Variable : public Terms, public Symbol
 {
 public:
-    Variable(const std::string& _name)
-            : Symbol(_name) {}
-    Variable(const Variable& one)
-            : Symbol(one) {}
+    Variable(const std::string& _name) : Symbol(_name) {}
+    Variable(const Variable& one) : Symbol(one) {}
     virtual ~Variable() {}
 
     Variable* clone() const override { return (new Variable(*this)); }
@@ -123,10 +110,8 @@ public:
 class Constant : public Terms, public Symbol
 {
 public:
-    Constant(const std::string& _name)
-            : Symbol(_name) {}
-    Constant(const Constant& one)
-            : Symbol(one) {}
+    Constant(const std::string& _name) : Symbol(_name) {}
+    Constant(const Constant& one) : Symbol(one) {}
     virtual ~Constant() {}
 
     Constant* clone() const override { return (new Constant(*this)); }
@@ -134,51 +119,35 @@ public:
 
 class ParenSymbol : public virtual Printable
 {
-private:
-    std::vector<std::shared_ptr<Terms> > args;
-protected:
-    void argCheck(Map* f, std::vector<Terms*> _args)
-    {
-        if (_args.size() != f->getArity())
-            throw nArg_arity_error();
-    }
-    void argCheck(std::shared_ptr<Map> f, std::vector<std::shared_ptr<Terms> > _args)
-    {
-        if (_args.size() != f->getArity())
-            throw nArg_arity_error();
-    }
 public:
-    ParenSymbol(std::vector<Terms*> _args)
+    typedef std::list<std::shared_ptr<Terms> > TermsList;
+private:
+    TermsList args;
+protected:
+    void argCheck(Map* f, std::list<Terms*> _args);
+    void argCheck(std::shared_ptr<Map> f, TermsList _args);
+public:
+    ParenSymbol(std::list<Terms*> _args)
     {
         for (auto t : _args)
             args.push_back(std::shared_ptr<Terms>(t->clone()));
     }
-    ParenSymbol(std::vector<std::shared_ptr<Terms> > _args)
-            : args(_args) {}
+    ParenSymbol(TermsList _args) : args(_args) {}
     virtual ~ParenSymbol() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
-
-    class nArg_arity_error : public std::invalid_argument
-    {
-    public:
-        nArg_arity_error()
-                : std::invalid_argument("Кол-во аргументов не соответствует арности символа.\n") {}
-    };
+    class nArg_arity_error;
 };
 
 class Term : public Terms, protected Function, protected ParenSymbol
 {
 public:
-    Term(Function* f, std::vector<Terms*> _args)
-            : Function(*f),
-              ParenSymbol(_args) { argCheck(f, _args); }
+    Term(Function* f, std::list<Terms*> _args)
+            : Function(*f), ParenSymbol(_args) { argCheck(f, _args); }
     Term(const Term& one)
-            : Function(one),
-              ParenSymbol(one) {}
-    Term(std::shared_ptr<Function> f, std::vector<std::shared_ptr<Terms> > _args)
-            : Function(*f.get()),
-              ParenSymbol(_args) { argCheck(f, _args); }
+            : Function(one), ParenSymbol(one) {}
+    Term(std::shared_ptr<Function> f, TermsList _args)
+            : Function(*f.get()), ParenSymbol(_args) { argCheck(f, _args); }
     virtual ~Term() {}
 
     Term* clone() const override { return (new Term(*this)); }
@@ -202,11 +171,8 @@ public:
 private:
     LType type;
 public:
-    LOperation(LOperation::LType _type)
-            : type(_type) {}
-    LOperation(const LOperation& one)
-            : type(one.type) {}
-//    LOperation(const std::string& foText);
+    LOperation(LOperation::LType _type) : type(_type) {}
+    LOperation(const LOperation& one) : type(one.type) {}
     virtual ~LOperation() {}
 
     bool isQuantifier() const override { return false;}
@@ -227,9 +193,7 @@ private:
 public:
     Quantifier(QType _type, const Variable& _arg)
             : type(_type) { arg = std::make_shared<Variable>(_arg); }
-    Quantifier(const Quantifier& one)
-            : type(one.type) {arg = std::make_shared<Variable>(*one.arg);}
-//    Quantifier(const std::string& text);
+    Quantifier(const Quantifier& one) : type(one.type) {arg = one.arg;}
     virtual ~Quantifier() {}
 
     bool isQuantifier() const override { return true;}
@@ -272,15 +236,12 @@ public:
 class Atom : public Formulas, protected Predicate, protected ParenSymbol
 {
 public:
-    Atom(Predicate* p, std::vector<Terms*> _args)
-            : Predicate(*p),
-              ParenSymbol(_args) { argCheck(p, _args); }
+    Atom(Predicate* p, std::list<Terms*> _args)
+            : Predicate(*p), ParenSymbol(_args) { argCheck(p, _args); }
     Atom(const Atom& one)
-            : Predicate(one),
-              ParenSymbol(one) {}
-    Atom(std::shared_ptr<Predicate> p, std::vector<std::shared_ptr<Terms> > _args)
-            : Predicate(*p.get()),
-              ParenSymbol(_args) { argCheck(p, _args); }
+            : Predicate(one), ParenSymbol(one) {}
+    Atom(std::shared_ptr<Predicate> p, TermsList _args)
+            : Predicate(*p.get()), ParenSymbol(_args) { argCheck(p, _args); }
     virtual ~Atom() {}
 
     void print(std::ostream& out = std::cout) const override;

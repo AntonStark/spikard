@@ -38,8 +38,11 @@ int main(void)
     Signature signature({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
     Interpr inter(signature);
 
-    Formula* formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))").get();
+    std::shared_ptr<Formula> formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))");
 
+    cout<<'\n';
+    formula->print();
+    cout<<'\n';
 
     cout<<flush;cerr<<flush;
     return 0;

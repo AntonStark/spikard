@@ -28,10 +28,16 @@ void Symbol::print(std::ostream &out) const
 void ParenSymbol::print(std::ostream &out) const
 {
     out << '(';
-    for (unsigned i = 0; i < args.size()-1; ++i)
-    { args[i]->print(out); out << ", "; }
     if (!args.empty())
-        args.back()->print(out);
+    {
+        auto lit = args.begin(), le = args.end();
+        (*lit)->print(out);
+        while (++lit != le)
+        {
+            out << ", ";
+            (*lit)->print(out);
+        }
+    }
     out << ')';
 }
 void Term::print(std::ostream &out) const
@@ -106,6 +112,23 @@ void Atom::print(std::ostream &out) const
     ParenSymbol::print(out);
 }
 
+
+class ParenSymbol::nArg_arity_error : public std::invalid_argument
+{
+public:
+    nArg_arity_error()
+            : std::invalid_argument("Кол-во аргументов не соответствует арности символа.\n") {}
+};
+void ParenSymbol::argCheck(Map* f, std::list<Terms*> _args)
+{
+    if (_args.size() != f->getArity())
+        throw nArg_arity_error();
+}
+void ParenSymbol::argCheck(std::shared_ptr<Map> f, std::list<std::shared_ptr<Terms> > _args)
+{
+    if (_args.size() != f->getArity())
+        throw nArg_arity_error();
+}
 
 
 Formula::Formula(const Modifier& _mod, const Formulas& F)

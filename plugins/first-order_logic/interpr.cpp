@@ -81,8 +81,6 @@ bool splitByTopLevelLO(std::string source, std::string& left, LOperation::LType&
 }
 
 
-
-
 bool Interpr::checkForAtom(const std::string& text, std::string& pred, std::string& paren)
 {
     size_t i = text.find('(');
@@ -182,10 +180,10 @@ inline std::shared_ptr<Formulas> Interpr::makeFormulas(const std::string& source
         return std::shared_ptr<Formula>(interpretFormula(source));
 }
 
-std::vector<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string& paren)
+std::list<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string& paren)
 {
     std::list<std::string> sargs;
-    std::vector<std::shared_ptr<Terms> > args;
+    std::list<std::shared_ptr<Terms> > args;
     size_t i = 0, j;
     do
     {
