@@ -10,6 +10,7 @@
 #include <list>
 #include <stdexcept>
 #include <memory>
+#include <set>
 
 class Printable
 {
@@ -26,8 +27,8 @@ private:
     const std::string name;
 public:
     Named(const std::string& _name) : name(_name) {}
-    Named(const Named& one) : name(one.name) {}
     ~Named() {}
+    Named(const Named& one) : name(one.name) {}
 
     std::string getName() const { return name; }
     bool operator== (const Named& one) const;
@@ -37,8 +38,8 @@ class Symbol : public virtual Printable, public Named
 {
 public:
     Symbol(const std::string& _name) : Named(_name) {}
-    Symbol(const Symbol& one) : Named(one) {}
     virtual ~Symbol() {}
+    Symbol(const Symbol& one) : Named(one) {}
 
     void print(std::ostream& out = std::cout) const override;
     bool operator== (const Symbol& one) const;
@@ -50,89 +51,104 @@ private:
     const unsigned arity;
 public:
     Map(unsigned _arity) : arity(_arity) {}
-    Map(const Map& one) : arity(one.arity) {}
     virtual ~Map() {}
+    Map(const Map& one) : arity(one.arity) {}
 
     unsigned getArity() const { return arity; }
     bool operator== (const Map& one) const;
 };
 
-/*class Terms;
-class Term;
-class Atom;*/
+/*=====================================================*/
+/*=====================================================*/
+/*=====================================================*/
+class Signature;
 class Predicate : public Symbol, public Map
 {
+private:
+//    std::shared_ptr<Signature> sigma;
+    Predicate(const std::string& _name, unsigned _arity/*, Signature* _sigma = nullptr*/)
+            : Symbol(_name), Map(_arity)/*, sigma(_sigma)*/ {}
+    friend class Signature;
 public:
-    Predicate(const std::string& _name, unsigned _arity)
-            : Symbol(_name), Map(_arity) {}
-    Predicate(const Predicate& one)
-            : Symbol(one), Map(one) {}
     virtual ~Predicate() {}
+    Predicate(const Predicate& one)
+            : Symbol(one), Map(one)/*, sigma(one.sigma)*/ {}
 
     bool operator== (const Predicate& one) const;
-
-    /*const Atom& operator() (std::vector<Terms*> _args);
-    { return Atom::Atom(this, _args); }*/
+    typedef std::shared_ptr<Predicate> sh_p;
 };
 
 class Function : public Symbol, public Map
 {
-public:
+private:
     Function(const std::string& _name, unsigned _arity)
             : Symbol(_name), Map(_arity) {}
+    friend class Signature;
+public:
+    virtual ~Function() {}
     Function(const Function& one)
             : Symbol(one), Map(one) {}
-    virtual ~Function() {}
 
     bool operator== (const Function& one) const;
-
-    /*const Term& operator() (std::vector<Terms*> _args);
-    { return Term::Term(this, _args); }*/
+    typedef std::shared_ptr<Function> sh_p;
 };
 
+//TODO Перенести Signature сюда, а всё начиная с Modifier туда. И будет signature.hpp и statements.hpp
+class Variable;
 class Terms : public virtual Printable
 {
+protected:
+    //TODO нужно использовать weak_ptr, иначе двойное удаление
+    //TODO нужно аккуратно управлять созданием (и хранением) всех классов. Позапрещать конструкторы и пусть за всё отвечает сигнатура?
+    std::set<std::shared_ptr<Variable> > vars;
 public:
     virtual ~Terms() {}
     virtual Terms* clone() const = 0;
+    virtual bool isVariable() const { return false; }
+    std::set<std::shared_ptr<Variable> > getVars() const { return vars; };
 };
 
 class Variable : public Terms, public Symbol
 {
 public:
-    Variable(const std::string& _name) : Symbol(_name) {}
+    Variable(const std::string& _name) : Symbol(_name) {/*vars.emplace(this);*/}
     Variable(const Variable& one) : Symbol(one) {}
     virtual ~Variable() {}
 
     Variable* clone() const override { return (new Variable(*this)); }
+    bool isVariable() const override { return true; }
 };
 
 class Constant : public Terms, public Symbol
 {
-public:
+private:
     Constant(const std::string& _name) : Symbol(_name) {}
-    Constant(const Constant& one) : Symbol(one) {}
+    friend class Signature;
+public:
     virtual ~Constant() {}
+    Constant(const Constant& one) : Symbol(one) {}
 
     Constant* clone() const override { return (new Constant(*this)); }
+    typedef std::shared_ptr<Constant> sh_p;
 };
+/*
 
 class ParenSymbol : public virtual Printable
 {
 public:
+    //TODO следует использовать weak_ptr, но это создаёт проблемы в случае [_args]=std::list<Terms*>
+    //TODO vars как объединение vars всех аргументов.
     typedef std::list<std::shared_ptr<Terms> > TermsList;
 private:
     TermsList args;
+    std::set<std::shared_ptr<Variable> > vars;
 protected:
     void argCheck(Map* f, std::list<Terms*> _args);
     void argCheck(std::shared_ptr<Map> f, TermsList _args);
 public:
-    ParenSymbol(std::list<Terms*> _args)
-    {
-        for (auto t : _args)
-            args.push_back(std::shared_ptr<Terms>(t->clone()));
-    }
-    ParenSymbol(TermsList _args) : args(_args) {}
+    ParenSymbol(std::list<Terms*> _args);
+    ParenSymbol(TermsList _args);
+    ParenSymbol(const ParenSymbol& one) : args(one.args), vars(one.vars) {}
     virtual ~ParenSymbol() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
@@ -144,10 +160,10 @@ class Term : public Terms, protected Function, protected ParenSymbol
 public:
     Term(Function* f, std::list<Terms*> _args)
             : Function(*f), ParenSymbol(_args) { argCheck(f, _args); }
-    Term(const Term& one)
-            : Function(one), ParenSymbol(one) {}
     Term(std::shared_ptr<Function> f, TermsList _args)
             : Function(*f.get()), ParenSymbol(_args) { argCheck(f, _args); }
+    Term(const Term& one)
+            : Function(one), ParenSymbol(one) {}
     virtual ~Term() {}
 
     Term* clone() const override { return (new Term(*this)); }
@@ -248,6 +264,7 @@ public:
     bool isAtom() const override { return true;}
     Atom* clone() const override { return (new Atom(*this)); }
 };
+*/
 
 /*const Atom& Predicate::operator() (std::vector<Terms*> _args)
 { return Atom(this, _args); }

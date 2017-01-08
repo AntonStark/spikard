@@ -15,12 +15,13 @@
 class Signature
 {
 private:
-    std::map<std::string, unsigned> R;
-    std::map<std::string, unsigned> F;
-    std::set<std::string> C;
+    std::map<std::string, std::shared_ptr<Predicate> > R;
+    std::map<std::string, std::shared_ptr<Function> > F;
+    std::map<std::string, std::shared_ptr<Constant> > C;
 
-    class sym_sets_intersection;
-    class sym_exists;
+    class sym_doubling;
+//    class sym_exists;
+    class no_sym;
 public:
     Signature() {}
     Signature(std::list<std::pair<std::string, unsigned> > _R,
@@ -40,13 +41,13 @@ public:
 
     unsigned arity(const std::string& name) const;
 
-    void addPred(const std::string& name, unsigned arity);
-    void addFunc(const std::string& name, unsigned arity);
-    void addConst(const std::string& name);
+    void addP(const std::string& name, unsigned arity);
+    void addF(const std::string& name, unsigned arity);
+    void addC(const std::string& name);
 
-    std::shared_ptr<Predicate> getPred(const std::string& name) const;
-    std::shared_ptr<Function> getFunc(const std::string& name) const;
-    std::shared_ptr<Constant> getCons(const std::string& name) const;
+    Predicate::sh_p getP(const std::string& name) const;
+    Function::sh_p getF(const std::string& name) const;
+    Constant::sh_p getC(const std::string& name) const;
 
     unsigned long maxLength(nameT type) const;
 };
@@ -143,6 +144,7 @@ Token lexer(std::string& source, std::string& word, Signature& sigma)
     source.erase(source.begin());
     return Token::literal;
 }*/
+/*
 
 class Interpr
 {
@@ -171,5 +173,6 @@ void prepareForName(std::string& _name);
 size_t findPairBracket(const std::string& source, size_t pos);
 void stripBrackets(std::string& text);
 bool splitByTopLevelLO(std::string source, std::string& left, LOperation::LType& type, std::string& right);
+*/
 
 #endif //TEST_BUILD_SIGNATURE_HPP

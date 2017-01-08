@@ -1,3 +1,4 @@
+/*
 //
 // Created by anton on 03.01.17.
 //
@@ -174,7 +175,7 @@ inline std::shared_ptr<Formulas> Interpr::makeFormulas(const std::string& source
 {
     std::string pred, paren;
     if (checkForAtom(source, pred, paren))
-        return std::make_shared<Atom>(sigma.getPred(pred),
+        return std::make_shared<Atom>(sigma.getP(pred),
                                       getTermsFromParen(paren));
     else
         return std::shared_ptr<Formula>(interpretFormula(source));
@@ -203,7 +204,7 @@ std::list<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string&
             pparen = l.substr(l.find('('));
             if (!sigma.isFuncName(func))
                 throw std::invalid_argument("Неизвестный функциональный символ: " + func + ".\n");
-            args.push_back(std::make_shared<Term>(sigma.getFunc(func),
+            args.push_back(std::make_shared<Term>(sigma.getF(func),
                                                   getTermsFromParen(pparen) ));
         }
         else if (sigma.isConsName(l))
@@ -247,4 +248,4 @@ std::shared_ptr<Formula> Interpr::interpretFormula(std::string foText)
         else
             throw std::invalid_argument("Ошибка в Formula(str) [str = " + foText + "]\n");
     }
-}
+}*/
