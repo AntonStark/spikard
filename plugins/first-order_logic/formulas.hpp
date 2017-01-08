@@ -12,45 +12,100 @@
 
 #include "logic.hpp"
 
-class Signature
+/*class Modifier : public virtual Printable
+{
+public:
+    virtual bool isQuantifier() const = 0;
+    virtual bool isLOperation() const = 0;
+    virtual unsigned getType() const = 0;
+    virtual ~Modifier() {}
+    virtual Modifier* clone() const = 0;
+};
+
+class LOperation : public Modifier
+{
+public:
+    enum class LType {NOT = 0, AND, OR, THAN};
+private:
+    LType type;
+public:
+    LOperation(LOperation::LType _type) : type(_type) {}
+    LOperation(const LOperation& one) : type(one.type) {}
+    virtual ~LOperation() {}
+
+    bool isQuantifier() const override { return false;}
+    bool isLOperation() const override { return true;}
+    unsigned getType() const override { return static_cast<unsigned>(type);}
+
+    void print(std::ostream& out = std::cout) const override;
+    LOperation* clone() const override { return (new LOperation(*this)); }
+};
+
+class Quantifier : public Modifier
+{
+public:
+    enum class QType {FORALL = 0, EXISTS};
+private:
+    QType type;
+    std::shared_ptr<Variable> arg;
+public:
+    Quantifier(QType _type, const Variable& _arg)
+            : type(_type) { arg = std::make_shared<Variable>(_arg); }
+    Quantifier(const Quantifier& one) : type(one.type) {arg = one.arg;}
+    virtual ~Quantifier() {}
+
+    bool isQuantifier() const override { return true;}
+    bool isLOperation() const override { return false;}
+    unsigned getType() const override { return static_cast<unsigned>(type);}
+
+    void print(std::ostream& out = std::cout) const override;
+    Quantifier* clone() const override { return (new Quantifier(*this)); }
+};
+
+class Formulas : public virtual Printable
+{
+public:
+    virtual bool isAtom() const { return false;};
+    virtual ~Formulas() {};
+
+    virtual Formulas* clone() const = 0;
+};
+
+class Formula : public Formulas
 {
 private:
-    std::map<std::string, std::shared_ptr<Predicate> > R;
-    std::map<std::string, std::shared_ptr<Function> > F;
-    std::map<std::string, std::shared_ptr<Constant> > C;
-
-    class sym_doubling;
-//    class sym_exists;
-    class no_sym;
+    std::shared_ptr<Formulas> arg1, arg2;
+    std::shared_ptr<Modifier> mod;
 public:
-    Signature() {}
-    Signature(std::list<std::pair<std::string, unsigned> > _R,
-              std::list<std::pair<std::string, unsigned> > _F,
-              std::list<std::string> _C);
-    ~Signature() {}
+    Formula(const Formula& one)
+            : arg1(one.arg1), mod(one.mod), arg2(one.arg2) {}
+    Formula(const Modifier& _mod, const Formulas& F);
+    Formula(const LOperation& _mod, const Formulas& F1, const Formulas& F2);
+    Formula(std::shared_ptr<Modifier> _mod,
+            std::shared_ptr<Formulas> F1,
+            std::shared_ptr<Formulas> F2 = nullptr)
+            : arg1(F1), mod(_mod), arg2(F2) {}
+    virtual ~Formula() {}
 
-    bool isPredName(const std::string &name) const
-    { return (R.find(name) != R.end()); }
-    bool isFuncName(const std::string &name) const
-    { return (F.find(name) != F.end()); }
-    bool isConsName(const std::string &name) const
-    { return (C.find(name) != C.end()); }
-
-    enum class nameT {predicate, function, constant, none};
-    nameT checkName(const std::string& name) const;
-
-    unsigned arity(const std::string& name) const;
-
-    void addP(const std::string& name, unsigned arity);
-    void addF(const std::string& name, unsigned arity);
-    void addC(const std::string& name);
-
-    Predicate::sh_p getP(const std::string& name) const;
-    Function::sh_p getF(const std::string& name) const;
-    Constant::sh_p getC(const std::string& name) const;
-
-    unsigned long maxLength(nameT type) const;
+    void print(std::ostream& out = std::cout) const override;
+    Formula* clone() const override { return (new Formula(*this)); }
 };
+
+class Atom : public Formulas, protected Predicate, protected ParenSymbol
+{
+public:
+    Atom(Predicate* p, std::list<Terms*> _args)
+            : Predicate(*p), ParenSymbol(_args) { argCheck(p, _args); }
+    Atom(const Atom& one)
+            : Predicate(one), ParenSymbol(one) {}
+    Atom(std::shared_ptr<Predicate> p, TermsList _args)
+            : Predicate(*p.get()), ParenSymbol(_args) { argCheck(p, _args); }
+    virtual ~Atom() {}
+
+    void print(std::ostream& out = std::cout) const override;
+    bool isAtom() const override { return true;}
+    Atom* clone() const override { return (new Atom(*this)); }
+};*/
 
 /*///возможные следующие квази-лексемы:
 enum class Token {quant, loper, arglist, paren, pred, func, cons, space, literal, err};
