@@ -1,6 +1,6 @@
 #include <sstream>
 #include "logic.hpp"
-#include "signature.hpp"
+#include "formulas.hpp"
 
 using namespace std;
 

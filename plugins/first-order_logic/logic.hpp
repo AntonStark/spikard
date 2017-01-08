@@ -93,6 +93,7 @@ public:
     typedef std::shared_ptr<Function> sh_p;
 };
 
+
 //TODO Перенести Signature сюда, а всё начиная с Modifier туда. И будет signature.hpp и statements.hpp
 class Variable;
 class Terms : public virtual Printable
