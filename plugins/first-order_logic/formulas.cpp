@@ -198,7 +198,7 @@ std::string Interpr::checkPred(const std::string& source)
     unsigned long maxLen = std::min(sigma.maxLength(Signature::nameT::predicate),
                                     source.length());
     for (unsigned long i = 1; i <= maxLen; ++i)
-        if (sigma.isPredName(source.substr(0, i)))
+        if (sigma.isPred(source.substr(0, i)))
             return source.substr(0, i);
     return "";
 }
@@ -292,12 +292,12 @@ std::list<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string&
             std::string func, pparen;
             func = l.substr(0, l.find('('));
             pparen = l.substr(l.find('('));
-            if (!sigma.isFuncName(func))
+            if (!sigma.isFunc(func))
                 throw std::invalid_argument("Неизвестный функциональный символ: " + func + ".\n");
             args.push_back(std::make_shared<Term>(sigma.getF(func),
                                                   getTermsFromParen(pparen) ));
         }
-        else if (sigma.isConsName(l))
+        else if (sigma.isCons(l))
             args.push_back(std::make_shared<Constant>(l));
         else
             args.push_back(std::make_shared<Variable>(l));

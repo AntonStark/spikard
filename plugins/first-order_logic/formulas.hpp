@@ -94,6 +94,7 @@ public:
 class Atom : public Formulas, protected Predicate, protected ParenSymbol
 {
 public:
+ //TODO _args по умолчанию пустой список
     Atom(Predicate* p, std::list<Terms*> _args)
             : Predicate(*p), ParenSymbol(_args) { argCheck(p, _args); }
     Atom(const Atom& one)

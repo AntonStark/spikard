@@ -62,13 +62,13 @@ public:
 /*=====================================================*/
 /*=====================================================*/
 /*=====================================================*/
-class Signature;
+
 class Predicate : public Symbol, public Map
 {
 private:
-//    std::shared_ptr<Signature> sigma;
     Predicate(const std::string& _name, unsigned _arity/*, Signature* _sigma = nullptr*/)
             : Symbol(_name), Map(_arity)/*, sigma(_sigma)*/ {}
+//    friend void Signature::addP(const std::string& name, unsigned arity);
     friend class Signature;
 public:
     virtual ~Predicate() {}
@@ -76,7 +76,6 @@ public:
             : Symbol(one), Map(one)/*, sigma(one.sigma)*/ {}
 
     bool operator== (const Predicate& one) const;
-    typedef std::shared_ptr<Predicate> sh_p;
 };
 
 class Function : public Symbol, public Map
@@ -84,6 +83,7 @@ class Function : public Symbol, public Map
 private:
     Function(const std::string& _name, unsigned _arity)
             : Symbol(_name), Map(_arity) {}
+//    friend void Signature::addF(const std::string& name, unsigned arity);
     friend class Signature;
 public:
     virtual ~Function() {}
@@ -91,17 +91,13 @@ public:
             : Symbol(one), Map(one) {}
 
     bool operator== (const Function& one) const;
-    typedef std::shared_ptr<Function> sh_p;
 };
 
-
-//TODO Перенести Signature сюда, а всё начиная с Modifier туда. И будет signature.hpp и statements.hpp
 class Variable;
 class Terms : public virtual Printable
 {
 protected:
-    //TODO нужно использовать weak_ptr, иначе двойное удаление
-    //TODO нужно аккуратно управлять созданием (и хранением) всех классов. Позапрещать конструкторы и пусть за всё отвечает сигнатура?
+    //TODO нужно аккуратно управлять созданием (и хранением) всех классов. Позапрещать конструкторы и пусть за всё отвечает -сигнатура- фабрики
     std::set<std::shared_ptr<Variable> > vars;
 public:
     virtual ~Terms() {}
@@ -110,10 +106,29 @@ public:
     std::set<std::shared_ptr<Variable> > getVars() const { return vars; };
 };
 
+class Constant : public Terms, public Symbol
+{
+private:
+    Constant(const std::string& _name) : Symbol(_name) {}
+//    friend void Signature::addC(const std::string& name);
+//    friend void TermsFactory::addC(const std::string& name);
+    friend class TermsFactory;
+public:
+    virtual ~Constant() {}
+    Constant(const Constant& one) : Symbol(one) {}
+    static Constant* create(const std::string& _name/*, Signature* _sigma = nullptr*/)
+    { return (new Constant(_name/*, _sigma*/) ); }
+
+    Constant* clone() const override { return (new Constant(*this)); }
+};
+
 class Variable : public Terms, public Symbol
 {
-public:
+private:
     Variable(const std::string& _name) : Symbol(_name) {/*vars.emplace(this);*/}
+//    friend void TermsFactory::addV(const std::string& name);
+    friend class TermsFactory;
+public:
     Variable(const Variable& one) : Symbol(one) {}
     virtual ~Variable() {}
 
@@ -121,23 +136,9 @@ public:
     bool isVariable() const override { return true; }
 };
 
-class Constant : public Terms, public Symbol
-{
-private:
-    Constant(const std::string& _name) : Symbol(_name) {}
-    friend class Signature;
-public:
-    virtual ~Constant() {}
-    Constant(const Constant& one) : Symbol(one) {}
-
-    Constant* clone() const override { return (new Constant(*this)); }
-    typedef std::shared_ptr<Constant> sh_p;
-};
-
 class ParenSymbol : public virtual Printable
 {
 public:
-    //TODO следует использовать weak_ptr, но это создаёт проблемы в случае [_args]=std::list<Terms*>
     //TODO vars как объединение vars всех аргументов.
     typedef std::list<std::shared_ptr<Terms> > TermsList;
 private:
@@ -170,50 +171,5 @@ public:
     Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
-
-class Signature
-{
-private:
-    std::map<std::string, std::shared_ptr<Predicate> > R;
-    std::map<std::string, std::shared_ptr<Function> > F;
-    std::map<std::string, std::shared_ptr<Constant> > C;
-
-    class sym_doubling;
-//    class sym_exists;
-    class no_sym;
-public:
-    Signature() {}
-    Signature(std::list<std::pair<std::string, unsigned> > _R,
-              std::list<std::pair<std::string, unsigned> > _F,
-              std::list<std::string> _C);
-    ~Signature() {}
-
-    bool isPredName(const std::string &name) const
-    { return (R.find(name) != R.end()); }
-    bool isFuncName(const std::string &name) const
-    { return (F.find(name) != F.end()); }
-    bool isConsName(const std::string &name) const
-    { return (C.find(name) != C.end()); }
-
-    enum class nameT {predicate, function, constant, none};
-    nameT checkName(const std::string& name) const;
-
-    unsigned arity(const std::string& name) const;
-
-    void addP(const std::string& name, unsigned arity);
-    void addF(const std::string& name, unsigned arity);
-    void addC(const std::string& name);
-
-    Predicate::sh_p getP(const std::string& name) const;
-    Function::sh_p getF(const std::string& name) const;
-    Constant::sh_p getC(const std::string& name) const;
-
-    unsigned long maxLength(nameT type) const;
-};
-
-/*const Atom& Predicate::operator() (std::vector<Terms*> _args)
-{ return Atom(this, _args); }
-const Term& Function ::operator() (std::vector<Terms*> _args)
-{ return Term(this, _args); }*/
 
 #endif //TEST_BUILD_LOGIC_HPP
