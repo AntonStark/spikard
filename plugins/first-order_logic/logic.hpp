@@ -9,7 +9,6 @@
 #include <iostream>
 #include <list>
 #include <stdexcept>
-#include <memory>
 #include <set>
 #include <map>
 
@@ -82,7 +81,9 @@ class Function : public Symbol, public Map
 {
 private:
     Function(const std::string& _name, unsigned _arity)
-            : Symbol(_name), Map(_arity) {}
+            : Symbol(_name), Map(_arity)
+    { if (_arity == 0)
+            throw std::invalid_argument("нуль-арные функции запрещены, константы задаются явно."); }
 //    friend void Signature::addF(const std::string& name, unsigned arity);
     friend class Signature;
 public:
@@ -96,30 +97,20 @@ public:
 class Variable;
 class Terms : public virtual Printable
 {
-protected:
-    //TODO нужно аккуратно управлять созданием (и хранением) всех классов. Позапрещать конструкторы и пусть за всё отвечает -сигнатура- фабрики
-    std::set<std::shared_ptr<Variable> > vars;
 public:
     virtual ~Terms() {}
-    virtual Terms* clone() const = 0;
     virtual bool isVariable() const { return false; }
-    std::set<std::shared_ptr<Variable> > getVars() const { return vars; };
 };
 
 class Constant : public Terms, public Symbol
 {
 private:
     Constant(const std::string& _name) : Symbol(_name) {}
-//    friend void Signature::addC(const std::string& name);
 //    friend void TermsFactory::addC(const std::string& name);
     friend class TermsFactory;
 public:
     virtual ~Constant() {}
     Constant(const Constant& one) : Symbol(one) {}
-    static Constant* create(const std::string& _name/*, Signature* _sigma = nullptr*/)
-    { return (new Constant(_name/*, _sigma*/) ); }
-
-    Constant* clone() const override { return (new Constant(*this)); }
 };
 
 class Variable : public Terms, public Symbol
@@ -129,46 +120,41 @@ private:
 //    friend void TermsFactory::addV(const std::string& name);
     friend class TermsFactory;
 public:
-    Variable(const Variable& one) : Symbol(one) {}
     virtual ~Variable() {}
+    Variable(const Variable& one) : Symbol(one) {}
 
-    Variable* clone() const override { return (new Variable(*this)); }
     bool isVariable() const override { return true; }
 };
 
 class ParenSymbol : public virtual Printable
 {
-public:
-    //TODO vars как объединение vars всех аргументов.
-    typedef std::list<std::shared_ptr<Terms> > TermsList;
 private:
-    TermsList args;
-    std::set<std::shared_ptr<Variable> > vars;
+    class nArg_arity_error;
+
+    std::list<Terms*> args;
 protected:
+    std::set<Variable*> vars;
     void argCheck(Map* f, std::list<Terms*> _args);
-    void argCheck(std::shared_ptr<Map> f, TermsList _args);
-public:
+
     ParenSymbol(std::list<Terms*> _args);
-    ParenSymbol(TermsList _args);
     ParenSymbol(const ParenSymbol& one) : args(one.args), vars(one.vars) {}
+public:
     virtual ~ParenSymbol() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
-    class nArg_arity_error;
 };
 
-class Term : public Terms, protected Function, protected ParenSymbol
+class Term : public Terms, protected Function, public ParenSymbol
 {
-public:
+private:
+    friend class TermsFactory;
     Term(Function* f, std::list<Terms*> _args)
             : Function(*f), ParenSymbol(_args) { argCheck(f, _args); }
-    Term(std::shared_ptr<Function> f, TermsList _args)
-            : Function(*f.get()), ParenSymbol(_args) { argCheck(f, _args); }
+public:
     Term(const Term& one)
             : Function(one), ParenSymbol(one) {}
     virtual ~Term() {}
 
-    Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
 

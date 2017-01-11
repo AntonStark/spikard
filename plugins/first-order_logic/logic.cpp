@@ -17,7 +17,6 @@ bool Function::operator==(const Function &one) const
 
 
 
-
 std::ostream& operator<< (std::ostream& os, const Printable& pr)
 {
     pr.print(os);
@@ -46,6 +45,7 @@ void Term::print(std::ostream &out) const
     ParenSymbol::print(out);
 }
 
+
 class ParenSymbol::nArg_arity_error : public std::invalid_argument
 {
 public:
@@ -57,26 +57,13 @@ void ParenSymbol::argCheck(Map* f, std::list<Terms*> _args)
     if (_args.size() != f->getArity())
         throw nArg_arity_error();
 }
-void ParenSymbol::argCheck(std::shared_ptr<Map> f, TermsList _args)
+ParenSymbol::ParenSymbol(std::list<Terms*> _args) : args(_args)
 {
-    if (_args.size() != f->getArity())
-        throw nArg_arity_error();
-}
-ParenSymbol::ParenSymbol(std::list<Terms*> _args)
-{
-    for (auto t : _args)
+    for (auto a : _args)
     {
-        std::shared_ptr<Terms> tSh(t->clone());
-        if (std::shared_ptr<Variable> vSh = std::dynamic_pointer_cast<Variable>(tSh))
-            vars.insert(vSh);
-        args.push_back(tSh);
-    }
-}
-ParenSymbol::ParenSymbol(TermsList _args) : args(_args)
-{
-    for (auto t : _args)
-    {
-        if (t->isVariable())
-            vars.insert(std::dynamic_pointer_cast<Variable>(t) );
+        if (Variable* v = dynamic_cast<Variable*>(a))
+        { vars.insert(v); }
+        else if (Term* t = dynamic_cast<Term*>(a))
+        { vars.insert(t->vars.begin(), t->vars.end()); }
     }
 }

@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "logic.hpp"
+#include "formulas.hpp"
 
 class Namespace
 {
@@ -45,11 +46,11 @@ class TermsFactory
 private:
     Namespace& names;
 
-    std::map<std::string, Constant* > C;
-    std::map<std::string, Variable* > V;
+    std::map<std::string, Constant*> C;
+    std::map<std::string, Variable*> V;
     std::map<std::pair<Function*,
                        std::list<Terms*> >,
-             Term* > T;
+             Term*> T;
 public:
     TermsFactory(Namespace& _names) : names(_names) {}
     ~TermsFactory();
@@ -68,16 +69,33 @@ public:
     Term* makeTerm(Function* f, std::list<Terms*> args);
 };
 
+class FormulasFactory
+{
+private:
+public:
+    std::set<Modifier*> M;
+    std::map<std::pair<Predicate*,
+                       std::list<Terms*> >,
+             Atom*> A;
+    std::map<std::pair<Modifier*,
+                       std::pair<Formula*, Formula*> >,
+             Formula*> F;
+    Modifier* makeMod(LOperation::LType _type);
+    Modifier* makeMod(Quantifier::QType _type, Variable* _arg);
+    Formula* makeFormula(Predicate* p, std::list<Terms*> args);
+    Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
+};
+
 class Signature
 {
 private:
-    std::map<std::string, Predicate* > R;
-    std::map<std::string, Function* > F;
-    std::map<std::string, Constant* > C;
+    std::map<std::string,Predicate*> R;
+    std::map<std::string, Function*> F;
+    std::map<std::string, Constant*> C;
 
     Namespace names;
-    TermsFactory termsStorage;
 public:
+    TermsFactory termsStorage;
     Signature() : names(), termsStorage(names) {}
     Signature(std::list<std::pair<std::string, unsigned> > _R,
               std::list<std::pair<std::string, unsigned> > _F,

@@ -78,10 +78,56 @@ void Namespace::addCons(const std::string& name)
 }
 void Namespace::addVar(const std::string& name)
 {
-    if (!isSomeSym(name))
+    if (isSomeSym(name))
         throw sym_doubling(name);
     else
         variables.insert(name);
+}
+
+
+TermsFactory::~TermsFactory()
+{
+    for (auto t : T)
+        delete t.second;
+    for (auto v : V)
+        delete v.second;
+    for (auto c : C)
+        delete c.second;
+}
+
+void TermsFactory::addC(const std::string& name)
+{
+    names.addCons(name);
+    C[name] = new Constant(name);
+}
+void TermsFactory::addV(const std::string& name)
+{
+    names.addVar(name);
+    V[name] = new Variable(name);
+}
+
+Constant* TermsFactory::getC(const std::string& name) const
+{
+    names.checkCons(name);
+    //если бы символ не был добавлен, схватили бы исключение от Namespace
+    return C.at(name);
+}
+Variable* TermsFactory::getV(const std::string& name) const
+{
+    names.checkVar(name);
+    return V.at(name);
+}
+
+Term* TermsFactory::makeTerm(Function* f, std::list<Terms*> args)
+{
+    auto pair = std::make_pair(f, args);
+    Term* t;
+    auto search = T.find(pair);
+    if (search != T.end())
+        t = search->second;
+    else
+        T[pair] = t = new Term(f, args);
+    return t;
 }
 
 
@@ -90,50 +136,6 @@ Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
                      std::list<std::string> _C)
         : names(), termsStorage(names)
 {
-    /*//Проверка, что в списках нет повторяющихся имён
-    std::map<std::string, unsigned> tR;
-    std::map<std::string, unsigned> tF;
-    std::set<std::string> tC;
-    for (auto r : _R)
-    {
-        if (tR.find(r.first) != tR.end())
-            throw sym_doubling(r.first);
-        else
-            tR.insert(r);
-    }
-    for (auto f : _F)
-    {
-        if (tF.find(f.first) != tF.end())
-            throw sym_doubling(f.first);
-        else
-            tF.insert(f);
-    }
-    for (auto c : _C)
-    {
-        if (tC.find(c) != tC.end())
-            throw sym_doubling(c);
-        else
-            tC.insert(c);
-    }
-
-    //Првоерка, что задаваемые множества не будут пересекаться по именам
-    for (auto f : tF)
-        if (tR.find(f.first) != tR.end())
-            throw sym_doubling(f.first);
-    for (auto c : tC)
-        if (tR.find(c) != tR.end())
-            throw sym_doubling(c);
-    for (auto c : tC)
-        if (tF.find(c) != tF.end())
-            throw sym_doubling(c);
-
-    //Инициализация множеств
-    for (auto r : tR)
-        R[r.first] = (new Predicate(r.first, r.second) );
-    for (auto f : tF)
-        F[f.first] = (new Function(f.first, f.second) );
-    for (auto c : tC)
-        C[c] = (new Constant(c) );*/
     for (auto r : _R)
         addP(r.first, r.second);
     for (auto f : _F)
@@ -148,8 +150,6 @@ Signature::~Signature()
         delete r.second;
     for (auto f : F)
         delete f.second;
-    for (auto c : C)
-        delete c.second;
 }
 
 Signature::nameT Signature::checkName(const std::string& name) const
@@ -235,52 +235,3 @@ unsigned long Signature::maxLength(nameT type) const
     return maxLen;
 }
 
-TermsFactory::~TermsFactory()
-{
-    for (auto t : T)
-        delete t.second;
-    for (auto v : V)
-        delete v.second;
-    for (auto c : C)
-        delete c.second;
-}
-
-void TermsFactory::addC(const std::string& name)
-{
-    names.addCons(name);
-    C[name] = new Constant(name);
-}
-void TermsFactory::addV(const std::string& name)
-{
-    names.addVar(name);
-    V[name] = new Variable(name);
-}
-
-Constant* TermsFactory::getC(const std::string& name) const
-{
-    names.checkCons(name);
-    //если бы символ не был добавлен, схватили бы исключение от Namespace
-    return C.at(name);
-}
-Variable* TermsFactory::getV(const std::string& name) const
-{
-    names.checkVar(name);
-    return V.at(name);
-}
-
-Term* TermsFactory::makeTerm(Function* f, std::list<Terms*> args)
-{
-    //TODO ещё не тестирована
-    auto pair = std::make_pair(f, args);
-    Term* t;
-    auto search = T.find(pair);
-    if (search != T.end())
-        t = search->second;
-    else
-        T[pair] = t = new Term(f, args);
-    return t;
-    /*try {t = T.at(pair);}
-    catch (std::out_of_range)
-    { t = T[pair] = new Term(f, args);}
-    return t;*/
-}

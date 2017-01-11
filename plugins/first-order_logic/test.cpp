@@ -24,13 +24,13 @@ int main(void)
     /*Atom a(&p1, {&t2, &n});
 
     Quantifier q(Quantifier::QType::FORALL, x);
-    Formula fo(q, a);
+    ComposedF fo(q, a);
 
     Predicate eq("=", 2);
     Atom fo2(&eq, {&x, &o});
 
     LOperation l(LOperation::LType::AND);
-    Formula fa(l, fo, fo2);
+    ComposedF fa(l, fo, fo2);
     stringstream ss;
     fo.print(ss); ss << endl;
     fa.print(ss); ss << endl;
@@ -41,15 +41,20 @@ int main(void)
 
     Interpr inter(signature);
 
-    std::shared_ptr<Formula> formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))");
+    std::shared_ptr<ComposedF> formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))");
 
     cout<<'\n';
     formula->print();
     cout<<'\n';*/
+    s.termsStorage.addV("x");
+    s.termsStorage.addV("y");
+    Variable* x = s.termsStorage.getV("x");
+    Variable* y = s.termsStorage.getV("y");
+    Term* te = s.termsStorage.makeTerm(f1, {x, n});
+    Term* te2 = s.termsStorage.makeTerm(f2, {te, y});
+    Term* ty = s.termsStorage.makeTerm(f2, {te, y});
+    bool eq = (te2 == ty);
 
-    Namespace ns;
-    ns.addPred("=");
-//    bool a = ns.isSomeSym("=");
 
 
     cout<<flush;cerr<<flush;

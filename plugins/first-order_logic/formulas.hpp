@@ -2,8 +2,8 @@
 // Created by anton on 15.12.16.
 //
 
-#ifndef TEST_BUILD_SIGNATURE_HPP
-#define TEST_BUILD_SIGNATURE_HPP
+#ifndef TEST_BUILD_FORMUALAS_HPP
+#define TEST_BUILD_FORMUALAS_HPP
 
 #include <stdexcept>
 #include <map>
@@ -12,7 +12,7 @@
 
 #include "logic.hpp"
 
-/*class Modifier : public virtual Printable
+class Modifier : public virtual Printable
 {
 public:
     virtual bool isQuantifier() const = 0;
@@ -47,10 +47,10 @@ public:
     enum class QType {FORALL = 0, EXISTS};
 private:
     QType type;
-    std::shared_ptr<Variable> arg;
+    Variable* arg;
 public:
-    Quantifier(QType _type, const Variable& _arg)
-            : type(_type) { arg = std::make_shared<Variable>(_arg); }
+    Quantifier(QType _type, Variable* _arg)
+            : type(_type), arg(_arg) {}
     Quantifier(const Quantifier& one) : type(one.type) {arg = one.arg;}
     virtual ~Quantifier() {}
 
@@ -62,56 +62,51 @@ public:
     Quantifier* clone() const override { return (new Quantifier(*this)); }
 };
 
-class Formulas : public virtual Printable
+class Formula : public virtual Printable
 {
 public:
     virtual bool isAtom() const { return false;};
-    virtual ~Formulas() {};
+    virtual ~Formula() {};
 
-    virtual Formulas* clone() const = 0;
+    virtual Formula* clone() const = 0;
 };
 
-class Formula : public Formulas
+class ComposedF : public Formula
 {
 private:
-    std::shared_ptr<Formulas> arg1, arg2;
-    std::shared_ptr<Modifier> mod;
+    Formula *arg1, *arg2;
+    Modifier* mod;
 public:
-    Formula(const Formula& one)
+    ComposedF(const ComposedF& one)
             : arg1(one.arg1), mod(one.mod), arg2(one.arg2) {}
-    Formula(const Modifier& _mod, const Formulas& F);
-    Formula(const LOperation& _mod, const Formulas& F1, const Formulas& F2);
-    Formula(std::shared_ptr<Modifier> _mod,
-            std::shared_ptr<Formulas> F1,
-            std::shared_ptr<Formulas> F2 = nullptr)
+    ComposedF(const Modifier& _mod, const Formula& F);
+    ComposedF(const LOperation& _mod, const Formula& F1, const Formula& F2);
+    ComposedF(Modifier* _mod, Formula* F1, Formula* F2 = nullptr)
             : arg1(F1), mod(_mod), arg2(F2) {}
-    virtual ~Formula() {}
+    virtual ~ComposedF() {}
 
     void print(std::ostream& out = std::cout) const override;
-    Formula* clone() const override { return (new Formula(*this)); }
+    ComposedF* clone() const override { return (new ComposedF(*this)); }
 };
 
-class Atom : public Formulas, protected Predicate, protected ParenSymbol
+class Atom : public Formula, protected Predicate, protected ParenSymbol
 {
 public:
- //TODO _args по умолчанию пустой список
     Atom(Predicate* p, std::list<Terms*> _args)
             : Predicate(*p), ParenSymbol(_args) { argCheck(p, _args); }
     Atom(const Atom& one)
             : Predicate(one), ParenSymbol(one) {}
-    Atom(std::shared_ptr<Predicate> p, TermsList _args)
-            : Predicate(*p.get()), ParenSymbol(_args) { argCheck(p, _args); }
     virtual ~Atom() {}
 
     void print(std::ostream& out = std::cout) const override;
     bool isAtom() const override { return true;}
     Atom* clone() const override { return (new Atom(*this)); }
-};*/
+};
 
 /*///возможные следующие квази-лексемы:
 enum class Token {quant, loper, arglist, paren, pred, func, cons, space, literal, err};
-*//*enum class token {  tok_qu, tok_lo, tok_al, tok_pa,
-                    tok_f, tok_p, tok_c, tok_s, tok_l};*//*
+enum class token {  tok_qu, tok_lo, tok_al, tok_pa,
+                    tok_f, tok_p, tok_c, tok_s, tok_l};
 ///квантор, логическая операция, скобки перечисления, скобки выделения,
 ///функциональный символ, предикатный символ, константный -, пробел, литерал
 Token lexer(std::string& source, std::string& word, Signature& sigma)
@@ -220,8 +215,8 @@ public:
     std::shared_ptr<LOperation> makeLOperation(const std::string& text);
     std::shared_ptr<Quantifier> makeQuantifier(const std::string& text);
     std::shared_ptr<Modifier> makeModifier(const std::string& text);
-    std::shared_ptr<Formulas> makeFormulas(const std::string& source);
-    std::shared_ptr<Formula> interpretFormula(std::string foText);
+    std::shared_ptr<Formula> makeFormulas(const std::string& source);
+    std::shared_ptr<ComposedF> interpretFormula(std::string foText);
     std::list<std::shared_ptr<Terms> > getTermsFromParen(const std::string& paren);
 };
 
@@ -231,4 +226,4 @@ void stripBrackets(std::string& text);
 bool splitByTopLevelLO(std::string source, std::string& left, LOperation::LType& type, std::string& right);
 */
 
-#endif //TEST_BUILD_SIGNATURE_HPP
+#endif //TEST_BUILD_FORMUALAS_HPP

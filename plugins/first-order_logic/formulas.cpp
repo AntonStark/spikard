@@ -3,7 +3,6 @@
 //
 
 #include "formulas.hpp"
-/*
 void LOperation::print(std::ostream &out) const
 {
     switch (type)
@@ -23,7 +22,7 @@ void Quantifier::print(std::ostream &out) const
     }
     arg->print(out);
 }
-void Formula::print(std::ostream &out) const
+void ComposedF::print(std::ostream &out) const
 {
     if (!arg1)
         return;
@@ -74,25 +73,24 @@ void Atom::print(std::ostream &out) const
 
 
 
-Formula::Formula(const Modifier& _mod, const Formulas& F)
+ComposedF::ComposedF(const Modifier& _mod, const Formula& F)
 {
     if (_mod.isLOperation() && (_mod.getType() != 0) )
         throw std::invalid_argument("Использована не унарная операция.\n");
 
-    mod = std::shared_ptr<Modifier>(_mod.clone());
-    arg1 = std::shared_ptr<Formulas>(F.clone());
+    mod = _mod.clone();
+    arg1 = F.clone();
     arg2 = nullptr;
 }
-Formula::Formula(const LOperation& _mod, const Formulas& F1, const Formulas& F2)
+ComposedF::ComposedF(const LOperation& _mod, const Formula& F1, const Formula& F2)
 {
     if (_mod.getType() == 0)
         throw std::invalid_argument("Отрицание - не бинарная операция.\n");
 
-    mod = std::shared_ptr<Modifier>(_mod.clone());
-    arg1 = std::shared_ptr<Formulas>(F1.clone());
-    arg2 = std::shared_ptr<Formulas>(F2.clone());
+    mod = _mod.clone();
+    arg1 = F1.clone();
+    arg2 = F2.clone();
 }
-*/
 
 /*
 void prepareForName(std::string& name)
@@ -261,14 +259,14 @@ std::shared_ptr<Modifier> Interpr::makeModifier(const std::string& text)
     else
     { throw std::invalid_argument("Ошибка в makeModifier(str) [str = " + text + "]\n");}
 }
-inline std::shared_ptr<Formulas> Interpr::makeFormulas(const std::string& source)
+inline std::shared_ptr<Formula> Interpr::makeFormulas(const std::string& source)
 {
     std::string pred, paren;
     if (checkForAtom(source, pred, paren))
         return std::make_shared<Atom>(sigma.getP(pred),
                                       getTermsFromParen(paren));
     else
-        return std::shared_ptr<Formula>(interpretFormula(source));
+        return std::shared_ptr<ComposedF>(interpretFormula(source));
 }
 
 std::list<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string& paren)
@@ -304,10 +302,10 @@ std::list<std::shared_ptr<Terms> > Interpr::getTermsFromParen(const std::string&
     }
     return args;
 }
-std::shared_ptr<Formula> Interpr::interpretFormula(std::string foText)
+std::shared_ptr<ComposedF> Interpr::interpretFormula(std::string foText)
 {
     std::shared_ptr<Modifier> mod;
-    std::shared_ptr<Formulas> arg1, arg2;
+    std::shared_ptr<Formula> arg1, arg2;
     std::cerr << foText <<std::endl;
     stripBrackets(foText);
     if (checkForQuant(foText) || checkForNOT(foText))
@@ -321,7 +319,7 @@ std::shared_ptr<Formula> Interpr::interpretFormula(std::string foText)
             throw std::invalid_argument("Неверно построенная формула: " + foText + ".\n");
         mod = std::shared_ptr<Modifier>(makeModifier(foText.substr(0, i)) );
         arg1 = makeFormulas(foText.substr(i));
-        return std::make_shared<Formula>(mod, arg1);
+        return std::make_shared<ComposedF>(mod, arg1);
     }
     else
     {
@@ -333,9 +331,9 @@ std::shared_ptr<Formula> Interpr::interpretFormula(std::string foText)
             mod = std::make_shared<LOperation>(oper);
             arg1 = makeFormulas(left);
             arg2 = makeFormulas(right);
-            return std::make_shared<Formula>(mod, arg1, arg2);
+            return std::make_shared<ComposedF>(mod, arg1, arg2);
         }
         else
-            throw std::invalid_argument("Ошибка в Formula(str) [str = " + foText + "]\n");
+            throw std::invalid_argument("Ошибка в ComposedF(str) [str = " + foText + "]\n");
     }
 }*/
