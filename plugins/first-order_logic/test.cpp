@@ -46,16 +46,25 @@ int main(void)
     cout<<'\n';
     formula->print();
     cout<<'\n';*/
-    s.termsStorage.addV("x");
-    s.termsStorage.addV("y");
-    Variable* x = s.termsStorage.getV("x");
-    Variable* y = s.termsStorage.getV("y");
-    Term* te = s.termsStorage.makeTerm(f1, {x, n});
-    Term* te2 = s.termsStorage.makeTerm(f2, {te, y});
-    Term* ty = s.termsStorage.makeTerm(f2, {te, y});
+    s.addV("x");
+    s.addV("y");
+    Variable* x = s.getV("x");
+    Variable* y = s.getV("y");
+    Term* te = s.makeTerm(f1, {x, n});
+    Term* te2 = s.makeTerm(f2, {te, y});
+    Term* ty = s.makeTerm(f2, {te, y});
     bool eq = (te2 == ty);
 
-
+    /*Namespace ns;
+    {
+        UniqueNamedObjectFactory<Predicate> fac(ns);
+        fac.add(">", 2);
+        fac.add(">=", 2);
+        fac.add("=", 2);
+        fac.add("prime", 1);
+    }
+    UniqueNamedObjectFactory<Function> as(ns);
+    as.add("add", 2);*/
 
     cout<<flush;cerr<<flush;
     return 0;

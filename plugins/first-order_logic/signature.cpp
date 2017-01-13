@@ -17,36 +17,21 @@ public:
             : std::invalid_argument("Cимвол \"" + symName + "\" не определён.\n") {}
 };
 
-bool Namespace::isPred(const std::string& name) const
-{ return (predicates.find(name) != predicates.end()); }
-bool Namespace::isFunc(const std::string& name) const
-{ return (functions.find(name) != functions.end()); }
-bool Namespace::isCons(const std::string& name) const
-{ return (constants.find(name) != constants.end()); }
-bool Namespace::isVar(const std::string& name) const
-{ return (variables.find(name) != variables.end()); }
-bool Namespace::isSomeSym(const std::string& name) const
-{ return (isPred(name) || isFunc(name) ||
-          isCons(name) || isVar(name)); }
+Namespace::Namespace()
+{
+    names[NameTy::PRED] = {}; names[NameTy::FUNC] = {};
+    names[NameTy::CONS] = {}; names[NameTy::VARS] = {};
+}
 
-void Namespace::checkPred(const std::string& name) const
+bool Namespace::isThatType(const std::string& name, const NameTy& type) const
+{ return (names.at(type).find(name) != names.at(type).end()); }
+bool Namespace::isSomeSym(const std::string& name) const
+{ return (isThatType(name, NameTy::PRED) || isThatType(name, NameTy::FUNC) ||
+          isThatType(name, NameTy::CONS) || isThatType(name, NameTy::VARS)); }
+
+void Namespace::checkSym(const std::string& name, const NameTy& type) const
 {
-    if (!isPred(name))
-        throw no_sym(name);
-}
-void Namespace::checkFunc(const std::string& name) const
-{
-    if (!isFunc(name))
-        throw no_sym(name);
-}
-void Namespace::checkCons(const std::string& name) const
-{
-    if (!isCons(name))
-        throw no_sym(name);
-}
-void Namespace::checkVar(const std::string& name) const
-{
-    if (!isVar(name))
+    if (!isThatType(name, type))
         throw no_sym(name);
 }
 void Namespace::checkSym(const std::string& name) const
@@ -55,86 +40,56 @@ void Namespace::checkSym(const std::string& name) const
         throw no_sym(name);
 }
 
-void Namespace::addPred(const std::string& name)
+void Namespace::addSym(const std::string& name, const NameTy& type)
 {
     if (isSomeSym(name))
         throw sym_doubling(name);
     else
-        predicates.insert(name);
+        names.at(type).insert(name);
 }
-void Namespace::addFunc(const std::string& name)
+void Namespace::delSym(const std::string& name, const NameTy& type)
 {
-    if (isSomeSym(name))
-        throw sym_doubling(name);
+    if (isThatType(name, type))
+        names.at(type).erase(name);
     else
-        functions.insert(name);
-}
-void Namespace::addCons(const std::string& name)
-{
-    if (isSomeSym(name))
-        throw sym_doubling(name);
-    else
-        constants.insert(name);
-}
-void Namespace::addVar(const std::string& name)
-{
-    if (isSomeSym(name))
-        throw sym_doubling(name);
-    else
-        variables.insert(name);
+        throw no_sym(name);
 }
 
-
-TermsFactory::~TermsFactory()
-{
-    for (auto t : T)
-        delete t.second;
-    for (auto v : V)
-        delete v.second;
-    for (auto c : C)
-        delete c.second;
-}
 
 void TermsFactory::addC(const std::string& name)
-{
-    names.addCons(name);
-    C[name] = new Constant(name);
-}
+{ C.add(name); }
 void TermsFactory::addV(const std::string& name)
-{
-    names.addVar(name);
-    V[name] = new Variable(name);
-}
+{ V.add(name); }
 
 Constant* TermsFactory::getC(const std::string& name) const
-{
-    names.checkCons(name);
-    //если бы символ не был добавлен, схватили бы исключение от Namespace
-    return C.at(name);
-}
+{ return C.get(name); }
 Variable* TermsFactory::getV(const std::string& name) const
-{
-    names.checkVar(name);
-    return V.at(name);
-}
+{ return V.get(name); }
 
 Term* TermsFactory::makeTerm(Function* f, std::list<Terms*> args)
+{ return T.make({f, args}); }
+
+
+FormulasFactory::FormulasFactory()
 {
-    auto pair = std::make_pair(f, args);
-    Term* t;
-    auto search = T.find(pair);
-    if (search != T.end())
-        t = search->second;
-    else
-        T[pair] = t = new Term(f, args);
-    return t;
+    makeMod(Modifier::MType::NOT);
+    makeMod(Modifier::MType::AND);
+    makeMod(Modifier::MType::OR);
+    makeMod(Modifier::MType::THAN);
 }
+
+Modifier* FormulasFactory::makeMod(Modifier::MType _type, Variable* _arg)
+{ return M.make({_arg, _type}); }
+Formula* FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
+{ return A.make({p, args}); }
+Formula* FormulasFactory::makeFormula(Modifier* _mod, Formula* F1, Formula* F2)
+{ return F.make({_mod, {F1, F2}}); }
 
 
 Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
                      std::list<std::pair<std::string, unsigned> > _F,
                      std::list<std::string> _C)
-        : names(), termsStorage(names)
+        : names(), R(names), F(names), terms(names)
 {
     for (auto r : _R)
         addP(r.first, r.second);
@@ -144,13 +99,32 @@ Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
         addC(c);
 }
 
-Signature::~Signature()
-{
-    for (auto r : R)
-        delete r.second;
-    for (auto f : F)
-        delete f.second;
-}
+bool Signature::isPred(const std::string& name) const
+{ return (names.isThatType(name, Namespace::NameTy::PRED)); }
+bool Signature::isFunc(const std::string& name) const
+{ return (names.isThatType(name, Namespace::NameTy::FUNC)); }
+bool Signature::isCons(const std::string& name) const
+{ return (terms.isCons(name)); }
+bool Signature::isVar(const std::string& name) const
+{ return (terms.isVar(name)); }
+
+void Signature::addP(const std::string& name, unsigned arity)
+{ R.add(name, arity); }
+void Signature::addF(const std::string& name, unsigned arity)
+{ F.add(name, arity); }
+void Signature::addC(const std::string& name)
+{ terms.addC(name); }
+void Signature::addV(const std::string& name)
+{ terms.addV(name); }
+
+Predicate* Signature::getP(const std::string& name) const
+{ return R.get(name); }
+Function* Signature::getF(const std::string& name) const
+{ return F.get(name); }
+Constant* Signature::getC(const std::string& name) const
+{ return terms.getC(name); }
+Variable* Signature::getV(const std::string& name) const
+{ return terms.getV(name); }
 
 Signature::nameT Signature::checkName(const std::string& name) const
 {
@@ -166,47 +140,16 @@ Signature::nameT Signature::checkName(const std::string& name) const
 unsigned Signature::arity(const std::string& name) const
 {
     if (isPred(name))
-    { return R.at(name)->getArity(); }
+    { return getP(name)->getArity(); }
     else if (isFunc(name))
-    { return F.at(name)->getArity(); }
+    { return getF(name)->getArity(); }
     else
     { return static_cast<unsigned>(-1);}
 }
 
-void Signature::addP(const std::string& name, unsigned arity)
-{
-    names.addPred(name);
-    R[name] = new Predicate(name, arity);
-}
-void Signature::addF(const std::string& name, unsigned arity)
-{
-    names.addFunc(name);
-    F[name] = new Function(name, arity);
-}
-void Signature::addC(const std::string& name)
-{
-    termsStorage.addC(name);
-}
-
-Predicate* Signature::getP(const std::string& name) const
-{
-    names.checkPred(name);
-    //если бы символ не был добавлен, схватили бы исключение от Namespace
-    return R.at(name);
-}
-Function* Signature::getF(const std::string& name) const
-{
-    names.checkFunc(name);
-    return F.at(name);
-}
-Constant* Signature::getC(const std::string& name) const
-{
-    return termsStorage.getC(name);
-}
-
 unsigned long Signature::maxLength(nameT type) const
 {
-    unsigned long maxLen = 0;
+    /*unsigned long maxLen = 0;
     switch (type)
     {
         case nameT::predicate:
@@ -232,6 +175,7 @@ unsigned long Signature::maxLength(nameT type) const
         }
         case nameT::none: {}
     }
-    return maxLen;
+    return maxLen;*/
+    return 1;
 }
 

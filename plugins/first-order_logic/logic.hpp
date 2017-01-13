@@ -67,8 +67,8 @@ class Predicate : public Symbol, public Map
 private:
     Predicate(const std::string& _name, unsigned _arity/*, Signature* _sigma = nullptr*/)
             : Symbol(_name), Map(_arity)/*, sigma(_sigma)*/ {}
-//    friend void Signature::addP(const std::string& name, unsigned arity);
-    friend class Signature;
+    template <typename V>
+    friend class UniqueNamedObjectFactory;
 public:
     virtual ~Predicate() {}
     Predicate(const Predicate& one)
@@ -83,9 +83,9 @@ private:
     Function(const std::string& _name, unsigned _arity)
             : Symbol(_name), Map(_arity)
     { if (_arity == 0)
-            throw std::invalid_argument("нуль-арные функции запрещены, константы задаются явно."); }
-//    friend void Signature::addF(const std::string& name, unsigned arity);
-    friend class Signature;
+            throw std::invalid_argument("Нуль-арные функции запрещены, константы задаются явно."); }
+    template <typename V>
+    friend class UniqueNamedObjectFactory;
 public:
     virtual ~Function() {}
     Function(const Function& one)
@@ -106,8 +106,8 @@ class Constant : public Terms, public Symbol
 {
 private:
     Constant(const std::string& _name) : Symbol(_name) {}
-//    friend void TermsFactory::addC(const std::string& name);
-    friend class TermsFactory;
+    template <typename V>
+    friend class UniqueNamedObjectFactory;
 public:
     virtual ~Constant() {}
     Constant(const Constant& one) : Symbol(one) {}
@@ -116,9 +116,9 @@ public:
 class Variable : public Terms, public Symbol
 {
 private:
-    Variable(const std::string& _name) : Symbol(_name) {/*vars.emplace(this);*/}
-//    friend void TermsFactory::addV(const std::string& name);
-    friend class TermsFactory;
+    Variable(const std::string& _name) : Symbol(_name) {}
+    template <typename V>
+    friend class UniqueNamedObjectFactory;
 public:
     virtual ~Variable() {}
     Variable(const Variable& one) : Symbol(one) {}
@@ -147,9 +147,12 @@ public:
 class Term : public Terms, protected Function, public ParenSymbol
 {
 private:
-    friend class TermsFactory;
     Term(Function* f, std::list<Terms*> _args)
             : Function(*f), ParenSymbol(_args) { argCheck(f, _args); }
+    Term(std::pair<Function*, std::list<Terms*> > pair)
+            : Term(pair.first, pair.second) {}
+    template <typename K, typename V>
+    friend class UniqueObjectFactory;
 public:
     Term(const Term& one)
             : Function(one), ParenSymbol(one) {}

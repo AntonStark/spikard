@@ -3,7 +3,7 @@
 //
 
 #include "formulas.hpp"
-void LOperation::print(std::ostream &out) const
+/*void LOperation::print(std::ostream &out) const
 {
     switch (type)
     {
@@ -21,6 +21,18 @@ void Quantifier::print(std::ostream &out) const
         case QType::EXISTS : { out << "\\exists "; break;}
     }
     arg->print(out);
+}*/
+void Modifier::print(std::ostream& out) const
+{
+    switch (type)
+    {
+        case MType::NOT :   { out << "\\lnot "; break; }
+        case MType::AND :   { out << "\\land "; break; }
+        case MType::OR :    { out << "\\lor ";  break; }
+        case MType::THAN :  { out << "\\Rightarrow "; break; }
+        case MType::FORALL :{ out << "\\forall "; arg->print(out); break;}
+        case MType::EXISTS :{ out << "\\exists "; arg->print(out); break;}
+    }
 }
 void ComposedF::print(std::ostream &out) const
 {
@@ -71,26 +83,78 @@ void Atom::print(std::ostream &out) const
 }
 
 
-
-
-ComposedF::ComposedF(const Modifier& _mod, const Formula& F)
+class Modifier::no_arg : public std::invalid_argument
 {
-    if (_mod.isLOperation() && (_mod.getType() != 0) )
-        throw std::invalid_argument("Использована не унарная операция.\n");
+public:
+    no_arg() :
+            std::invalid_argument("Попытка создания квантора без переменной.\n") {}
+};
+class Modifier::excess_arg : public std::invalid_argument
+{
+public:
+    excess_arg() :
+            std::invalid_argument("Попытка создания логической связки с указанием переменной.\n") {}
+};
+
+Modifier::Modifier(MType _type, Variable* _arg)
+{
+    if (isLogical(_type))
+    {
+        if (arg != nullptr)
+            throw excess_arg();
+        else
+            type = _type;
+    }
+    else
+    {
+        if (arg == nullptr)
+            throw no_arg();
+        else
+        {
+            type = _type;
+            arg = _arg;
+        }
+    }
+}
+
+bool Modifier::isLogical(MType _type) const
+{
+    return (_type == MType::NOT || _type == MType::AND ||
+            _type == MType::OR  || _type == MType::THAN);
+}
+bool Modifier::isQuantor(MType _type) const
+{ return (_type == MType::FORALL || _type == MType::EXISTS); }
+
+bool Modifier::isLogical() const
+{ return isLogical(type); }
+bool Modifier::isQuantor() const
+{ return isQuantor(type); }
+bool Modifier::isUnary() const
+{
+    return (type == MType::NOT ||
+            type == MType::FORALL ||
+            type == MType::EXISTS);
+}
+
+
+/*ComposedF::ComposedF(const Modifier& _mod, const Formula& F)
+{
+    if (!_mod.isUnary())
+        throw std::invalid_argument("Использована не унарная связка.\n");
 
     mod = _mod.clone();
     arg1 = F.clone();
     arg2 = nullptr;
 }
-ComposedF::ComposedF(const LOperation& _mod, const Formula& F1, const Formula& F2)
+ComposedF::ComposedF(const Modifier& _mod, const Formula& F1, const Formula& F2)
 {
-    if (_mod.getType() == 0)
-        throw std::invalid_argument("Отрицание - не бинарная операция.\n");
+    if (_mod.isUnary())
+        throw std::invalid_argument("Использована не бинарная связка.\n");
 
     mod = _mod.clone();
     arg1 = F1.clone();
     arg2 = F2.clone();
-}
+}*/
 
 /*
 void prepareForName(std::string& name)
