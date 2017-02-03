@@ -41,7 +41,10 @@ public:
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Function>* one) const { return NameTy::FUNC; }
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Constant>* one) const { return NameTy::CONS; }
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Variable>* one) const { return NameTy::VARS; }
+
+    friend class Lexer;
 };
+typedef Namespace::NameTy NameTy;
 
 template <typename K, typename V>
 class UniqueObjectStorage
@@ -81,7 +84,7 @@ class UniqueNamedObjectFactory : public UniqueObjectStorage<std::string, V>
 {
 private:
     Namespace& ns;
-    const Namespace::NameTy type;
+    const NameTy type;
 protected:
     using UniqueObjectStorage<std::string, V>::storage;
 public:
@@ -128,9 +131,9 @@ public:
     ~TermsFactory() {}
 
     bool isCons(const std::string& name) const
-    { return names.isThatType(name, Namespace::NameTy::CONS); }
+    { return names.isThatType(name, NameTy::CONS); }
     bool isVar(const std::string& name) const
-    { return names.isThatType(name, Namespace::NameTy::VARS); }
+    { return names.isThatType(name, NameTy::VARS); }
 
     void addC(const std::string& name);
     void addV(const std::string& name);
@@ -144,7 +147,7 @@ public:
 class FormulasFactory
 {
 private:
-    UniqueObjectFactory<std::pair<Variable*, Modifier::MType>,
+    UniqueObjectFactory<std::pair<Variable*, MType>,
                         Modifier> M;
     UniqueObjectFactory<std::pair<Predicate*,
                                   std::list<Terms*> >,
@@ -153,17 +156,17 @@ private:
                                   std::pair<Formula*, Formula*> >,
                         ComposedF> F;
 protected:
-    Modifier* makeMod(Modifier::MType _type, Variable* _arg = nullptr);
+    Modifier* makeMod(MType _type, Variable* _arg = nullptr);
 public:
     FormulasFactory();
     ~FormulasFactory() {}
 
-    Modifier* logNOT()  { return makeMod(Modifier::MType::NOT, nullptr); }
-    Modifier* logAND()  { return makeMod(Modifier::MType::AND, nullptr); }
-    Modifier* logOR()   { return makeMod(Modifier::MType::OR,  nullptr); }
-    Modifier* logTHAN() { return makeMod(Modifier::MType::THAN,nullptr); }
-    Modifier* forall(Variable* var) { return makeMod(Modifier::MType::FORALL, var); }
-    Modifier* exists(Variable* var) { return makeMod(Modifier::MType::EXISTS, var); }
+    Modifier* logNOT()  { return makeMod(MType::NOT, nullptr); }
+    Modifier* logAND()  { return makeMod(MType::AND, nullptr); }
+    Modifier* logOR()   { return makeMod(MType::OR,  nullptr); }
+    Modifier* logTHAN() { return makeMod(MType::THAN,nullptr); }
+    Modifier* forall(Variable* var) { return makeMod(MType::FORALL, var); }
+    Modifier* exists(Variable* var) { return makeMod(MType::EXISTS, var); }
 
     Formula* makeFormula(Predicate* p, std::list<Terms*> args);
     Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
@@ -178,13 +181,16 @@ private:
     UniqueNamedObjectFactory<Function> F;
 
     TermsFactory terms;
+    friend class Lexer;
+public:
     FormulasFactory formulas;
 protected:
+    //TODO написать конструкторы фабрик от Initializer_list и сделать их const и не нужны эти add тогда
     void addP(const std::string& name, unsigned arity);
     void addF(const std::string& name, unsigned arity);
     void addC(const std::string& name);
 public:
-    Signature() : names(), R(names), F(names), terms(names) {}
+    Signature() : names(), R(names), F(names), terms(names), formulas() {}
     Signature(std::list<std::pair<std::string, unsigned> > _R,
               std::list<std::pair<std::string, unsigned> > _F,
               std::list<std::string> _C);
@@ -204,17 +210,8 @@ public:
 
     Term* makeTerm(Function* f, std::list<Terms*> args)
     { return terms.makeTerm(f, args); }
-    Formula* makeFormula(Predicate* p, std::list<Terms*> args)
-    { return formulas.makeFormula(p, args); }
-    Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr)
-    { return formulas.makeFormula(_mod, F1, F2); }
-
-    //TODO убрать в Namespace после возврата Interpr
-    enum class nameT {predicate, function, constant, none};
-    nameT checkName(const std::string& name) const;
 
     unsigned arity(const std::string& name) const;
-    unsigned long maxLength(nameT type) const;
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

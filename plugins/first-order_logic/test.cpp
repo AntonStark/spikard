@@ -2,6 +2,7 @@
 #include "logic.hpp"
 #include "signature.hpp"
 #include "formulas.hpp"
+#include "parser.hpp"
 
 using namespace std;
 
@@ -39,7 +40,7 @@ int main(void)
 
     cout << "add == mul? " << (f1 == f2) << endl;
 
-    Interpr inter(signature);
+    Parser inter(signature);
 
     std::shared_ptr<ComposedF> formula = inter.interpretFormula("\\forall a (!=(a, 0)\\Rightarrow\\exists b(in(b,a)\\land\\exists c (in(c,b)\\Rightarrow!in(c,a))))");
 
@@ -55,16 +56,10 @@ int main(void)
     Term* ty = s.makeTerm(f2, {te, y});
     bool eq = (te2 == ty);
 
-    /*Namespace ns;
-    {
-        UniqueNamedObjectFactory<Predicate> fac(ns);
-        fac.add(">", 2);
-        fac.add(">=", 2);
-        fac.add("=", 2);
-        fac.add("prime", 1);
-    }
-    UniqueNamedObjectFactory<Function> as(ns);
-    as.add("add", 2);*/
+    Lexer lex(s);
+    Parser inter(lex, s.formulas, s, "\\forall x >=(mul(x, x), 0) \\Rightarrow =(0,0)");
+
+    (*inter.stage3.begin())->print();
 
     cout<<flush;cerr<<flush;
     return 0;

@@ -72,13 +72,13 @@ Term* TermsFactory::makeTerm(Function* f, std::list<Terms*> args)
 
 FormulasFactory::FormulasFactory()
 {
-    makeMod(Modifier::MType::NOT);
-    makeMod(Modifier::MType::AND);
-    makeMod(Modifier::MType::OR);
-    makeMod(Modifier::MType::THAN);
+    makeMod(MType::NOT);
+    makeMod(MType::AND);
+    makeMod(MType::OR);
+    makeMod(MType::THAN);
 }
 
-Modifier* FormulasFactory::makeMod(Modifier::MType _type, Variable* _arg)
+Modifier* FormulasFactory::makeMod(MType _type, Variable* _arg)
 { return M.make({_arg, _type}); }
 Formula* FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
 { return A.make({p, args}); }
@@ -89,7 +89,7 @@ Formula* FormulasFactory::makeFormula(Modifier* _mod, Formula* F1, Formula* F2)
 Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
                      std::list<std::pair<std::string, unsigned> > _F,
                      std::list<std::string> _C)
-        : names(), R(names), F(names), terms(names)
+        : names(), R(names), F(names), terms(names), formulas()
 {
     for (auto r : _R)
         addP(r.first, r.second);
@@ -100,9 +100,9 @@ Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
 }
 
 bool Signature::isPred(const std::string& name) const
-{ return (names.isThatType(name, Namespace::NameTy::PRED)); }
+{ return (names.isThatType(name, NameTy::PRED)); }
 bool Signature::isFunc(const std::string& name) const
-{ return (names.isThatType(name, Namespace::NameTy::FUNC)); }
+{ return (names.isThatType(name, NameTy::FUNC)); }
 bool Signature::isCons(const std::string& name) const
 { return (terms.isCons(name)); }
 bool Signature::isVar(const std::string& name) const
@@ -126,17 +126,6 @@ Constant* Signature::getC(const std::string& name) const
 Variable* Signature::getV(const std::string& name) const
 { return terms.getV(name); }
 
-Signature::nameT Signature::checkName(const std::string& name) const
-{
-    if (isPred(name))
-        return nameT::predicate;
-    if (isFunc(name))
-        return nameT::function;
-    if (isCons(name))
-        return nameT::constant;
-    return nameT::none;
-}
-
 unsigned Signature::arity(const std::string& name) const
 {
     if (isPred(name))
@@ -146,36 +135,3 @@ unsigned Signature::arity(const std::string& name) const
     else
     { return static_cast<unsigned>(-1);}
 }
-
-unsigned long Signature::maxLength(nameT type) const
-{
-    /*unsigned long maxLen = 0;
-    switch (type)
-    {
-        case nameT::predicate:
-        {
-            for (auto r : R)
-                if (r.first.length() > maxLen)
-                    maxLen = r.first.length();
-            break;
-        }
-        case nameT::function:
-        {
-            for (auto f : F)
-                if (f.first.length() > maxLen)
-                    maxLen = f.first.length();
-            break;
-        }
-        case nameT::constant:
-        {
-            for (auto c : C)
-                if (c.first.length() > maxLen)
-                    maxLen = c.first.length();
-            break;
-        }
-        case nameT::none: {}
-    }
-    return maxLen;*/
-    return 1;
-}
-
