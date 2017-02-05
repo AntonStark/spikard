@@ -18,7 +18,7 @@ class UniqueNamedObjectFactory;
 class Namespace
 {
 public:
-    enum class NameTy {PRED, FUNC, CONS, VARS};
+    enum class NameTy {PRED, FUNC, VARS};
 private:
     class sym_doubling;
     class no_sym;
@@ -39,7 +39,6 @@ public:
 
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Predicate>* one)const { return NameTy::PRED; }
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Function>* one) const { return NameTy::FUNC; }
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Constant>* one) const { return NameTy::CONS; }
     const NameTy getFactoryType(const UniqueNamedObjectFactory<Variable>* one) const { return NameTy::VARS; }
 
     friend class Lexer;
@@ -116,30 +115,52 @@ public:
     }
 };
 
+class Signature
+{
+private:
+    Namespace names;
+
+    UniqueNamedObjectFactory<Predicate> R;
+    UniqueNamedObjectFactory<Function> F;
+
+    friend class TermsFactory;
+public:
+    Signature() : names(), R(names), F(names) {}
+    Signature(std::list<std::pair<std::string, unsigned> > _R,
+              std::list<std::pair<std::string, unsigned> > _F,
+              std::list<std::string> _C);
+    ~Signature() {}
+
+    bool isPred(const std::string& name) const;
+    bool isFunc(const std::string& name) const;
+
+    Predicate* getP(const std::string& name) const;
+    Function* getF(const std::string& name) const;
+
+    unsigned arity(const std::string& name) const;
+
+    const Namespace& viewNS() const
+    { return names; }
+};
+
 class TermsFactory
 {
 private:
     Namespace& names;
 
-    UniqueNamedObjectFactory<Constant> C;
     UniqueNamedObjectFactory<Variable> V;
     UniqueObjectFactory<std::pair<Function*,
                                   std::list<Terms*> >,
                         Term> T;
 public:
-    TermsFactory(Namespace& _names) : names(_names), C(names), V(names) {}
+    TermsFactory(Namespace& _names) : names(_names), V(names) {}
+    TermsFactory(Signature& sigma) : names(sigma.names), V(names) {}
     ~TermsFactory() {}
 
-    bool isCons(const std::string& name) const
-    { return names.isThatType(name, NameTy::CONS); }
-    bool isVar(const std::string& name) const
-    { return names.isThatType(name, NameTy::VARS); }
-
-    void addC(const std::string& name);
-    void addV(const std::string& name);
-
-    Constant* getC(const std::string& name) const;
+    bool isVar(const std::string& name) const;
     Variable* getV(const std::string& name) const;
+    void addV(const std::string& name);
+    Variable* makeVar(const std::string& name);
 
     Term* makeTerm(Function* f, std::list<Terms*> args);
 };
@@ -161,57 +182,15 @@ public:
     FormulasFactory();
     ~FormulasFactory() {}
 
-    Modifier* logNOT()  { return makeMod(MType::NOT, nullptr); }
-    Modifier* logAND()  { return makeMod(MType::AND, nullptr); }
-    Modifier* logOR()   { return makeMod(MType::OR,  nullptr); }
-    Modifier* logTHAN() { return makeMod(MType::THAN,nullptr); }
+    Modifier* logNOT()  { return makeMod(MType::NOT); }
+    Modifier* logAND()  { return makeMod(MType::AND); }
+    Modifier* logOR()   { return makeMod(MType::OR ); }
+    Modifier* logTHAN() { return makeMod(MType::THAN);}
     Modifier* forall(Variable* var) { return makeMod(MType::FORALL, var); }
     Modifier* exists(Variable* var) { return makeMod(MType::EXISTS, var); }
 
     Formula* makeFormula(Predicate* p, std::list<Terms*> args);
     Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
-};
-
-class Signature
-{
-private:
-    Namespace names;
-
-    UniqueNamedObjectFactory<Predicate> R;
-    UniqueNamedObjectFactory<Function> F;
-
-    TermsFactory terms;
-    friend class Lexer;
-public:
-    FormulasFactory formulas;
-protected:
-    //TODO написать конструкторы фабрик от Initializer_list и сделать их const и не нужны эти add тогда
-    void addP(const std::string& name, unsigned arity);
-    void addF(const std::string& name, unsigned arity);
-    void addC(const std::string& name);
-public:
-    Signature() : names(), R(names), F(names), terms(names), formulas() {}
-    Signature(std::list<std::pair<std::string, unsigned> > _R,
-              std::list<std::pair<std::string, unsigned> > _F,
-              std::list<std::string> _C);
-    ~Signature() {}
-
-    bool isPred(const std::string& name) const;
-    bool isFunc(const std::string& name) const;
-    bool isCons(const std::string& name) const;
-    bool isVar(const std::string& name) const;
-
-    void addV(const std::string& name);
-
-    Predicate* getP(const std::string& name) const;
-    Function* getF(const std::string& name) const;
-    Constant* getC(const std::string& name) const;
-    Variable* getV(const std::string& name) const;
-
-    Term* makeTerm(Function* f, std::list<Terms*> args)
-    { return terms.makeTerm(f, args); }
-
-    unsigned arity(const std::string& name) const;
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

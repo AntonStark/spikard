@@ -83,14 +83,14 @@ Modifier::Modifier(MType _type, Variable* _arg)
 {
     if (isLogical(_type))
     {
-        if (arg != nullptr)
+        if (_arg != nullptr)
             throw excess_arg();
         else
             type = _type;
     }
     else
     {
-        if (arg == nullptr)
+        if (_arg == nullptr)
             throw no_arg();
         else
         {

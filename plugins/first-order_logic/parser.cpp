@@ -227,7 +227,7 @@ void printL(const LexList& list)
 LexList::const_iterator findTopLevelMod(
         const LexList& list)
 {
-printL(list);
+//printL(list);
     unsigned priority = 0;
     auto e = list.end();
     auto gotIt = e;
@@ -247,16 +247,18 @@ inline std::string Parser::lexToStr(const Lexeme& lex)
 
 void Parser::recognizeParenSymbol(LexList::const_iterator& it, LexList::const_iterator e, std::list<Terms*>& dst)
 {
+std::cerr<<"parenOf(";
+printL({it, e});
+std::cerr<<")\n";
     //стартуем с открывающей скобки, её пропускаем
     ++it;
     for (; it != e; ++it)
     {
+std::cerr<<Lexer::tokToStr(it->first);
         switch (it->first)
         {
-            case Lexer::Token::C :
-            { dst.push_back(sigma.getC(lexToStr(*it))); break; }
             case Lexer::Token::V :
-            { dst.push_back(sigma.getV(lexToStr(*it))); break; }
+            { dst.push_back(tf.makeVar(lexToStr(*it))); break; }
             case Lexer::Token::F :
             { dst.push_back(recognizeTerm(it, e)); break; }
             case Lexer::Token::c :
@@ -272,15 +274,17 @@ void Parser::recognizeParenSymbol(LexList::const_iterator& it, LexList::const_it
 
 Term* Parser::recognizeTerm(LexList::const_iterator& it, LexList::const_iterator end)
 {
-    Function* f = sigma.getF(lexToStr(*it++));
+    Function* f = sigma.getF(lexToStr(*it));
     std::list<Terms*> args;
-    if (it->first != Lexer::Token::lb)
+    auto nit = std::next(it);
+    if (nit != end && nit->first == Lexer::Token::lb)
+        recognizeParenSymbol(++it, end, args);
+    else if (f->getArity() != 0)
         throw std::invalid_argument("Ожидалась скобка.\n");
-    recognizeParenSymbol(it, end, args);
     //TODO эта нестыковка обнаруживает проблему семантики модели: добавление настоящего терма
     // не меняет сигнатуры, т.к. они не часть её (с другой стороны такие же тёрки с переменными),
     // а TermFactory - часть Signature - и приплыли. Пока просто сниму const
-    return sigma.makeTerm(f, args);
+    return tf.makeTerm(f, args);
 }
 
 Formula* Parser::recogniseFormula(const LexList& list)
@@ -324,7 +328,7 @@ Formula* Parser::recogniseFormula(const LexList& list)
             {
                 if ((++m)->first != Lexer::Token::V)
                     throw std::invalid_argument("После квантора должно быть имя переменной.\n");
-                Variable* _arg = sigma.getV(lexToStr(*m));
+                Variable* _arg = tf.makeVar(lexToStr(*m));
                 if (std::prev(m)->first == Lexer::Token::Qf)
                     mod = ff.forall(_arg);
                 else

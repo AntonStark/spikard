@@ -81,9 +81,7 @@ class Function : public Symbol, public Map
 {
 private:
     Function(const std::string& _name, unsigned _arity)
-            : Symbol(_name), Map(_arity)
-    { if (_arity == 0)
-            throw std::invalid_argument("Нуль-арные функции запрещены, константы задаются явно."); }
+            : Symbol(_name), Map(_arity) {}
     template <typename V>
     friend class UniqueNamedObjectFactory;
 public:
@@ -94,23 +92,11 @@ public:
     bool operator== (const Function& one) const;
 };
 
-class Variable;
 class Terms : public virtual Printable
 {
 public:
     virtual ~Terms() {}
     virtual bool isVariable() const { return false; }
-};
-
-class Constant : public Terms, public Symbol
-{
-private:
-    Constant(const std::string& _name) : Symbol(_name) {}
-    template <typename V>
-    friend class UniqueNamedObjectFactory;
-public:
-    virtual ~Constant() {}
-    Constant(const Constant& one) : Symbol(one) {}
 };
 
 class Variable : public Terms, public Symbol

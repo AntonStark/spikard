@@ -9,17 +9,19 @@ using namespace std;
 int main(void)
 {
     Signature s({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}}, {{"add",2}, {"mul",2}}, {"0", "1"});
+    TermsFactory tf(s);
 
     Function* f1 = s.getF("add");
 //    Variable x("x");
-    Constant* o(s.getC("1"));
-    Constant* one = s.getC("1");
+    Function* o(s.getF("1"));
+    Function* one = s.getF("1");
 //    Term t1(&f1, {&x, &o});
 
     Function* f2 = s.getF("mul");
 //    Term t2(&f2, {&t1, &t1});
 
-    Constant* n = s.getC("0");
+    Function* n = s.getF("0");
+    Term* ni = tf.makeTerm(n, {});
     Predicate* p1 = s.getP(">=");
 
     /*Atom a(&p1, {&t2, &n});
@@ -47,18 +49,16 @@ int main(void)
     cout<<'\n';
     formula->print();
     cout<<'\n';*/
-    s.addV("x");
-    s.addV("y");
-    Variable* x = s.getV("x");
-    Variable* y = s.getV("y");
-    Term* te = s.makeTerm(f1, {x, n});
-    Term* te2 = s.makeTerm(f2, {te, y});
-    Term* ty = s.makeTerm(f2, {te, y});
+    Variable* x = tf.makeVar("x");
+    Variable* y = tf.makeVar("y");
+    Term* te = tf.makeTerm(f1, {x, ni});
+    Term* te2 = tf.makeTerm(f2, {te, y});
+    Term* ty = tf.makeTerm(f2, {te, y});
     bool eq = (te2 == ty);
 
     Lexer lex(s);
-    Parser inter(lex, s.formulas, s, "\\forall x >=(mul(x, x), 0) \\Rightarrow =(0,0)");
-
+    FormulasFactory ff;
+    Parser inter(lex, ff, tf, s, "\\forall x >=(mul(x, x), 0) \\Rightarrow =(0,0)");
     (*inter.stage3.begin())->print();
 
     cout<<flush;cerr<<flush;

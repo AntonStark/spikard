@@ -12,14 +12,14 @@
  * 2) class Lexeme. Lexeme::operator==(Lexer::Token)
  * 3) std::string Lexeme::value() const;
  * 4) Lexeme.second.second = indent -> lexLen
- * 5) addV/getV -> makeV
+ * 5) addV/getV -> makeVar
  * 6) checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
  */
 
 class Lexer
 {
 public:
-    enum class Token {P, F, C, V,
+    enum class Token {P, F, V,
         Ln, La, Lo, Qf, Qe, Lt,
         c, s, lb, rb};
 static std::string tokToStr(const Token& tok)
@@ -28,7 +28,6 @@ static std::string tokToStr(const Token& tok)
     {
         case Token::P : return "P";
         case Token::F : return "F";
-        case Token::C : return "C";
         case Token::V : return "V";
         case Token::Ln: return "Ln";
         case Token::La: return "La";
@@ -46,14 +45,12 @@ static std::string tokToStr(const Token& tok)
 
     Lexer(const Signature& sigma)
     {
-        const Namespace& ns = sigma.names;
+        const Namespace& ns = sigma.viewNS();
 
         for (auto s : ns.names.at(NameTy::PRED))
             words[s] = Token::P;
         for (auto s : ns.names.at(NameTy::FUNC))
             words[s] = Token::F;
-        for (auto s : ns.names.at(NameTy::CONS))
-            words[s] = Token::C;
 
         words[Modifier::word[MType::NOT]]   = Token::Ln;
         words[Modifier::word[MType::AND]]   = Token::La;
@@ -79,8 +76,8 @@ class Parser
 public:
     const Lexer& lex;
     FormulasFactory& ff;
-    //TODO это неправильно семантически
-    /*const */Signature& sigma;
+    TermsFactory& tf;
+    const Signature& sigma;
     const std::string input;
 
     /*class Lexeme
@@ -123,9 +120,9 @@ public:
     std::set<LexList> stage2;
     std::set<Formula*> stage3;
 
-    Parser(const Lexer& _lex, FormulasFactory& _ff,
+    Parser(const Lexer& _lex, FormulasFactory& _ff, TermsFactory& _tf,
             Signature& _sigma, const std::string& _input)
-            : lex(_lex), ff(_ff), sigma(_sigma), input(_input)
+            : lex(_lex), ff(_ff), tf(_tf), sigma(_sigma), input(_input)
     {
         markLexems();
         for (auto p : stage1)
