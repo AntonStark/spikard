@@ -5,6 +5,8 @@
 #ifndef TEST_BUILD_INTERPR_HPP
 #define TEST_BUILD_INTERPR_HPP
 
+#include <stack>
+
 #include "signature.hpp"
 
 //TODO мысли о рефакторинге:
@@ -16,11 +18,13 @@
  * 6) checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
  */
 
+bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
+
 class Lexer
 {
 public:
     enum class Token {P, F, V,
-        Ln, La, Lo, Qf, Qe, Lt,
+        Ln, La, Lo, Lt, Qf, Qe,
         c, s, lb, rb};
 static std::string tokToStr(const Token& tok)
 {
@@ -64,12 +68,71 @@ static std::string tokToStr(const Token& tok)
     }
 };
 
+/*bool mayFollow(const Lexer::Token& one, const Lexer::Token& two);
+
+class LexTree
+{
+public:
+    const Lexer* lexer;
+    const std::string& input;
+
+    unsigned indent;
+    Lexer::Token rootT;
+    unsigned length;
+
+    std::list<LexTree*> subs;
+
+    LexTree(const Lexer* _lexer, const std::string& _input, unsigned _indent, Lexer::Token _rootT, unsigned _length)
+            : lexer(_lexer), input(_input), indent(_indent), rootT(_rootT), length(_length)
+    {
+        for (auto w : lexer->words)
+        {
+            if (mayFollow(rootT, w.second) && matchIndented(input, indent+length, w.first))
+                subs.push_back(new LexTree(lexer, input, indent+length, w.second, w.first.length()));
+        }
+    }
+    ~LexTree()
+    {
+        for (auto s : subs)
+            delete s;
+    }
+};*/
+
+/*class Lexeme
+{
+public:
+    const Lexer::Token type;
+    const std::pair<size_t, size_t> piece;
+    const std::string& source;
+
+    Lexeme(const Lexer::Token& _type, std::pair<size_t, size_t> _piece, const std::string& _source)
+            : type(_type), piece(_piece), source(_source)
+    {
+        if (piece.second > source.length())
+            throw std::invalid_argument("Выход за границу строки.\n");
+    }
+    Lexeme(const Lexeme& one)
+            : type(one.type), piece(one.piece), source(one.source) {}
+
+    ~Lexeme() {}
+
+    std::string value() const
+    { return source.substr(piece.first, piece.second - piece.first); }
+};*/
+
 typedef std::pair<Lexer::Token,
                   std::pair<size_t, size_t> > Lexeme;
 typedef std::list<Lexeme> LexList;
 typedef std::pair<size_t, LexList> PartialResolved;
+
+struct LlCiterCompare
+{
+    bool operator()(const LexList::const_iterator& a,
+                    const LexList::const_iterator& b) const
+    { return (std::distance(a, b) > 0); }
+};
 typedef std::map<LexList::const_iterator,
-                 LexList::const_iterator> BracketMap;
+                 LexList::const_iterator, LlCiterCompare> BracketMap;
 
 class Parser
 {
@@ -80,43 +143,7 @@ public:
     const Signature& sigma;
     const std::string input;
 
-    /*class Lexeme
-    {
-    public:
-        const Lexer::Token type;
-        const std::pair<size_t, size_t> piece;
-
-        Lexeme(const Lexer::Token& _type, std::pair<size_t, size_t> _piece)
-                : type(_type), piece(_piece)
-        {
-            if (piece.second > input.length())
-                throw std::invalid_argument("Выход за границу строки.\n");
-        }
-        Lexeme(const Lexeme& one)
-                : type(one.type), piece(one.piece) {}
-
-        ~Lexeme() {}
-
-        std::string value() const
-        { return input.substr(piece.first, piece.second - piece.first); }
-    };*/
-
-
-    /*struct Compare
-    {
-        bool operator()(const std::pair<std::string,
-                                        LexList >& a,
-                        const std::pair<std::string,
-                                        LexList >& b) const
-        {
-            if (a.first.length() != b.first.length())
-                return (a.first.length() > b.first.length());
-            else
-                return (a.second < b.second);
-        }
-    };*/
-
-    std::set<PartialResolved/*, Compare*/> stage1;
+    std::set<PartialResolved> stage1;
     std::set<LexList> stage2;
     std::set<Formula*> stage3;
 
@@ -143,11 +170,5 @@ public:
     void recognizeParenSymbol(LexList::const_iterator& it, LexList::const_iterator end, std::list<Terms*>& dst);
     Formula* recogniseFormula(const LexList& list);
 };
-
-void prepareForName(std::string& _name);
-size_t findPairBracket(const std::string& source, size_t pos);
-void stripBrackets(std::string& text);
-bool splitByTopLevelLO(std::string source, std::string& left, MType& type, std::string& right);
-
 
 #endif //TEST_BUILD_INTERPR_HPP

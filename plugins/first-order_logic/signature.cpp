@@ -84,9 +84,7 @@ FormulasFactory::FormulasFactory()
 }
 
 Modifier* FormulasFactory::makeMod(MType _type, Variable* _arg)
-{
-std::cerr<<"makeMod:"<<"Arg="<<_arg<<"Arg==nullptr?:"<<(_arg == nullptr)<<std::endl;
-    return M.make({_arg, _type}); }
+{ return M.make({_arg, _type}); }
 Formula* FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
 { return A.make({p, args}); }
 Formula* FormulasFactory::makeFormula(Modifier* _mod, Formula* F1, Formula* F2)
