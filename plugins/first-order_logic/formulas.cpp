@@ -119,6 +119,9 @@ bool Modifier::isUnary() const
             type == MType::EXISTS);
 }
 
+const MType Modifier::getType() const
+{ return type; }
+
 
 /*ComposedF::ComposedF(const Modifier& _mod, const Formula& F)
 {
@@ -138,3 +141,18 @@ ComposedF::ComposedF(const Modifier& _mod, const Formula& F1, const Formula& F2)
     arg1 = F1.clone();
     arg2 = F2.clone();
 }*/
+
+ComposedF::ComposedF(Modifier* _mod, Formula* F1, Formula* F2)
+        : arg1(F1), mod(_mod), arg2(F2)
+{
+    holds = F1->getHolds();
+    if (F2)
+        for (auto h : F2->getHolds())
+            holds.insert(h);
+}
+const Modifier::MType ComposedF::getConType() const
+{ return mod->getType(); }
+Formula* ComposedF::getFArg() const
+{ return arg1; }
+Formula* ComposedF::getSArg() const
+{ return arg2; }

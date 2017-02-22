@@ -89,6 +89,16 @@ Formula* FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
 { return A.make({p, args}); }
 Formula* FormulasFactory::makeFormula(Modifier* _mod, Formula* F1, Formula* F2)
 { return F.make({_mod, {F1, F2}}); }
+Formula* FormulasFactory::makeFormula(Modifier::MType modT, Formula* F1, Formula* F2)
+{
+    Modifier* _mod = makeMod(modT);
+    return makeFormula(_mod, F1, F2);
+}
+Formula* FormulasFactory::makeFormula(Modifier::MType modT, Variable* arg, Formula* F)
+{
+    Modifier* _mod = makeMod(modT, arg);
+    return makeFormula(_mod, F);
+}
 
 
 Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,

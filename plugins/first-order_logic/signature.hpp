@@ -191,6 +191,8 @@ public:
 
     Formula* makeFormula(Predicate* p, std::list<Terms*> args);
     Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
+    Formula* makeFormula(Modifier::MType modT, Formula* F1, Formula* F2 = nullptr);
+    Formula* makeFormula(Modifier::MType modT, Variable* arg, Formula* F);
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP
