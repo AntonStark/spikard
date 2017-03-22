@@ -9,6 +9,7 @@
 #include <map>
 #include <list>
 #include <set>
+#include <stack>
 
 #include "logic.hpp"
 
@@ -46,29 +47,37 @@ public:
 };
 typedef Modifier::MType MType;
 
+//class FormulasFactory;
+//class Placeholder;
+class Formula;
+typedef const Formula* FCard;
 class Formula : public virtual Printable
 {
+//private:
+//    FormulasFactory* ff;
 public:
+//    Formula(FormulasFactory* _ff) : ff(_ff) {}
     virtual bool isAtom() const { return false;};
-    typedef std::set<const Placeholder*> PlacehSet;
-    virtual PlacehSet getHolds() const = 0;
+//    typedef std::set<const Placeholder*> PlacehSet;
+//    virtual PlacehSet getHolds() const = 0;
     virtual ~Formula() {};
 
     //TODO Если конструкторы ComposedF от ссылок всё-таки будут нужны, нужно
     //делать clone через фабричный метод make.
 //    virtual Formula* clone() const = 0;
+    enum class ArgTy {f, s};
+    virtual FCard getSub(std::stack<ArgTy> path) const = 0;
 };
 
-class Placeholder;
 class ComposedF : public Formula
 {
 private:
-    Formula *arg1, *arg2;
+    const Formula *arg1, *arg2;
     Modifier* mod;
-    PlacehSet holds;
-    ComposedF(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
+//    PlacehSet holds;
+    ComposedF(Modifier* _mod, FCard F1, FCard F2 = nullptr);
     ComposedF(const std::pair<Modifier*,
-                        std::pair<Formula*, Formula*> >& tuple)
+                        std::pair<FCard, FCard> >& tuple)
             : ComposedF(tuple.first, tuple.second.first, tuple.second.second) {}
     template <typename K, typename V>
     friend class UniqueObjectFactory;
@@ -83,10 +92,13 @@ public:
 //    ComposedF* clone() const override { return (new ComposedF(*this)); }
 
     const Modifier::MType getConType() const;
-    Formula* getFArg() const;
-    Formula* getSArg() const;
-    PlacehSet getHolds() const override
-    { return holds; }
+    FCard getFArg() const;
+    FCard getSArg() const;
+    //todo механика получения подформулы
+    FCard getSub(std::stack<ArgTy> path) const override;
+//    PlacehSet getHolds() const override
+//    { return holds; }
+//    void substitute(Placeholder* what, Formula* by);
 };
 
 class Atom : public Formula, protected Predicate, protected ParenSymbol
@@ -106,15 +118,16 @@ public:
     void print(std::ostream& out = std::cout) const override;
     bool isAtom() const override { return true;}
 //    Atom* clone() const override { return (new Atom(*this)); }
-    PlacehSet getHolds() const override
-    { return {}; }
+    /*PlacehSet getHolds() const override
+    { return {}; }*/
+    FCard getSub(std::stack<ArgTy> path) const override;
 };
 
-class Placeholder : public Formula
+/*class Placeholder : public Formula
 {
 private:
     unsigned ID;
-    static unsigned inUse = 0;
+    static unsigned inUse;
 public:
     Placeholder() : ID(inUse++) {}
     ~Placeholder() {};
@@ -125,6 +138,6 @@ public:
     { out << '[' << ID << ']'; }
     PlacehSet getHolds() const override
     { return {this}; }
-};
+};*/
 
 #endif //TEST_BUILD_FORMUALAS_HPP

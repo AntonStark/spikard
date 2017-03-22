@@ -130,8 +130,10 @@ bool checkBrackets(LexList::const_iterator it, LexList::const_iterator e, Bracke
         {
             if (buf.empty())
                 return false;
-            brackets[buf.top()] = it;
-            brackets[it] = buf.top();
+            /*brackets[buf.top()] = it;
+            brackets[it] = buf.top();*/
+            brackets.insert(std::make_pair(buf.top(), it));
+            brackets.insert(std::make_pair(it, buf.top()));
             buf.pop();
         }
     }
@@ -158,20 +160,37 @@ void printL(const LexList& list)
         std::cerr << Lexer::tokToStr(l.first) << ":<"
         << l.second.first << ',' << l.second.second << ">" << std::endl;
 }
+void printLlciter(const Llciter& it)
+{ std::cout << "iter_to:" << Lexer::tokToStr(it->first) << "(on_sym=" << it->second.first << ")"; }
+void printBM(const BracketMap& brackes)
+{
+    auto e = brackes.end();
+    for (auto it = brackes.begin(); it != e; ++it)
+    {
+        std::cout << "Pair[";
+        printLlciter(it->first);
+        std::cout << ", ";
+        printLlciter(it->second);
+        std::cout << "]" << std::endl;
+    }
+}
 
-LexList::const_iterator findTopLevelMod(
-        const LexList& list)
+Llciter findTopLevelMod(const LexList& list, const BracketMap& brackets)
 {
     unsigned priority = 0;
-    auto e = list.end();
-    auto gotIt = e;
-    for (auto it = list.begin(); it != e; ++it)
+    Llciter it = list.begin();
+    Llciter e = list.end();
+    Llciter gotIt = e;
+    while (it != e)
     {
-        if (order(it->first) > priority)
+        if (it->first == Lexer::Token::lb)
+            it = brackets.at(it);
+        else if (order(it->first) > priority)
         {
             priority = order(it->first);
             gotIt = it;
         }
+        ++it;
     }
     return gotIt;
 }
@@ -217,7 +236,7 @@ Term* Parser::recognizeTerm(LexList::const_iterator& it, LexList::const_iterator
     return tf.makeTerm(f, args);
 }
 
-Formula* Parser::recogniseFormula(const LexList& list)
+const Formula* Parser::recogniseFormula(const LexList& list)
 {
     //F ::= (F) | atom |
     // \\forall x F | \\exists x F | \\lnot F |
@@ -229,9 +248,9 @@ Formula* Parser::recogniseFormula(const LexList& list)
         throw std::invalid_argument("Неверная расстановка скобок в формуле \"" + input + "\".\n");
     if (it->first == Lexer::Token::lb && brackets[it] == std::prev(e))
         return recogniseFormula({std::next(it), std::prev(e)});
-    auto m = findTopLevelMod(list);
+    auto m = findTopLevelMod(list, brackets);
     Modifier* mod;
-    Formula *F1, *F2;
+    const Formula *F1, *F2;
     if (m != e)
     {
         if (m->first == Lexer::Token::La ||

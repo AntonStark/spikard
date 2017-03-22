@@ -85,20 +85,69 @@ FormulasFactory::FormulasFactory()
 
 Modifier* FormulasFactory::makeMod(MType _type, Variable* _arg)
 { return M.make({_arg, _type}); }
-Formula* FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
+FCard FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
 { return A.make({p, args}); }
-Formula* FormulasFactory::makeFormula(Modifier* _mod, Formula* F1, Formula* F2)
+FCard FormulasFactory::makeFormula(Modifier* _mod, FCard F1, FCard F2)
 { return F.make({_mod, {F1, F2}}); }
-Formula* FormulasFactory::makeFormula(Modifier::MType modT, Formula* F1, Formula* F2)
+FCard FormulasFactory::makeFormula(Modifier::MType modT, FCard F1, FCard F2)
 {
     Modifier* _mod = makeMod(modT);
     return makeFormula(_mod, F1, F2);
 }
-Formula* FormulasFactory::makeFormula(Modifier::MType modT, Variable* arg, Formula* F)
+FCard FormulasFactory::makeFormula(Modifier::MType modT, Variable* arg, Formula* F)
 {
     Modifier* _mod = makeMod(modT, arg);
     return makeFormula(_mod, F);
 }
+FCard FormulasFactory::makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace)
+{
+/*base->print(std::cerr);
+std::cerr<<std::endl;
+forReplace->print(std::cerr);
+std::cerr<<std::endl;*/
+    if (where.size() == 0)
+        return forReplace;
+    else if (auto cbase = static_cast<const ComposedF*>(base))
+    {
+        Formula::ArgTy arg = where.top();
+        where.pop();
+        if (arg == Formula::ArgTy::f)
+            return makeFormula(cbase->getConType(),
+                               makeFormula(cbase->getFArg(), where, forReplace),
+                               cbase->getSArg());
+        else
+            return makeFormula(cbase->getConType(),
+                               cbase->getFArg(),
+                               makeFormula(cbase->getSArg(), where, forReplace));
+    }
+    else
+        throw std::invalid_argument("Ненулевой путь при атомарной базе - противоречие.\n");
+}
+
+/*Formula* FormulasFactory::makeFormula(Formula* one)
+{
+    if (ComposedF* cOne = static_cast<ComposedF*>(one))
+        return makeFormula(cOne);
+    else if (Atom* aOne = static_cast<Atom*>(one))
+        return one;
+    else if (Placeholder* pOne = static_cast<Placeholder*>(one))
+        return one;
+    else
+        return nullptr;
+}
+Formula* FormulasFactory::makeFormula(ComposedF* cOne)
+{
+    return makeFormula(cOne->getConType(),
+                       makeFormula(cOne->getFArg()),
+                       makeFormula(cOne->getSArg()));
+}
+
+Formula* FormulasFactory::makePlace()
+{
+    Placeholder* p = new Placeholder();
+    P.insert(p);
+    return p;
+}*/
 
 
 Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,

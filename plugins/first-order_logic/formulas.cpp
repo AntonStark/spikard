@@ -142,17 +142,67 @@ ComposedF::ComposedF(const Modifier& _mod, const Formula& F1, const Formula& F2)
     arg2 = F2.clone();
 }*/
 
-ComposedF::ComposedF(Modifier* _mod, Formula* F1, Formula* F2)
+ComposedF::ComposedF(Modifier* _mod, FCard F1, FCard F2)
         : arg1(F1), mod(_mod), arg2(F2)
 {
-    holds = F1->getHolds();
+    /*holds = F1->getHolds();
     if (F2)
         for (auto h : F2->getHolds())
-            holds.insert(h);
+            holds.insert(h);*/
 }
 const Modifier::MType ComposedF::getConType() const
 { return mod->getType(); }
-Formula* ComposedF::getFArg() const
+FCard ComposedF::getFArg() const
 { return arg1; }
-Formula* ComposedF::getSArg() const
+FCard ComposedF::getSArg() const
 { return arg2; }
+
+FCard Atom::getSub(std::stack<ArgTy> path) const
+{
+    if (path.size() == 0)
+        return this;
+    else
+        throw std::invalid_argument("Попытка взятия подформулы у атома.");
+}
+FCard ComposedF::getSub(std::stack<ArgTy> path) const
+{
+    if (path.size() == 0)
+        return this;
+    else
+    {
+        auto arg = path.top();
+        path.pop();
+        if (arg == ArgTy::f)
+            return getFArg()->getSub(path);
+        else
+            return getSArg()->getSub(path);
+    }
+}
+
+/*
+void ComposedF::substitute(Placeholder* what, Formula* by)
+{
+    if (holds.find(what) != holds.end())
+    {
+        if (Placeholder* hArg1 = static_cast<Placeholder*>(arg1))
+        {
+            if ((*hArg1) == (*what))
+                arg1 = by;
+        }
+        else if (ComposedF* cArg1 = static_cast<ComposedF*>(arg1))
+        {
+            cArg1->substitute(what, by);
+            arg1 = cArg1;
+        }
+        if (Placeholder* hArg2 = static_cast<Placeholder*>(arg2))
+        {
+            if ((*hArg2) == (*what))
+                arg2 = by;
+        }
+        else if (ComposedF* cArg2 = static_cast<ComposedF*>(arg2))
+        {
+            cArg2->substitute(what, by);
+            arg2 = cArg2;
+        }
+    }
+}*/

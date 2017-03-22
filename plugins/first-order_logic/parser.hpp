@@ -6,6 +6,7 @@
 #define TEST_BUILD_INTERPR_HPP
 
 #include <stack>
+#include <unordered_map>
 
 #include "signature.hpp"
 
@@ -14,8 +15,8 @@
  * 2) class Lexeme. Lexeme::operator==(Lexer::Token)
  * 3) std::string Lexeme::value() const;
  * 4) Lexeme.second.second = indent -> lexLen
- * 5) addV/getV -> makeVar
- * 6) checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
+ *-5)-addV/getV -> makeVar
+ *-6)-checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
  */
 
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
@@ -56,7 +57,7 @@ static std::string tokToStr(const Token& tok)
         for (auto s : ns.names.at(NameTy::FUNC))
             words[s] = Token::F;
 
-        words[Modifier::word[MType::NOT]]   = Token::Ln;
+        words[Modifier::word[Modifier::MType::NOT]]   = Token::Ln;
         words[Modifier::word[MType::AND]]   = Token::La;
         words[Modifier::word[MType::OR]]    = Token::Lo;
         words[Modifier::word[MType::THAN]]  = Token::Lt;
@@ -125,14 +126,19 @@ typedef std::pair<Lexer::Token,
 typedef std::list<Lexeme> LexList;
 typedef std::pair<size_t, LexList> PartialResolved;
 
-struct LlCiterCompare
+typedef LexList::const_iterator Llciter;
+struct LlciterCompare
 {
-    bool operator()(const LexList::const_iterator& a,
-                    const LexList::const_iterator& b) const
-    { return (std::distance(a, b) > 0); }
+    bool operator()(const Llciter& a, const Llciter& b) const
+    { return (std::distance(a, b) > 0)/*true*/; }
 };
-typedef std::map<LexList::const_iterator,
-                 LexList::const_iterator, LlCiterCompare> BracketMap;
+struct LLciterHash
+{
+    size_t operator()(const Llciter& x) const
+    { return x->second.first; }
+};
+//typedef std::map<Llciter, Llciter, LlciterCompare> BracketMap;
+typedef std::unordered_map<Llciter, Llciter, LLciterHash> BracketMap;
 
 class Parser
 {
@@ -145,7 +151,7 @@ public:
 
     std::set<PartialResolved> stage1;
     std::set<LexList> stage2;
-    std::set<Formula*> stage3;
+    std::set<const Formula*> stage3;
 
     Parser(const Lexer& _lex, FormulasFactory& _ff, TermsFactory& _tf,
             Signature& _sigma, const std::string& _input)
@@ -168,7 +174,7 @@ public:
     std::string lexToStr(const Lexeme& lex);
     Term* recognizeTerm(LexList::const_iterator& it, LexList::const_iterator end);
     void recognizeParenSymbol(LexList::const_iterator& it, LexList::const_iterator end, std::list<Terms*>& dst);
-    Formula* recogniseFormula(const LexList& list);
+    const Formula* recogniseFormula(const LexList& list);
 };
 
 #endif //TEST_BUILD_INTERPR_HPP

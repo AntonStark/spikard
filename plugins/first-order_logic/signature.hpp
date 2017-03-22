@@ -174,13 +174,18 @@ private:
                                   std::list<Terms*> >,
                         Atom> A;
     UniqueObjectFactory<std::pair<Modifier*,
-                                  std::pair<Formula*, Formula*> >,
+                                  std::pair<FCard, FCard> >,
                         ComposedF> F;
+//    std::set<Placeholder*> P;
 protected:
     Modifier* makeMod(MType _type, Variable* _arg = nullptr);
 public:
     FormulasFactory();
-    ~FormulasFactory() {}
+    ~FormulasFactory()
+    {
+//        for (auto p : P)
+//            delete p;
+    }
 
     Modifier* logNOT()  { return makeMod(MType::NOT); }
     Modifier* logAND()  { return makeMod(MType::AND); }
@@ -189,10 +194,16 @@ public:
     Modifier* forall(Variable* var) { return makeMod(MType::FORALL, var); }
     Modifier* exists(Variable* var) { return makeMod(MType::EXISTS, var); }
 
-    Formula* makeFormula(Predicate* p, std::list<Terms*> args);
-    Formula* makeFormula(Modifier* _mod, Formula* F1, Formula* F2 = nullptr);
-    Formula* makeFormula(Modifier::MType modT, Formula* F1, Formula* F2 = nullptr);
-    Formula* makeFormula(Modifier::MType modT, Variable* arg, Formula* F);
+    FCard makeFormula(Predicate* p, std::list<Terms*> args);
+    FCard makeFormula(Modifier* _mod, FCard F1, FCard F2 = nullptr);
+    FCard makeFormula(Modifier::MType modT, FCard F1, FCard F2 = nullptr);
+    FCard makeFormula(Modifier::MType modT, Variable* arg, Formula* F);
+    FCard makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace);
+
+    /*Formula* makeFormula(Formula* one);
+    Formula* makeFormula(ComposedF* cOne);
+
+    Formula* makePlace();*/
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP
