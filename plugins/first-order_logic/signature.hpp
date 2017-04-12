@@ -10,7 +10,7 @@
 #include <stdexcept>
 
 #include "logic.hpp"
-#include "formulas.hpp"
+//#include "formulas.hpp"
 
 template <typename V>
 class UniqueNamedObjectFactory;
@@ -18,7 +18,7 @@ class UniqueNamedObjectFactory;
 class Namespace
 {
 public:
-    enum class NameTy {PRED, FUNC, VARS};
+    enum class NameTy {SYM, VAR};
 private:
     class sym_doubling;
     class no_sym;
@@ -37,9 +37,8 @@ public:
     void addSym(const std::string& name, const NameTy& type);
     void delSym(const std::string& name, const NameTy& type);
 
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Predicate>* one)const { return NameTy::PRED; }
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Function>* one) const { return NameTy::FUNC; }
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Variable>* one) const { return NameTy::VARS; }
+    const NameTy getFactoryType(const UniqueNamedObjectFactory<Symbol>* one) const { return NameTy::SYM; }
+    const NameTy getFactoryType(const UniqueNamedObjectFactory<Variable>* one) const { return NameTy::VAR; }
 
     friend class Lexer;
 };
@@ -66,6 +65,11 @@ protected:
 public:
     virtual ~UniqueObjectFactory() {}
 
+    bool check(const K& key) const
+    {
+        auto search = storage.find(key);
+        return (search != storage.end());
+    }
     V* make(const K& key)
     {
         auto search = storage.find(key);
@@ -120,36 +124,32 @@ class Signature
 private:
     Namespace names;
 
-    UniqueNamedObjectFactory<Predicate> R;
-    UniqueNamedObjectFactory<Function> F;
+//    UniqueObjectFactory<Symbol::Sign, Symbol> S;
+    std::set<Symbol> S;
 
     friend class TermsFactory;
 public:
-    Signature() : names(), R(names), F(names) {}
-    Signature(std::list<std::pair<std::string, unsigned> > _R,
-              std::list<std::pair<std::string, unsigned> > _F,
-              std::list<std::string> _C);
+    Signature() : names() {}
+    Signature(std::initializer_list<Symbol> _S);
     ~Signature() {}
 
-    bool isPred(const std::string& name) const;
-    bool isFunc(const std::string& name) const;
+    bool isSym(const Symbol& name) const;
+//    Symbol* getS(const std::string& name) const;
 
-    Predicate* getP(const std::string& name) const;
-    Function* getF(const std::string& name) const;
-
-    unsigned arity(const std::string& name) const;
+//    unsigned arity(const std::string& name) const;
 
     const Namespace& viewNS() const
     { return names; }
 };
+extern Signature logical_sign;
 
-class TermsFactory
+/*class TermsFactory
 {
 private:
     Namespace& names;
 
     UniqueNamedObjectFactory<Variable> V;
-    UniqueObjectFactory<std::pair<Function*,
+    UniqueObjectFactory<std::pair<Symbol*,
                                   std::list<Terms*> >,
                         Term> T;
 public:
@@ -162,10 +162,10 @@ public:
     void addV(const std::string& name);
     Variable* makeVar(const std::string& name);
 
-    Term* makeTerm(Function* f, std::list<Terms*> args);
-};
+    Term* makeTerm(Symbol* f, std::list<Terms*> args);
+};*/
 
-class FormulasFactory
+/*class FormulasFactory
 {
 private:
     UniqueObjectFactory<std::pair<Variable*, MType>,
@@ -200,10 +200,10 @@ public:
     FCard makeFormula(Modifier::MType modT, Variable* arg, Formula* F);
     FCard makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace);
 
-    /*Formula* makeFormula(Formula* one);
+    *//*Formula* makeFormula(Formula* one);
     Formula* makeFormula(ComposedF* cOne);
 
-    Formula* makePlace();*/
-};
+    Formula* makePlace();*//*
+};*/
 
 #endif //TEST_BUILD_SIGNATURE_HPP

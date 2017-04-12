@@ -19,17 +19,15 @@ public:
 
 Namespace::Namespace()
 {
-    names[NameTy::PRED] = {};
-    names[NameTy::FUNC] = {};
-    names[NameTy::VARS] = {};
+    names[NameTy::SYM] = {};
+    names[NameTy::VAR] = {};
 }
 
 bool Namespace::isThatType(const std::string& name, const NameTy& type) const
 { return (names.at(type).find(name) != names.at(type).end()); }
 bool Namespace::isSomeSym(const std::string& name) const
-{ return (isThatType(name, NameTy::PRED) ||
-          isThatType(name, NameTy::FUNC) ||
-          isThatType(name, NameTy::VARS)); }
+{ return (isThatType(name, NameTy::SYM) ||
+          isThatType(name, NameTy::VAR)); }
 
 void Namespace::checkSym(const std::string& name, const NameTy& type) const
 {
@@ -57,7 +55,7 @@ void Namespace::delSym(const std::string& name, const NameTy& type)
         throw no_sym(name);
 }
 
-bool TermsFactory::isVar(const std::string& name) const
+/*bool TermsFactory::isVar(const std::string& name) const
 { return V.is(name); }
 void TermsFactory::addV(const std::string& name)
 { V.add(name); }
@@ -70,11 +68,11 @@ Variable* TermsFactory::makeVar(const std::string& name)
     return V.get(name);
 }
 
-Term* TermsFactory::makeTerm(Function* f, std::list<Terms*> args)
-{ return T.make({f, args}); }
+Term* TermsFactory::makeTerm(Symbol* f, std::list<Terms*> args)
+{ return T.make({f, args}); }*/
 
 
-FormulasFactory::FormulasFactory()
+/*FormulasFactory::FormulasFactory()
         : M(), A(), F()
 {
     makeMod(MType::NOT);
@@ -101,10 +99,10 @@ FCard FormulasFactory::makeFormula(Modifier::MType modT, Variable* arg, Formula*
 }
 FCard FormulasFactory::makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace)
 {
-/*base->print(std::cerr);
+*//*base->print(std::cerr);
 std::cerr<<std::endl;
 forReplace->print(std::cerr);
-std::cerr<<std::endl;*/
+std::cerr<<std::endl;*//*
     if (where.size() == 0)
         return forReplace;
     else if (auto cbase = static_cast<const ComposedF*>(base))
@@ -122,7 +120,7 @@ std::cerr<<std::endl;*/
     }
     else
         throw std::invalid_argument("Ненулевой путь при атомарной базе - противоречие.\n");
-}
+}*/
 
 /*Formula* FormulasFactory::makeFormula(Formula* one)
 {
@@ -150,35 +148,26 @@ Formula* FormulasFactory::makePlace()
 }*/
 
 
-Signature::Signature(std::list<std::pair<std::string, unsigned> > _R,
-                     std::list<std::pair<std::string, unsigned> > _F,
-                     std::list<std::string> _C)
-        : names(), R(names), F(names)
+Signature::Signature(std::initializer_list<Symbol> _S)
+        : names()
 {
-    for (auto r : _R)
-        R.add(r.first, r.second);
-    for (auto f : _F)
-        F.add(f.first, f.second);
-    for (auto c : _C)
-        F.add(c, 0);
+    for (auto s : _S)
+        S.insert(s);
 }
 
-bool Signature::isPred(const std::string& name) const
-{ return R.is(name); }
-bool Signature::isFunc(const std::string& name) const
-{ return F.is(name); }
+bool Signature::isSym(const Symbol& sym) const
+{ return (S.find(sym) != S.end()); }
 
-Predicate* Signature::getP(const std::string& name) const
-{ return R.get(name); }
-Function* Signature::getF(const std::string& name) const
-{ return F.get(name); }
+Signature logical_sign({{"\\lnot ", logical_mt, 1, logical_mt}, {"\\lor ", logical_mt, 2, logical_mt},
+                        {"\\land ", logical_mt, 2, logical_mt}, {"\\Rightarrow ", logical_mt, 2, logical_mt}});
+
+/*Symbol* Signature::getS(const std::string& name) const
+{ return S.get(name); }
 
 unsigned Signature::arity(const std::string& name) const
 {
-    if (isPred(name))
-    { return getP(name)->getArity(); }
-    else if (isFunc(name))
-    { return getF(name)->getArity(); }
+    if (isSym(name))
+        return getS(name)->getArity();
     else
-    { return static_cast<unsigned>(-1);}
-}
+        return static_cast<unsigned>(-1);
+}*/

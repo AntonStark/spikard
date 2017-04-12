@@ -1,29 +1,30 @@
 #include <sstream>
 #include "logic.hpp"
 #include "signature.hpp"
-#include "formulas.hpp"
-#include "parser.hpp"
-#include "inference.hpp"
+//#include "formulas.hpp"
+//#include "parser.hpp"
+//#include "inference.hpp"
 
 using namespace std;
 
-Signature s({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}},
+/*Signature s({{">=",2}, {"=",2}, {"!=",2}, {"in",2}, {"!in",2}},
             {{"add",2}, {"mul",2}},
             {"0", "1"});
 TermsFactory tf(s);
-FormulasFactory ff;
+FormulasFactory ff;*/
+//Signature s({{"!=", natural_mt, 2, logical_mt}});
 
 
-inline FCard getF()
+/*inline FCard getS()
 {
     string input;
     getline(cin, input);
     Lexer lex(s);
     Parser inter(lex, ff, tf, s, input);
     return *inter.stage3.begin();
-}
+}*/
 
-void readLabel(Inference::FPath& fpath)
+/*void readLabel(Inference::FPath& fpath)
 {
     char c;
     string num;
@@ -60,17 +61,15 @@ void readLabel(Inference::FPath& fpath)
         buf.pop();
     }
     fpath.second = path;
-};
+};*/
 
-//todo СОСРЕДОТОЧЬСЯ!!! логика предикатов как одна из теорий, а не нечно особенное жёстко фиксированное в коде
-//todo эта теория задаёт логический тип, используемый логиками первого порядка
 int main(void)
 {
     /*Lexer lex(s);
     Parser inter(lex, ff, tf, s, "\\forall x >=(mul(x, x), 0) \\Rightarrow =(0,0)");
     FCard ax1 = *inter.stage3.begin();*/
 
-    FCard ax1 = getF();
+    /*FCard ax1 = getF();
     Theory th({ax1});
     Inference deduce(ff, th);
     deduce.print(Inference::PrintTy::INC);
@@ -87,7 +86,7 @@ int main(void)
         if (tr == -1)
         {
             bool flags[10];
-            deduce.check(deduce.getF(lA.first)->getSub(lA.second), flags);
+            deduce.check(deduce.getS(lA.first)->getSub(lA.second), flags);
             for (int i = 0; i < 10; ++i)
                 if (flags[i])
                     cout << " (" << i+1 << ")";
@@ -102,7 +101,15 @@ int main(void)
                 deduce.performBinary(lA, lB, tr);
             deduce.print(Inference::PrintTy::INC);
         }
-    }
+    }*/
+
+    Symbol ne({"!=", natural_mt, 2, logical_mt});
+    Symbol n({"\\lnot ", logical_mt, 1, logical_mt});
+    Symbol o({"\\lor ", logical_mt, 2, logical_mt});
+    Symbol a({"\\land ", logical_mt, 2, logical_mt});
+    Symbol r({"\\Rightarrow ", logical_mt, 2, logical_mt});
+
+    cerr<<logical_sign.isSym(n);
 
     return 0;
 }

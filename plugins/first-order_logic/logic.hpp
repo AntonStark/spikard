@@ -32,82 +32,142 @@ public:
 
     std::string getName() const { return name; }
     bool operator== (const Named& one) const;
+    bool operator< (const Named& other) const;
 };
 
-class Symbol : public virtual Printable, public Named
+class Label : public virtual Printable, public Named
 {
 public:
-    Symbol(const std::string& _name) : Named(_name) {}
-    virtual ~Symbol() {}
-    Symbol(const Symbol& one) : Named(one) {}
+    Label(const std::string& _name) : Named(_name) {}
+    virtual ~Label() {}
+    Label(const Label& one) : Named(one) {}
 
     void print(std::ostream& out = std::cout) const override;
-    bool operator== (const Symbol& one) const;
+    bool operator== (const Label& one) const;
+    bool operator< (const Label& other) const;
 };
 
+class MathType
+{
+private:
+    std::string type;
+public:
+    MathType(std::string _type) : type(_type) {}
+    MathType(const MathType& one) : type(one.type) {}
+    ~MathType() {}
+    const MathType& operator=(const MathType& one)
+    {
+        if (one.type != this->type)
+            this->type = one.type;
+        return *this;
+    }
+    bool operator== (const MathType& other) const;
+    bool operator<(const MathType& other) const;
+
+//    static MathType natural_mt, logical_mt, set;
+};
+extern MathType natural_mt;
+extern MathType logical_mt;
+extern MathType set_mt;
+
+// Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
+// Важно, что с априорной информацией о типах упрощается парсер.
 class Map
 {
 private:
+    const MathType argT;
     const unsigned arity;
+    const MathType retT;
 public:
-    Map(unsigned _arity) : arity(_arity) {}
+    Map(MathType _argT, unsigned _arity, MathType _retT)
+            : arity(_arity), argT(_argT), retT(_retT) {}
     virtual ~Map() {}
-    Map(const Map& one) : arity(one.arity) {}
+    Map(const Map& one)
+            : argT(one.argT), arity(one.arity), retT(one.retT) {}
 
     unsigned getArity() const { return arity; }
     bool operator== (const Map& one) const;
+    MathType getType() const { return retT; }
+    bool operator< (const Map& other) const;
 };
 
 /*=====================================================*/
 /*=====================================================*/
 /*=====================================================*/
 
-class Predicate : public Symbol, public Map
+class Symbol : public Label, public Map
+{
+public:
+    Symbol(const std::string& _name,
+           MathType _argT, unsigned _arity, MathType _retT)
+            : Label(_name), Map(_argT, _arity, _retT) {}
+
+    virtual ~Symbol() {}
+    Symbol(const Symbol& one)
+            : Label(one), Map(one) {}
+    bool operator== (const Symbol& one) const;
+    typedef std::pair<std::string,
+                      std::pair<std::pair<MathType, unsigned >,
+                                MathType> > Sign;
+    Symbol(const Sign& sign)
+            : Symbol(sign.first,
+                     sign.second.first.first, sign.second.first.second,
+                     sign.second.second) {}
+    bool operator<(const Symbol& other) const;
+};
+
+/*class Predicate : public Label, public Map
 {
 private:
-    Predicate(const std::string& _name, unsigned _arity/*, Signature* _sigma = nullptr*/)
-            : Symbol(_name), Map(_arity)/*, sigma(_sigma)*/ {}
+    Predicate(const std::string& _name, unsigned _arity*//*, Signature* _sigma = nullptr*//*)
+            : Label(_name), Map(_arity)*//*, sigma(_sigma)*//* {}
     template <typename V>
     friend class UniqueNamedObjectFactory;
 public:
     virtual ~Predicate() {}
     Predicate(const Predicate& one)
-            : Symbol(one), Map(one)/*, sigma(one.sigma)*/ {}
+            : Label(one), Map(one)*//*, sigma(one.sigma)*//* {}
 
     bool operator== (const Predicate& one) const;
 };
 
-class Function : public Symbol, public Map
+class Function : public Label, public Map
 {
 private:
     Function(const std::string& _name, unsigned _arity)
-            : Symbol(_name), Map(_arity) {}
+            : Label(_name), Map(_arity) {}
     template <typename V>
     friend class UniqueNamedObjectFactory;
 public:
     virtual ~Function() {}
     Function(const Function& one)
-            : Symbol(one), Map(one) {}
+            : Label(one), Map(one) {}
 
     bool operator== (const Function& one) const;
-};
+};*/
 
 class Terms : public virtual Printable
 {
+private:
+    MathType type;
 public:
+    Terms(MathType _type) : type(_type) {}
+    Terms(const Terms& one) : type(one.type) {}
     virtual ~Terms() {}
     virtual bool isVariable() const { return false; }
 };
 
-class Variable : public Terms, public Symbol
+class Variable : public Terms, public Label
 {
 private:
-    Variable(const std::string& _name) : Symbol(_name) {}
+    Variable(const std::string& _name, MathType _type)
+            : Terms(_type), Label(_name) {}
     template <typename V>
     friend class UniqueNamedObjectFactory;
 public:
     virtual ~Variable() {}
-    Variable(const Variable& one) : Symbol(one) {}
+    Variable(const Variable& one) :
+            Terms(one), Label(one) {}
 
     bool isVariable() const override { return true; }
 };
@@ -130,18 +190,19 @@ public:
     virtual void print(std::ostream& out = std::cout) const override;
 };
 
-class Term : public Terms, protected Function, public ParenSymbol
+class Term : public Terms, protected Symbol, public ParenSymbol
 {
 private:
-    Term(Function* f, std::list<Terms*> _args)
-            : Function(*f), ParenSymbol(_args) { argCheck(f, _args); }
-    Term(std::pair<Function*, std::list<Terms*> > pair)
+    Term(Symbol* f, std::list<Terms*> _args)
+            : Terms(f->getType()), Symbol(*f),
+              ParenSymbol(_args) { argCheck(f, _args); }
+    Term(std::pair<Symbol*, std::list<Terms*> > pair)
             : Term(pair.first, pair.second) {}
     template <typename K, typename V>
     friend class UniqueObjectFactory;
 public:
     Term(const Term& one)
-            : Function(one), ParenSymbol(one) {}
+            : Terms(one), Symbol(one), ParenSymbol(one) {}
     virtual ~Term() {}
 
     virtual void print(std::ostream& out = std::cout) const override;

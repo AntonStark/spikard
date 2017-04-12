@@ -6,23 +6,55 @@
 
 bool Named::operator==(const Named& one) const
 { return (name == one.name); }
-bool Symbol::operator==(const Symbol& one) const
+bool Label::operator==(const Label& one) const
 { return (this->Named::operator==)(one); }
 bool Map::operator==(const Map& one) const
-{ return (arity == one.arity); }
-bool Predicate::operator==(const Predicate& one) const
-{ return ( /*(sigma.get() == one.sigma.get()) && */(this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
+{ return ((arity == one.arity) && (argT == one.argT) && (retT == one.retT)); }
+bool Symbol::operator==(const Symbol& one) const
+{ return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
+/*bool Predicate::operator==(const Predicate& one) const
+{ return ( *//*(sigma.get() == one.sigma.get()) && *//*(this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
 bool Function::operator==(const Function &one) const
-{ return ( (this->Symbol::operator==)(one) && (this->Map::operator==)(one) ); }
+{ return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }*/
+bool MathType::operator==(const MathType& other) const
+{ return (this->type == other.type); }
 
+bool Named::operator<(const Named& other) const
+{ return (name < other.name); }
+bool Label::operator<(const Label& other) const
+{ return (this->Named::operator<)(other); }
+bool MathType::operator<(const MathType& other) const
+{ return (type < other.type); }
+bool Map::operator<(const Map& other) const
+{
+    if (argT < other.argT) return true;
+    else if (other.argT < argT) return false;
 
+    else if (arity < other.arity) return true;
+    else if (other.arity < arity) return false;
+
+    else return (retT < other.retT);
+}
+bool Symbol::operator<(const Symbol& other) const
+{
+    if ((this->Map::operator<)(other))
+        return true;
+    else if (other.Map::operator<(*this))
+        return false;
+    else
+        return (this->Label::operator<)(other);
+}
+
+MathType natural_mt("natural_mt");
+MathType logical_mt("logical_mt");
+MathType set_mt("set");
 
 std::ostream& operator<< (std::ostream& os, const Printable& pr)
 {
     pr.print(os);
     return os;
 }
-void Symbol::print(std::ostream &out) const
+void Label::print(std::ostream &out) const
 { out << getName(); }
 void ParenSymbol::print(std::ostream &out) const
 {
@@ -41,7 +73,7 @@ void ParenSymbol::print(std::ostream &out) const
 }
 void Term::print(std::ostream &out) const
 {
-    Function::print(out);
+    Symbol::print(out);
     ParenSymbol::print(out);
 }
 
