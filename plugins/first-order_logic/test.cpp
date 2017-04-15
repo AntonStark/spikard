@@ -109,6 +109,11 @@ int main(void)
     Symbol a({"\\land ", logical_mt, 2, logical_mt});
     Symbol r({"\\Rightarrow ", logical_mt, 2, logical_mt});
 
+    Variable x("x", natural_mt);
+    Variable one("1", natural_mt);
+    Term equ(ne, {x, one});
+
+
     cerr<<logical_sign.isSym(n);
 
     return 0;

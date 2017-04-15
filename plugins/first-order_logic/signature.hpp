@@ -44,7 +44,7 @@ public:
 };
 typedef Namespace::NameTy NameTy;
 
-template <typename K, typename V>
+/*template <typename K, typename V>
 class UniqueObjectStorage
 {
 protected:
@@ -117,14 +117,12 @@ public:
         ns.addSym(name, type);
         storage[name] = new V(name, arity);
     }
-};
+};*/
 
 class Signature
 {
 private:
     Namespace names;
-
-//    UniqueObjectFactory<Symbol::Sign, Symbol> S;
     std::set<Symbol> S;
 
     friend class TermsFactory;
@@ -134,8 +132,6 @@ public:
     ~Signature() {}
 
     bool isSym(const Symbol& name) const;
-//    Symbol* getS(const std::string& name) const;
-
 //    unsigned arity(const std::string& name) const;
 
     const Namespace& viewNS() const

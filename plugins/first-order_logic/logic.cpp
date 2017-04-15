@@ -12,10 +12,6 @@ bool Map::operator==(const Map& one) const
 { return ((arity == one.arity) && (argT == one.argT) && (retT == one.retT)); }
 bool Symbol::operator==(const Symbol& one) const
 { return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
-/*bool Predicate::operator==(const Predicate& one) const
-{ return ( *//*(sigma.get() == one.sigma.get()) && *//*(this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
-bool Function::operator==(const Function &one) const
-{ return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }*/
 bool MathType::operator==(const MathType& other) const
 { return (this->type == other.type); }
 
@@ -84,18 +80,39 @@ public:
     nArg_arity_error()
             : std::invalid_argument("Кол-во аргументов не соответствует арности символа.\n") {}
 };
-void ParenSymbol::argCheck(Map* f, std::list<Terms*> _args)
+void ParenSymbol::argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args)
 {
-    if (_args.size() != f->getArity())
+    if (_args.size() != f.getArity())
         throw nArg_arity_error();
 }
-ParenSymbol::ParenSymbol(std::list<Terms*> _args) : args(_args)
+ParenSymbol::ParenSymbol(std::list<std::reference_wrapper<Terms> > _args)
 {
-    for (auto a : _args)
+    for (auto& a : _args)
     {
-        if (Variable* v = dynamic_cast<Variable*>(a))
-        { vars.insert(v); }
-        else if (Term* t = dynamic_cast<Term*>(a))
-        { vars.insert(t->vars.begin(), t->vars.end()); }
+        Terms& ta = a.get();
+        args.push_back(ta.clone());
+        if (ta.isVariable())
+        {
+            Variable v = static_cast<Variable&>(ta);
+            vars.insert(v);
+        }
+        else
+        {
+            Term t = static_cast<Term&>(ta);
+            vars.insert(t.vars.begin(), t.vars.end());
+        }
     }
+}
+
+ParenSymbol::ParenSymbol(const ParenSymbol& one)
+        : vars(one.vars)
+{
+    for (const auto& a : one.args)
+        args.push_back(a->clone());
+}
+
+ParenSymbol::~ParenSymbol()
+{
+    for (auto a : args)
+        delete a;
 }

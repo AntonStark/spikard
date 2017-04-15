@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <set>
 #include <map>
+#include <functional>
 
 class Printable
 {
@@ -116,36 +117,6 @@ public:
     bool operator<(const Symbol& other) const;
 };
 
-/*class Predicate : public Label, public Map
-{
-private:
-    Predicate(const std::string& _name, unsigned _arity*//*, Signature* _sigma = nullptr*//*)
-            : Label(_name), Map(_arity)*//*, sigma(_sigma)*//* {}
-    template <typename V>
-    friend class UniqueNamedObjectFactory;
-public:
-    virtual ~Predicate() {}
-    Predicate(const Predicate& one)
-            : Label(one), Map(one)*//*, sigma(one.sigma)*//* {}
-
-    bool operator== (const Predicate& one) const;
-};
-
-class Function : public Label, public Map
-{
-private:
-    Function(const std::string& _name, unsigned _arity)
-            : Label(_name), Map(_arity) {}
-    template <typename V>
-    friend class UniqueNamedObjectFactory;
-public:
-    virtual ~Function() {}
-    Function(const Function& one)
-            : Label(one), Map(one) {}
-
-    bool operator== (const Function& one) const;
-};*/
-
 class Terms : public virtual Printable
 {
 private:
@@ -155,21 +126,19 @@ public:
     Terms(const Terms& one) : type(one.type) {}
     virtual ~Terms() {}
     virtual bool isVariable() const { return false; }
+    virtual Terms* clone() const = 0;
 };
 
 class Variable : public Terms, public Label
 {
-private:
+public:
     Variable(const std::string& _name, MathType _type)
             : Terms(_type), Label(_name) {}
-    template <typename V>
-    friend class UniqueNamedObjectFactory;
-public:
     virtual ~Variable() {}
     Variable(const Variable& one) :
             Terms(one), Label(one) {}
-
-    bool isVariable() const override { return true; }
+    virtual bool isVariable() const override { return true; }
+    virtual Variable* clone() const override { return (new Variable(*this)); }
 };
 
 class ParenSymbol : public virtual Printable
@@ -179,32 +148,29 @@ private:
 
     std::list<Terms*> args;
 protected:
-    std::set<Variable*> vars;
-    void argCheck(Map* f, std::list<Terms*> _args);
-
-    ParenSymbol(std::list<Terms*> _args);
-    ParenSymbol(const ParenSymbol& one) : args(one.args), vars(one.vars) {}
+    std::set<Variable> vars;
+    void argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args);
 public:
-    virtual ~ParenSymbol() {}
+    ParenSymbol(std::list<std::reference_wrapper<Terms> > _args);
+    ParenSymbol(const ParenSymbol& one);
+    virtual ~ParenSymbol();
 
     virtual void print(std::ostream& out = std::cout) const override;
 };
 
 class Term : public Terms, protected Symbol, public ParenSymbol
 {
-private:
-    Term(Symbol* f, std::list<Terms*> _args)
-            : Terms(f->getType()), Symbol(*f),
-              ParenSymbol(_args) { argCheck(f, _args); }
-    Term(std::pair<Symbol*, std::list<Terms*> > pair)
-            : Term(pair.first, pair.second) {}
-    template <typename K, typename V>
-    friend class UniqueObjectFactory;
 public:
+    Term(Symbol f, std::list<std::reference_wrapper<Terms> > _args)
+            : Terms(f.getType()), Symbol(f),
+              ParenSymbol(_args) { argCheck(f, _args); }
+    Term(std::pair<Symbol, std::list<std::reference_wrapper<Terms> > > pair)
+            : Term(pair.first, pair.second) {}
     Term(const Term& one)
             : Terms(one), Symbol(one), ParenSymbol(one) {}
     virtual ~Term() {}
 
+    virtual Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
 

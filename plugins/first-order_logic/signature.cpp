@@ -54,7 +54,7 @@ void Namespace::delSym(const std::string& name, const NameTy& type)
     else
         throw no_sym(name);
 }
-
+// TODO ПОДКЛЮЧИТЬ TermsFactory
 /*bool TermsFactory::isVar(const std::string& name) const
 { return V.is(name); }
 void TermsFactory::addV(const std::string& name)
@@ -152,7 +152,10 @@ Signature::Signature(std::initializer_list<Symbol> _S)
         : names()
 {
     for (auto s : _S)
+    {
         S.insert(s);
+        names.addSym(s.getName(), Namespace::NameTy::SYM);
+    }
 }
 
 bool Signature::isSym(const Symbol& sym) const
