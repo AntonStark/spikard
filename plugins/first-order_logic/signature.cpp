@@ -21,13 +21,15 @@ Namespace::Namespace()
 {
     names[NameTy::SYM] = {};
     names[NameTy::VAR] = {};
+    names[NameTy::MT] = {};
 }
 
 bool Namespace::isThatType(const std::string& name, const NameTy& type) const
 { return (names.at(type).find(name) != names.at(type).end()); }
 bool Namespace::isSomeSym(const std::string& name) const
 { return (isThatType(name, NameTy::SYM) ||
-          isThatType(name, NameTy::VAR)); }
+          isThatType(name, NameTy::VAR) ||
+          isThatType(name, NameTy::MT)); }
 
 void Namespace::checkSym(const std::string& name, const NameTy& type) const
 {
@@ -54,7 +56,7 @@ void Namespace::delSym(const std::string& name, const NameTy& type)
     else
         throw no_sym(name);
 }
-// TODO ПОДКЛЮЧИТЬ TermsFactory
+
 /*bool TermsFactory::isVar(const std::string& name) const
 { return V.is(name); }
 void TermsFactory::addV(const std::string& name)
@@ -161,8 +163,8 @@ Signature::Signature(std::initializer_list<Symbol> _S)
 bool Signature::isSym(const Symbol& sym) const
 { return (S.find(sym) != S.end()); }
 
-Signature logical_sign({{"\\lnot ", logical_mt, 1, logical_mt}, {"\\lor ", logical_mt, 2, logical_mt},
-                        {"\\land ", logical_mt, 2, logical_mt}, {"\\Rightarrow ", logical_mt, 2, logical_mt}});
+Signature logical_sign({{"\\lnot ", {logical_mt}, logical_mt}, {"\\lor ", {2, logical_mt}, logical_mt},
+                        {"\\land ", {2, logical_mt}, logical_mt}, {"\\Rightarrow ", {2, logical_mt}, logical_mt}});
 
 /*Symbol* Signature::getS(const std::string& name) const
 { return S.get(name); }

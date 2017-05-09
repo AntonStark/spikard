@@ -12,42 +12,83 @@ bool matchIndented(const std::string& source, const size_t indent, const std::st
         return (source.substr(indent, word.length()).compare(word) == 0);
 }
 
-/*inline bool formulaBegin(const Lexer::Token& tok)
-{ return (tok == Lexer::Token::Qf || tok == Lexer::Token::Qe ||
-          tok == Lexer::Token::Ln || tok == Lexer::Token::lb || tok == Lexer::Token::P); }
+inline bool termBegin(const Lexer::Token& tok)
+{ return (tok == Lexer::Token::Q || tok == Lexer::Token::lb || tok == Lexer::Token::S); }
 
-//TODO 1) возможно, через проверку принадлежности multimap<one, two> будет лаконичнее
-//TODO 2) ещё можно сделать set<pair<Token, Token> > и проверять принадлежность
-//TODO 3) или map<Token, set<Token> >
+// 1) возможно, через проверку принадлежности multimap<one, two> будет лаконичнее
+// 2) ещё можно сделать set<pair<Token, Token> > и проверять принадлежность
+// 3) или map<Token, set<Token> >
 bool mayFollow(const Lexer::Token& one, const Lexer::Token& two)
 {
+    if (two == Lexer::Token::s)
+        return true;
     switch (one)
     {
-        case Lexer::Token::P :
-        case Lexer::Token::F :
+        case Lexer::Token::S :
             return (two == Lexer::Token::lb);
         case Lexer::Token::V :
-            return (two == Lexer::Token::c || two == Lexer::Token::rb || formulaBegin(two));
-        case Lexer::Token::Ln :
-        case Lexer::Token::La :
-        case Lexer::Token::Lo :
-        case Lexer::Token::Lt :
-            return (formulaBegin(two));
-        case Lexer::Token::Qf :
-        case Lexer::Token::Qe :
-            return (formulaBegin(two));
+            return (two == Lexer::Token::c || two == Lexer::Token::rb || termBegin(two));
+        /*case Lexer::Token::T : //todo что там с выражениями вида "Пусть G - св. ред. группа"
+            return false;*/
+        case Lexer::Token::Q :
+            return (two == Lexer::Token::V);
         case Lexer::Token::lb :
-            return (two == Lexer::Token::lb || two == Lexer::Token::V ||
-                    two == Lexer::Token::F  || formulaBegin(two));
+            return (two == Lexer::Token::rb || two == Lexer::Token::V || termBegin(two));
         case Lexer::Token::rb :
-            return (two == Lexer::Token::lb || two == Lexer::Token::c ||
-                    two == Lexer::Token::La || two == Lexer::Token::Lo || two == Lexer::Token::Lt);
+            return (two == Lexer::Token::rb || two == Lexer::Token::c);
         case Lexer::Token::c :
-            return (two == Lexer::Token::V || two == Lexer::Token::F);
+            return (two == Lexer::Token::V || two == Lexer::Token::S);
         case Lexer::Token::s :
             return true;
     }
-}*/
+}
+//fixme 1) Квантификация терма превращает его в логический терм? Ведь не может быть add(1, \forall x !=(x, 0))
+//      1) Хотя квантифицируются и так только логические термы. Можно ввести class QuantedTerm - DONE
+//         Приписывание квантора не меняет типа => разрешено использование внутри скобок. Важен только порядок кванторов
+//fixme 2) Что там с выражениями вида "Пусть G - св. ред. группа". Эта конструкция просто вводит в область имён терм заданного типа
+//      2) Сама же она термом не является и требует отдельного расмотрения
+//fixme 3) Кванторы тоже являются конструкциями ввода имен. После встречи с квантором надо считывать имя переменной по символам
+//         пока не встретится что-то другое. В остальных ситуациях имеем дело с известными именами.
+//fixme 3`)После квантора конструкция вида "\delta\typeof Real" -- это назывное
+//         утверждение на уровень ниже, порождающее переменную (терм) заданного типа.
+void Lexer::delSpaces(LexList& list)
+{
+    auto e = list.end();
+    for (auto it = list.begin(); it != e; ++it)
+        if (it->second == Lexer::Token::s)
+            it = list.erase(it);
+}
+
+void Lexer::recognize(const std::string& source)
+{
+    std::set<PartialResolved> partial;
+    PartialResolved pair(0, {});
+    partial.insert(pair);
+
+    while (!partial.empty())
+    {
+        pair = *partial.begin();
+        partial.erase(partial.begin());
+        if (pair.first == source.length())
+        {
+            delSpaces(pair.second);
+            lastResult.insert(pair.second);
+            continue;
+        }
+        for (auto w : words)
+        {
+            if ( mayFollow(pair.second.back().second, w.second)
+                  && matchIndented(source, pair.first, w.first))
+            {
+                size_t newIndent = pair.first + w.first.length();
+                LexList list = pair.second;
+                list.push_back(w);
+                partial.insert({newIndent, list});
+            }
+        }
+    }
+}
+/*
 
 void Parser::markLexems()
 {
@@ -130,8 +171,10 @@ bool checkBrackets(LexList::const_iterator it, LexList::const_iterator e, Bracke
         {
             if (buf.empty())
                 return false;
-            /*brackets[buf.top()] = it;
-            brackets[it] = buf.top();*/
+            */
+/*brackets[buf.top()] = it;
+            brackets[it] = buf.top();*//*
+
             brackets.insert(std::make_pair(buf.top(), it));
             brackets.insert(std::make_pair(it, buf.top()));
             buf.pop();
@@ -296,4 +339,147 @@ const Formula* Parser::recogniseFormula(const LexList& list)
         recognizeParenSymbol(++it, e, args);
         return ff.makeFormula(p, args);
     }
+}*/
+
+MathType parseType(Reasoning& closure, const std::string& source, unsigned& len)
+{
+    unsigned typeNameLen = 1;
+    const Reasoning* reas;
+    while ((reas = closure.isNameExist(source.substr(0, typeNameLen),
+                                NameTy::MT)) == nullptr)
+        if (typeNameLen == source.length())
+            throw std::invalid_argument("Не найдено имя типа - неверный формат.\n");
+        else
+            ++typeNameLen;
+    std::string typeName = source.substr(0, typeNameLen);
+    len = typeNameLen;
+    return reas->getT(typeName);
+}
+// Из выражения вида "*\typeof <typeName>"
+void registerVar(Reasoning& closure, std::string& source, unsigned indent)
+{
+    unsigned nameLen = 1;
+    while (!matchIndented(source, indent+nameLen, "\\typeof "))
+        if (indent+nameLen == source.length())
+            throw std::invalid_argument("Отсутствует \"\\\\typeof \" - неверный формат.\n");
+        else
+            ++nameLen;
+    std::string name = source.substr(indent, nameLen);
+    unsigned typeNameLen;
+    MathType type = parseType(closure, source.substr(indent + nameLen + 8), typeNameLen);
+    Variable parsed(name, type);
+    closure.addVar(name, parsed);
+    source.erase(indent + nameLen, 8+typeNameLen);
+}
+
+void registerVars(Reasoning& closure, std::string& source)
+{
+    for (unsigned i = 0; i < source.length(); ++i)
+        if (matchIndented(source, i, "\\forall ") ||
+            matchIndented(source, i, "\\exists "))
+            registerVar(closure, source, i+8);
+}
+
+
+Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list)
+{
+    switch (list.front().second)
+    {
+        case Lexer::Token::Q :
+        {
+            QuantedTerm::QType type;
+            if (list.front().first == QuantedTerm::word[QuantedTerm::QType::EXISTS])
+                type = QuantedTerm::QType::EXISTS;
+            else
+                type = QuantedTerm::QType::FORALL;
+            list.pop_front();
+
+            if (list.front().second != Lexer::Token::V)
+                return nullptr;
+            Variable var = reas.getV(list.front().first);
+            list.pop_front();
+
+            Terms* term = parseTerm(reas, list);
+            if (term == nullptr)
+                return nullptr;
+            QuantedTerm* qterm = new QuantedTerm(type, var, term);
+            delete term;
+            return qterm;
+        }
+        case Lexer::Token::S :
+        {
+            Symbol s = reas.getS(list.front().first);
+            list.pop_front();
+
+            if (list.front().second != Lexer::Token::lb)
+                return nullptr;
+            list.pop_front();
+
+            std::list<Terms*> terms;
+            while (true)
+            {
+                if (list.front().second == Lexer::Token::rb)
+                {
+                    list.pop_front();
+                    break;
+                }
+                Terms* nextT = parseTerm(reas, list);
+                if (nextT == nullptr)
+                    return nullptr;
+                terms.push_back(nextT);
+
+                if (list.front().second == Lexer::Token::c)
+                    list.pop_front();
+                else if (list.front().second == Lexer::Token::rb)
+                {
+                    list.pop_front();
+                    break;
+                }
+                else
+                    return nullptr;
+            }
+            Term* tterm = new Term(s, terms);
+            for (auto t : terms)
+                delete t;
+            return tterm;
+        }
+        case Lexer::Token::V:
+        {
+            Variable* var = reas.getV(list.front().first).clone();
+            list.pop_front();
+            return var;
+        }
+        case Lexer::Token::lb:
+        {
+            list.pop_front();
+            return parseTerm(reas, list);
+        }
+        default:
+            return nullptr;
+    }
+}
+
+void addStatement(Reasoning& reas, std::string source)
+{
+    registerVars(reas, source);
+//std::cerr<<source<<std::endl;
+    Lexer lex(reas);
+//for (auto w : lex.words)
+//std::cerr<<'['<<w.first<<"] ";
+//std::cerr<<std::endl;
+    lex.recognize(source);
+    /*for (auto ll : lex.lastResult)
+    {
+        for (auto l : ll)
+            std::cout<<'['<<Lexer::tokToStr(l.second)<<"]:"<<l.first<<std::endl;
+        std::cout<<std::endl;
+    }*/
+    Terms* parsed = nullptr;
+    for (auto r : lex.lastResult)
+    {
+        parsed = parseTerm(reas, r);
+        if (parsed != nullptr)
+            break;
+    }
+    reas.addSub(new Statement(parsed));
 }

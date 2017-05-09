@@ -63,9 +63,9 @@ public:
         return *this;
     }
     bool operator== (const MathType& other) const;
+    bool operator!= (const MathType& other) const
+    { return (!(this->operator==)(other)); }
     bool operator<(const MathType& other) const;
-
-//    static MathType natural_mt, logical_mt, set;
 };
 extern MathType natural_mt;
 extern MathType logical_mt;
@@ -73,22 +73,26 @@ extern MathType set_mt;
 
 // Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
 // Важно, что с априорной информацией о типах упрощается парсер.
+// fixme Это реализация неоднородного символа.
+// Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 class Map
 {
 private:
-    const MathType argT;
-    const unsigned arity;
+    const std::list<MathType> argT;
+//    const unsigned arity;
     const MathType retT;
 public:
-    Map(MathType _argT, unsigned _arity, MathType _retT)
-            : arity(_arity), argT(_argT), retT(_retT) {}
+    Map(const std::list<MathType>& _argT, /*unsigned _arity,*/ MathType _retT)
+            : argT(_argT), /*arity(_arity),*/ retT(_retT) {}
     virtual ~Map() {}
-    Map(const Map& one)
-            : argT(one.argT), arity(one.arity), retT(one.retT) {}
+    Map(const Map& one) : argT(one.argT), /*arity(one.arity),*/ retT(one.retT) {}
 
-    unsigned getArity() const { return arity; }
+    unsigned getArity() const { return /*arity*/argT.size(); }
     bool operator== (const Map& one) const;
-    MathType getType() const { return retT; }
+    MathType getArgType() const { return argT.front(); }
+    bool matchArgType(const std::list<MathType> otherArgT) const
+    { return (otherArgT == argT); }
+    MathType getRetType() const { return retT; }
     bool operator< (const Map& other) const;
 };
 
@@ -100,20 +104,18 @@ class Symbol : public Label, public Map
 {
 public:
     Symbol(const std::string& _name,
-           MathType _argT, unsigned _arity, MathType _retT)
-            : Label(_name), Map(_argT, _arity, _retT) {}
+           std::list<MathType> _argT, /*unsigned _arity,*/ MathType _retT)
+            : Label(_name), Map(_argT, /*_arity,*/ _retT) {}
 
     virtual ~Symbol() {}
     Symbol(const Symbol& one)
             : Label(one), Map(one) {}
     bool operator== (const Symbol& one) const;
     typedef std::pair<std::string,
-                      std::pair<std::pair<MathType, unsigned >,
-                                MathType> > Sign;
+                      std::pair<std::list<MathType>, MathType> > Sign;
     Symbol(const Sign& sign)
             : Symbol(sign.first,
-                     sign.second.first.first, sign.second.first.second,
-                     sign.second.second) {}
+                     sign.second.first, sign.second.second) {}
     bool operator<(const Symbol& other) const;
 };
 
@@ -127,6 +129,7 @@ public:
     virtual ~Terms() {}
     virtual bool isVariable() const { return false; }
     virtual Terms* clone() const = 0;
+    MathType getType() const { return type; }
 };
 
 class Variable : public Terms, public Label
@@ -146,31 +149,74 @@ class ParenSymbol : public virtual Printable
 private:
     class nArg_arity_error;
 
+    // Внимание! ParenSymbol владеет своими аргументами,
+    // к передаваемым указателям применяется глубокое копирование
     std::list<Terms*> args;
 protected:
     std::set<Variable> vars;
+    // Это устаревшая версия
     void argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args);
+    void argCheck(Map f, std::list<Terms*> _args);
 public:
     ParenSymbol(std::list<std::reference_wrapper<Terms> > _args);
     ParenSymbol(const ParenSymbol& one);
+    // Применяется глубокое копирование
+    ParenSymbol(std::list<Terms*> _args);
     virtual ~ParenSymbol();
 
     virtual void print(std::ostream& out = std::cout) const override;
 };
 
-class Term : public Terms, protected Symbol, public ParenSymbol
+class Term : public Terms, public Symbol, public ParenSymbol
 {
 public:
     Term(Symbol f, std::list<std::reference_wrapper<Terms> > _args)
-            : Terms(f.getType()), Symbol(f),
+            : Terms(f.getRetType()), Symbol(f),
               ParenSymbol(_args) { argCheck(f, _args); }
     Term(std::pair<Symbol, std::list<std::reference_wrapper<Terms> > > pair)
             : Term(pair.first, pair.second) {}
     Term(const Term& one)
             : Terms(one), Symbol(one), ParenSymbol(one) {}
+    Term(Symbol f, std::list<Terms*> _args)
+            : Terms(f.getRetType()), Symbol(f),
+              ParenSymbol(_args) {argCheck(f, _args); }
     virtual ~Term() {}
 
     virtual Term* clone() const override { return (new Term(*this)); }
+    virtual void print(std::ostream& out = std::cout) const override;
+};
+
+class QuantedTerm : virtual public Printable, public Terms
+{
+public:
+    enum class QType {FORALL, EXISTS};
+    static std::map<QType, const std::string> word;
+private:
+    QType type;
+    Variable var;
+    Terms* term;
+public:
+    QuantedTerm(QType _type, Variable _var, Term _term) :
+            type(_type), var(_var), term(_term.clone()), Terms(logical_mt)
+    {
+        if (_term.getRetType() != logical_mt)
+            throw std::invalid_argument("Квантификация не логического терма.\n");
+    }
+    QuantedTerm(QType _type, Variable _var, QuantedTerm _term) :
+            type(_type), var(_var), term(_term.clone()), Terms(logical_mt) {}
+    QuantedTerm(QType _type, Variable _var, Terms* _term) :
+            type(_type), var(_var), term(_term->clone()), Terms(logical_mt)
+    {
+        if (Term* t = static_cast<Term*>(_term))
+        {
+            if (t->getRetType() != logical_mt)
+                throw std::invalid_argument("Квантификация не логического терма.\n");
+        }
+        else if (QuantedTerm* qt = static_cast<QuantedTerm*>(_term)) {}
+        else throw std::invalid_argument("Квантификация неизвестного вида.\n");
+    }
+    virtual ~QuantedTerm() {}
+    virtual QuantedTerm* clone() const override { return (new QuantedTerm(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
 

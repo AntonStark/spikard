@@ -24,22 +24,17 @@ bool matchIndented(const std::string& source, const size_t indent, const std::st
 class Lexer
 {
 public:
-    enum class Token {P, F, V,
-        Ln, La, Lo, Lt, Qf, Qe,
-        c, s, lb, rb};
+    enum class Token {S, V, Q, /*T, to,*/
+                      c, s, lb, rb};
 static std::string tokToStr(const Token& tok)
 {
     switch (tok)
     {
-        case Token::P : return "P";
-        case Token::F : return "F";
+        case Token::S : return "S";
         case Token::V : return "V";
-        case Token::Ln: return "Ln";
-        case Token::La: return "La";
-        case Token::Lo: return "Lo";
-        case Token::Qf: return "Qf";
-        case Token::Qe: return "Qe";
-        case Token::Lt: return "Lt";
+        case Token::Q : return "Q";
+        /*case Token::T : return "T";
+        case Token::to: return "to";*/
         case Token::c : return "c";
         case Token::s : return "s";
         case Token::lb: return "lb";
@@ -48,25 +43,35 @@ static std::string tokToStr(const Token& tok)
 }
     std::map<std::string, Token> words;
 
-    Lexer(const Signature& sigma)
+    Lexer(const Reasoning& R)
     {
-        const Namespace& ns = sigma.viewNS();
+        std::set<std::string> buf;
+        R.viewSetOfNames(buf, NameTy::SYM);
+        for (auto s : buf)
+            words[s] = Token::S;
+        buf.clear();
+        R.viewSetOfNames(buf, NameTy::VAR);
+        for (auto s : buf)
+            words[s] = Token::V;
+        buf.clear();
+        /*R.viewSetOfNames(buf, NameTy::MT);
+        for (auto s : buf)
+            words[s] = Token::T;*/
 
-        for (auto s : ns.names.at(NameTy::PRED))
-            words[s] = Token::P;
-        for (auto s : ns.names.at(NameTy::FUNC))
-            words[s] = Token::F;
-
-        words[Modifier::word[Modifier::MType::NOT]]   = Token::Ln;
-        words[Modifier::word[MType::AND]]   = Token::La;
-        words[Modifier::word[MType::OR]]    = Token::Lo;
-        words[Modifier::word[MType::THAN]]  = Token::Lt;
-        words[Modifier::word[MType::FORALL]]= Token::Qf;
-        words[Modifier::word[MType::EXISTS]]= Token::Qe;
-
+        words[QuantedTerm::word[QuantedTerm::QType::FORALL]]= Token::Q;
+        words[QuantedTerm::word[QuantedTerm::QType::EXISTS]]= Token::Q;
         words[","] = Token::c;  words[" "] = Token::s;
         words["("] = Token::lb; words[")"] = Token::rb;
     }
+
+    typedef std::pair<std::string, Lexer::Token> Lexeme;
+    typedef std::list<Lexeme> LexList;
+    typedef std::pair<size_t, LexList> PartialResolved;
+
+    std::set<LexList> lastResult;
+
+    void delSpaces(LexList& list);
+    void recognize(const std::string& source);
 };
 
 /*bool mayFollow(const Lexer::Token& one, const Lexer::Token& two);
@@ -103,23 +108,15 @@ public:
 {
 public:
     const Lexer::Token type;
-    const std::pair<size_t, size_t> piece;
-    const std::string& source;
+    const std::string value;
 
-    Lexeme(const Lexer::Token& _type, std::pair<size_t, size_t> _piece, const std::string& _source)
-            : type(_type), piece(_piece), source(_source)
-    {
-        if (piece.second > source.length())
-            throw std::invalid_argument("Выход за границу строки.\n");
-    }
+    Lexeme(const Lexer::Token& _type, const std::string& _value)
+            : type(_type), value(_value) {}
     Lexeme(const Lexeme& one)
-            : type(one.type), piece(one.piece), source(one.source) {}
-
+            : type(one.type), value(one.value) {}
     ~Lexeme() {}
-
-    std::string value() const
-    { return source.substr(piece.first, piece.second - piece.first); }
 };*/
+/*
 
 typedef std::pair<Lexer::Token,
                   std::pair<size_t, size_t> > Lexeme;
@@ -130,7 +127,9 @@ typedef LexList::const_iterator Llciter;
 struct LlciterCompare
 {
     bool operator()(const Llciter& a, const Llciter& b) const
-    { return (std::distance(a, b) > 0)/*true*/; }
+    { return (std::distance(a, b) > 0)*/
+/*true*//*
+; }
 };
 struct LLciterHash
 {
@@ -176,5 +175,12 @@ public:
     void recognizeParenSymbol(LexList::const_iterator& it, LexList::const_iterator end, std::list<Terms*>& dst);
     const Formula* recogniseFormula(const LexList& list);
 };
+*/
+
+MathType parseType(Reasoning&, std::string&, unsigned&);
+void registerVar(Reasoning&, std::string&, unsigned);
+void registerVars(Reasoning& closure, std::string& source);
+Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list);
+void addStatement(Reasoning&, std::string source);
 
 #endif //TEST_BUILD_INTERPR_HPP

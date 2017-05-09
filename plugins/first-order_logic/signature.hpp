@@ -18,7 +18,7 @@ class UniqueNamedObjectFactory;
 class Namespace
 {
 public:
-    enum class NameTy {SYM, VAR};
+    enum class NameTy {SYM, VAR, MT};
 private:
     class sym_doubling;
     class no_sym;
@@ -37,87 +37,117 @@ public:
     void addSym(const std::string& name, const NameTy& type);
     void delSym(const std::string& name, const NameTy& type);
 
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Symbol>* one) const { return NameTy::SYM; }
-    const NameTy getFactoryType(const UniqueNamedObjectFactory<Variable>* one) const { return NameTy::VAR; }
-
-    friend class Lexer;
+    void viewSetOfNames(std::set<std::string>& set, const NameTy& type) const
+    {
+        for (auto& w : names.at(type))
+            set.insert(w);
+    }
 };
 typedef Namespace::NameTy NameTy;
 
-/*template <typename K, typename V>
-class UniqueObjectStorage
-{
-protected:
-    std::map<K, V*> storage;
-public:
-    virtual ~UniqueObjectStorage()
-    {
-        for (auto i : storage)
-            delete i.second;
-    }
-};
-
-template <typename K, typename V>
-class UniqueObjectFactory : public UniqueObjectStorage<K, V>
-{
-protected:
-    using UniqueObjectStorage<K, V>::storage;
-public:
-    virtual ~UniqueObjectFactory() {}
-
-    bool check(const K& key) const
-    {
-        auto search = storage.find(key);
-        return (search != storage.end());
-    }
-    V* make(const K& key)
-    {
-        auto search = storage.find(key);
-        V* v;
-        if (search != storage.end())
-            v = search->second;
-        else
-            storage[key] = v = new V(key);
-        return v;
-    };
-};
-
-template <typename V>
-class UniqueNamedObjectFactory : public UniqueObjectStorage<std::string, V>
+/// Универсальный класс для описания иерархической единицы рассуждения
+/// Реализуется, что в разных разделах одни символы могут обозначать различные вещи
+class Reasoning
 {
 private:
-    Namespace& ns;
-    const NameTy type;
-protected:
-    using UniqueObjectStorage<std::string, V>::storage;
+    std::list<Reasoning*> subs;
+    Reasoning* parent;
+    Namespace names;
+
+    std::map<std::string, Symbol  > syms;
+    std::map<std::string, Variable> vars;
+    std::map<std::string, MathType> types;
+
+    Reasoning(Reasoning* _parent) : parent(_parent) {}
 public:
-    UniqueNamedObjectFactory(Namespace& _ns)
-            : ns(_ns), type(ns.getFactoryType(this)) {}
-    virtual ~UniqueNamedObjectFactory()
+    Reasoning() : parent(nullptr) {}
+    virtual ~Reasoning()
     {
-        for (auto i : storage)
-            ns.delSym(i.first, type);
+        for (auto& r : subs)
+            delete r;
     }
 
-    bool is(const std::string& key) const
-    { return ns.isThatType(key, type); }
+    Reasoning& getParent() const { return *parent; }
+    Reasoning& startSub()
+    {
+        subs.push_back(new Reasoning(this));
+        return *subs.back();
+    }
+    void addSub(Reasoning* sub)
+    {
+        subs.push_back(sub);
+    }
 
-    V* get(const std::string& key) const
+    const Reasoning* isNameExist(const std::string& name, const NameTy& type) const
     {
-        ns.checkSym(key, type);
-        return storage.at(key);
+        if (names.isThatType(name, type))
+            return this;
+        else if (parent != nullptr)
+            return parent->isNameExist(name, type);
+        else
+            return nullptr;
     }
-    void add(const std::string& name)
+
+    void addSym(const std::string& name, Symbol sym)
     {
-        ns.addSym(name, type);
-        storage[name] = new V(name);
+        names.addSym(name, NameTy::SYM);
+        syms.insert({name, sym});
     }
-    void add(const std::string& name, unsigned arity)
+    void addVar(const std::string& name, Variable var)
     {
-        ns.addSym(name, type);
-        storage[name] = new V(name, arity);
+        names.addSym(name, NameTy::VAR);
+        vars.insert({name, var});
     }
-};*/
+    void addType(const std::string& name, MathType type)
+    {
+        names.addSym(name, NameTy::MT);
+        types.insert({name, type});
+    }
+
+    Symbol   getS(const std::string& name) const
+    {
+        const Reasoning* reas = isNameExist(name, NameTy::SYM);
+        if (reas != nullptr)
+            return reas->syms.at(name);
+        else
+            throw std::invalid_argument("No sym.\n");
+    }
+    Variable getV(const std::string& name) const
+    {
+        const Reasoning* reas = isNameExist(name, NameTy::VAR);
+        if (reas != nullptr)
+            return reas->vars.at(name);
+        else
+            throw std::invalid_argument("No sym.\n");
+    }
+    MathType getT(const std::string& name) const
+    {
+        const Reasoning* reas = isNameExist(name, NameTy::MT);
+        if (reas != nullptr)
+            return reas->types.at(name);
+        else
+            throw std::invalid_argument("No sym.\n");
+    }
+
+    void viewSetOfNames(std::set<std::string>& set, const NameTy& type) const
+    {
+        names.viewSetOfNames(set, type);
+        if (parent != nullptr)
+            parent->viewSetOfNames(set, type);
+    }
+
+//    void addStatement(std::string source);
+};
+
+class Statement : public Reasoning
+{
+public:
+    Terms* monom;
+    Statement(Terms* _monom)
+            : monom(_monom) {}
+    virtual ~Statement()
+    { delete monom; }
+};
 
 class Signature
 {
@@ -138,68 +168,5 @@ public:
     { return names; }
 };
 extern Signature logical_sign;
-
-/*class TermsFactory
-{
-private:
-    Namespace& names;
-
-    UniqueNamedObjectFactory<Variable> V;
-    UniqueObjectFactory<std::pair<Symbol*,
-                                  std::list<Terms*> >,
-                        Term> T;
-public:
-    TermsFactory(Namespace& _names) : names(_names), V(names) {}
-    TermsFactory(Signature& sigma) : names(sigma.names), V(names) {}
-    ~TermsFactory() {}
-
-    bool isVar(const std::string& name) const;
-    Variable* getV(const std::string& name) const;
-    void addV(const std::string& name);
-    Variable* makeVar(const std::string& name);
-
-    Term* makeTerm(Symbol* f, std::list<Terms*> args);
-};*/
-
-/*class FormulasFactory
-{
-private:
-    UniqueObjectFactory<std::pair<Variable*, MType>,
-                        Modifier> M;
-    UniqueObjectFactory<std::pair<Predicate*,
-                                  std::list<Terms*> >,
-                        Atom> A;
-    UniqueObjectFactory<std::pair<Modifier*,
-                                  std::pair<FCard, FCard> >,
-                        ComposedF> F;
-//    std::set<Placeholder*> P;
-protected:
-    Modifier* makeMod(MType _type, Variable* _arg = nullptr);
-public:
-    FormulasFactory();
-    ~FormulasFactory()
-    {
-//        for (auto p : P)
-//            delete p;
-    }
-
-    Modifier* logNOT()  { return makeMod(MType::NOT); }
-    Modifier* logAND()  { return makeMod(MType::AND); }
-    Modifier* logOR()   { return makeMod(MType::OR ); }
-    Modifier* logTHAN() { return makeMod(MType::THAN);}
-    Modifier* forall(Variable* var) { return makeMod(MType::FORALL, var); }
-    Modifier* exists(Variable* var) { return makeMod(MType::EXISTS, var); }
-
-    FCard makeFormula(Predicate* p, std::list<Terms*> args);
-    FCard makeFormula(Modifier* _mod, FCard F1, FCard F2 = nullptr);
-    FCard makeFormula(Modifier::MType modT, FCard F1, FCard F2 = nullptr);
-    FCard makeFormula(Modifier::MType modT, Variable* arg, Formula* F);
-    FCard makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace);
-
-    *//*Formula* makeFormula(Formula* one);
-    Formula* makeFormula(ComposedF* cOne);
-
-    Formula* makePlace();*//*
-};*/
 
 #endif //TEST_BUILD_SIGNATURE_HPP

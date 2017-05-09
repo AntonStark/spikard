@@ -1,8 +1,7 @@
 #include <sstream>
 #include "logic.hpp"
 #include "signature.hpp"
-//#include "formulas.hpp"
-//#include "parser.hpp"
+#include "parser.hpp"
 //#include "inference.hpp"
 
 using namespace std;
@@ -103,16 +102,35 @@ int main(void)
         }
     }*/
 
-    Symbol ne({"!=", natural_mt, 2, logical_mt});
-    Symbol n({"\\lnot ", logical_mt, 1, logical_mt});
-    Symbol o({"\\lor ", logical_mt, 2, logical_mt});
-    Symbol a({"\\land ", logical_mt, 2, logical_mt});
-    Symbol r({"\\Rightarrow ", logical_mt, 2, logical_mt});
+    Symbol n({"\\lnot ", {logical_mt}, logical_mt});
+    Symbol o({"\\lor ", {2, logical_mt}, logical_mt});
+    Symbol a({"\\land ", {2, logical_mt}, logical_mt});
+    Symbol r({"\\Rightarrow ", {2, logical_mt}, logical_mt});
 
     Variable x("x", natural_mt);
     Variable one("1", natural_mt);
-    Term equ(ne, {x, one});
+//    Term equ(ne, {x, one});
 
+    Reasoning reas;
+    MathType group("Group");
+    MathType real("Real");
+    reas.addType("Logical", logical_mt);
+    reas.addType("Natural", natural_mt);
+    reas.addType("Group", group);
+    reas.addType("Real", real);
+    std::string input = "\\forall x\\typeof Natural asd \\exists g\\typeof Group a";
+    registerVars(reas, input);
+
+    Symbol gr({">", {real, real}, logical_mt});
+    reas.addSym("\\Rightarrow ", r);
+    reas.addSym(">", gr);
+    Symbol ze({"0", {}, real});
+    reas.addSym("0", ze);
+    Symbol ne({"!=", {2, real}, logical_mt});
+    reas.addSym("!=", ne);
+    addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
+    //todo argT: MathType -> list<MathType>
+    //todo меньше new/delete в термах
 
     cerr<<logical_sign.isSym(n);
 
