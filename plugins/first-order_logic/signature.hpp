@@ -8,12 +8,9 @@
 #include <string>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 #include "logic.hpp"
-//#include "formulas.hpp"
-
-template <typename V>
-class UniqueNamedObjectFactory;
 
 class Namespace
 {
@@ -47,10 +44,10 @@ typedef Namespace::NameTy NameTy;
 
 /// Универсальный класс для описания иерархической единицы рассуждения
 /// Реализуется, что в разных разделах одни символы могут обозначать различные вещи
-class Reasoning
+class Reasoning : virtual public Printable
 {
 private:
-    std::list<Reasoning*> subs;
+    std::vector<Reasoning*> subs;
     Reasoning* parent;
     Namespace names;
 
@@ -58,115 +55,52 @@ private:
     std::map<std::string, Variable> vars;
     std::map<std::string, MathType> types;
 
+protected:
     Reasoning(Reasoning* _parent) : parent(_parent) {}
 public:
     Reasoning() : parent(nullptr) {}
-    virtual ~Reasoning()
-    {
-        for (auto& r : subs)
-            delete r;
-    }
+    virtual ~Reasoning();
 
     Reasoning& getParent() const { return *parent; }
-    Reasoning& startSub()
-    {
-        subs.push_back(new Reasoning(this));
-        return *subs.back();
-    }
-    void addSub(Reasoning* sub)
-    {
-        subs.push_back(sub);
-    }
+    Reasoning& operator[] (size_t n) { return *subs[n]; }
 
-    const Reasoning* isNameExist(const std::string& name, const NameTy& type) const
-    {
-        if (names.isThatType(name, type))
-            return this;
-        else if (parent != nullptr)
-            return parent->isNameExist(name, type);
-        else
-            return nullptr;
-    }
+    Reasoning& startSub();
+    void addSub(Terms* monom);
 
-    void addSym(const std::string& name, Symbol sym)
-    {
-        names.addSym(name, NameTy::SYM);
-        syms.insert({name, sym});
-    }
-    void addVar(const std::string& name, Variable var)
-    {
-        names.addSym(name, NameTy::VAR);
-        vars.insert({name, var});
-    }
-    void addType(const std::string& name, MathType type)
-    {
-        names.addSym(name, NameTy::MT);
-        types.insert({name, type});
-    }
+    const Reasoning* isNameExist(const std::string& name,
+                                 const NameTy& type) const;
 
-    Symbol   getS(const std::string& name) const
-    {
-        const Reasoning* reas = isNameExist(name, NameTy::SYM);
-        if (reas != nullptr)
-            return reas->syms.at(name);
-        else
-            throw std::invalid_argument("No sym.\n");
-    }
-    Variable getV(const std::string& name) const
-    {
-        const Reasoning* reas = isNameExist(name, NameTy::VAR);
-        if (reas != nullptr)
-            return reas->vars.at(name);
-        else
-            throw std::invalid_argument("No sym.\n");
-    }
-    MathType getT(const std::string& name) const
-    {
-        const Reasoning* reas = isNameExist(name, NameTy::MT);
-        if (reas != nullptr)
-            return reas->types.at(name);
-        else
-            throw std::invalid_argument("No sym.\n");
-    }
+    void addSym(Symbol sym);
+    void addSym(const std::string& name,
+                std::list<MathType> argT, MathType retT);
 
-    void viewSetOfNames(std::set<std::string>& set, const NameTy& type) const
-    {
-        names.viewSetOfNames(set, type);
-        if (parent != nullptr)
-            parent->viewSetOfNames(set, type);
-    }
+    void addVar(Variable var);
+    void addVar(const std::string& name, MathType type);
 
-//    void addStatement(std::string source);
+    void addType(MathType type);
+    void addType(const std::string& name);
+
+    Symbol   getS(const std::string& name) const;
+    Variable getV(const std::string& name) const;
+    MathType getT(const std::string& name) const;
+
+    void viewSetOfNames(std::set<std::string>& set,
+                        const NameTy& type) const;
+
+    virtual void print(std::ostream& out = std::cout) const override;
 };
 
-class Statement : public Reasoning
+class Statement : virtual public Printable, public Reasoning
 {
 public:
     Terms* monom;
-    Statement(Terms* _monom)
-            : monom(_monom) {}
-    virtual ~Statement()
-    { delete monom; }
+    Statement(Reasoning* _parent, Terms* _monom)
+            : Reasoning(_parent), monom(_monom) {}
+    Statement(Terms* _monom) : monom(_monom) {}
+    virtual ~Statement() {}
+
+    virtual void print(std::ostream& out = std::cout) const override
+    { monom->print(out); }
 };
-
-class Signature
-{
-private:
-    Namespace names;
-    std::set<Symbol> S;
-
-    friend class TermsFactory;
-public:
-    Signature() : names() {}
-    Signature(std::initializer_list<Symbol> _S);
-    ~Signature() {}
-
-    bool isSym(const Symbol& name) const;
-//    unsigned arity(const std::string& name) const;
-
-    const Namespace& viewNS() const
-    { return names; }
-};
-extern Signature logical_sign;
 
 #endif //TEST_BUILD_SIGNATURE_HPP

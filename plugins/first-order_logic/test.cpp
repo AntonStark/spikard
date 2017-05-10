@@ -101,38 +101,40 @@ int main(void)
             deduce.print(Inference::PrintTy::INC);
         }
     }*/
+    MathType natural("Natural");
+    MathType set("Set");
 
-    Symbol n({"\\lnot ", {logical_mt}, logical_mt});
+    Symbol n("\\lnot ", {logical_mt}, logical_mt); //можно и без {скобок}
     Symbol o({"\\lor ", {2, logical_mt}, logical_mt});
     Symbol a({"\\land ", {2, logical_mt}, logical_mt});
     Symbol r({"\\Rightarrow ", {2, logical_mt}, logical_mt});
 
-    Variable x("x", natural_mt);
-    Variable one("1", natural_mt);
+    Variable x("x", natural);
+    Variable one("1", natural);
 //    Term equ(ne, {x, one});
 
     Reasoning reas;
     MathType group("Group");
     MathType real("Real");
-    reas.addType("Logical", logical_mt);
-    reas.addType("Natural", natural_mt);
-    reas.addType("Group", group);
-    reas.addType("Real", real);
+    reas.addType(logical_mt);
+    reas.addType(natural);
+    reas.addType(group);
+    reas.addType(real);
     std::string input = "\\forall x\\typeof Natural asd \\exists g\\typeof Group a";
     registerVars(reas, input);
 
     Symbol gr({">", {real, real}, logical_mt});
-    reas.addSym("\\Rightarrow ", r);
-    reas.addSym(">", gr);
+    reas.addSym(r);
+//    reas.addSym(gr);
+    reas.addSym(">", {2, real}, logical_mt);
     Symbol ze({"0", {}, real});
-    reas.addSym("0", ze);
+    reas.addSym(ze);
     Symbol ne({"!=", {2, real}, logical_mt});
-    reas.addSym("!=", ne);
+    reas.addSym(ne);
     addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
-    //todo argT: MathType -> list<MathType>
-    //todo меньше new/delete в термах
+    //todo меньше new/delete в термах, потом
+    reas[0].print(cerr);
 
-    cerr<<logical_sign.isSym(n);
 
     return 0;
 }

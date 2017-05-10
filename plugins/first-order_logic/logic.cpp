@@ -12,15 +12,15 @@ bool Map::operator==(const Map& one) const
 { return (/*(arity == one.arity) && */(argT == one.argT) && (retT == one.retT)); }
 bool Symbol::operator==(const Symbol& one) const
 { return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
-bool MathType::operator==(const MathType& other) const
-{ return (this->type == other.type); }
+bool MathType::operator==(const MathType& one) const
+{ return (this->Named::operator==)(one); }
 
 bool Named::operator<(const Named& other) const
 { return (name < other.name); }
 bool Label::operator<(const Label& other) const
 { return (this->Named::operator<)(other); }
 bool MathType::operator<(const MathType& other) const
-{ return (type < other.type); }
+{ return (this->Named::operator<)(other); }
 bool Map::operator<(const Map& other) const
 {
     if (argT < other.argT) return true;
@@ -41,9 +41,7 @@ bool Symbol::operator<(const Symbol& other) const
         return (this->Label::operator<)(other);
 }
 
-MathType natural_mt("natural_mt");
-MathType logical_mt("logical_mt");
-MathType set_mt("set");
+MathType logical_mt("Logical");
 
 std::ostream& operator<< (std::ostream& os, const Printable& pr)
 {
@@ -76,18 +74,19 @@ void QuantedTerm::print(std::ostream &out) const
 { out << word[type] << var << *term; }
 
 
-class ParenSymbol::nArg_arity_error : public std::invalid_argument
+class ParenSymbol::argN_argType_error : public std::invalid_argument
 {
 public:
-    nArg_arity_error()
-            : std::invalid_argument("Кол-во аргументов не соответствует арности символа.\n") {}
+    argN_argType_error()
+            : std::invalid_argument("Кол-во или тип аргументов не соответствует символу.\n") {}
 };
 void ParenSymbol::argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args)
 {
-    //todo проверка соответствия типа аргументов пока только по первому
-    if (_args.size() != f.getArity() ||
-            (_args.size() == 0 ? false :_args.front().get().getType() != f.getArgType()) )
-        throw nArg_arity_error();
+    std::list<MathType> _argsType;
+    for (auto a : _args)
+        _argsType.push_back(a.get().getType());
+    if (!f.matchArgType(_argsType))
+        throw argN_argType_error();
 }
 void ParenSymbol::argCheck(Map f, std::list<Terms*> _args)
 {
@@ -95,7 +94,7 @@ void ParenSymbol::argCheck(Map f, std::list<Terms*> _args)
     for (auto a : _args)
         _argsType.push_back(a->getType());
     if (!f.matchArgType(_argsType))
-        throw nArg_arity_error();
+        throw argN_argType_error();
 }
 ParenSymbol::ParenSymbol(std::list<std::reference_wrapper<Terms> > _args)
 {

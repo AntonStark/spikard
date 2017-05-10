@@ -57,122 +57,112 @@ void Namespace::delSym(const std::string& name, const NameTy& type)
         throw no_sym(name);
 }
 
-/*bool TermsFactory::isVar(const std::string& name) const
-{ return V.is(name); }
-void TermsFactory::addV(const std::string& name)
-{ V.add(name); }
-Variable* TermsFactory::getV(const std::string& name) const
-{ return V.get(name); }
-Variable* TermsFactory::makeVar(const std::string& name)
+
+Reasoning::~Reasoning()
 {
-    if (!V.is(name))
-        V.add(name);
-    return V.get(name);
+    for (auto& r : subs)
+        delete r;
 }
 
-Term* TermsFactory::makeTerm(Symbol* f, std::list<Terms*> args)
-{ return T.make({f, args}); }*/
-
-
-/*FormulasFactory::FormulasFactory()
-        : M(), A(), F()
+Reasoning& Reasoning::startSub()
 {
-    makeMod(MType::NOT);
-    makeMod(MType::AND);
-    makeMod(MType::OR);
-    makeMod(MType::THAN);
+    subs.push_back(new Reasoning(this));
+    return *subs.back();
+}
+void Reasoning::addSub(Terms* monom)
+{
+    Reasoning* t = new Statement(this, monom);
+    subs.push_back(t);
 }
 
-Modifier* FormulasFactory::makeMod(MType _type, Variable* _arg)
-{ return M.make({_arg, _type}); }
-FCard FormulasFactory::makeFormula(Predicate* p, std::list<Terms*> args)
-{ return A.make({p, args}); }
-FCard FormulasFactory::makeFormula(Modifier* _mod, FCard F1, FCard F2)
-{ return F.make({_mod, {F1, F2}}); }
-FCard FormulasFactory::makeFormula(Modifier::MType modT, FCard F1, FCard F2)
+const Reasoning* Reasoning::isNameExist(const std::string& name, const NameTy& type) const
 {
-    Modifier* _mod = makeMod(modT);
-    return makeFormula(_mod, F1, F2);
-}
-FCard FormulasFactory::makeFormula(Modifier::MType modT, Variable* arg, Formula* F)
-{
-    Modifier* _mod = makeMod(modT, arg);
-    return makeFormula(_mod, F);
-}
-FCard FormulasFactory::makeFormula(FCard base, std::stack<Formula::ArgTy> where, FCard forReplace)
-{
-*//*base->print(std::cerr);
-std::cerr<<std::endl;
-forReplace->print(std::cerr);
-std::cerr<<std::endl;*//*
-    if (where.size() == 0)
-        return forReplace;
-    else if (auto cbase = static_cast<const ComposedF*>(base))
-    {
-        Formula::ArgTy arg = where.top();
-        where.pop();
-        if (arg == Formula::ArgTy::f)
-            return makeFormula(cbase->getConType(),
-                               makeFormula(cbase->getFArg(), where, forReplace),
-                               cbase->getSArg());
-        else
-            return makeFormula(cbase->getConType(),
-                               cbase->getFArg(),
-                               makeFormula(cbase->getSArg(), where, forReplace));
-    }
-    else
-        throw std::invalid_argument("Ненулевой путь при атомарной базе - противоречие.\n");
-}*/
-
-/*Formula* FormulasFactory::makeFormula(Formula* one)
-{
-    if (ComposedF* cOne = static_cast<ComposedF*>(one))
-        return makeFormula(cOne);
-    else if (Atom* aOne = static_cast<Atom*>(one))
-        return one;
-    else if (Placeholder* pOne = static_cast<Placeholder*>(one))
-        return one;
+    if (names.isThatType(name, type))
+        return this;
+    else if (parent != nullptr)
+        return parent->isNameExist(name, type);
     else
         return nullptr;
 }
-Formula* FormulasFactory::makeFormula(ComposedF* cOne)
+
+void Reasoning::addSym(Symbol sym)
 {
-    return makeFormula(cOne->getConType(),
-                       makeFormula(cOne->getFArg()),
-                       makeFormula(cOne->getSArg()));
+    std::string name = sym.getName();
+    names.addSym(name, NameTy::SYM);
+    syms.insert({name, sym});
+}
+void Reasoning::addSym(const std::string& name,
+                       std::list<MathType> argT, MathType retT)
+{
+    Symbol sym(name, argT, retT);
+    names.addSym(name, NameTy::SYM);
+    syms.insert({name, sym});
 }
 
-Formula* FormulasFactory::makePlace()
+void Reasoning::addVar(Variable var)
 {
-    Placeholder* p = new Placeholder();
-    P.insert(p);
-    return p;
-}*/
-
-
-Signature::Signature(std::initializer_list<Symbol> _S)
-        : names()
+    std::string name = var.getName();
+    names.addSym(name, NameTy::VAR);
+    vars.insert({name, var});
+}
+void Reasoning::addVar(const std::string& name, MathType type)
 {
-    for (auto s : _S)
+    names.addSym(name, NameTy::VAR);
+    Variable var(name, type);
+    vars.insert({name, var});
+}
+
+void Reasoning::addType(MathType type)
+{
+    std::string name = type.getName();
+    names.addSym(name, NameTy::MT);
+    types.insert({name, type});
+}
+void Reasoning::addType(const std::string& name)
+{
+    names.addSym(name, NameTy::MT);
+    MathType type(name);
+    types.insert({name, type});
+}
+
+Symbol Reasoning::getS(const std::string& name) const
+{
+    const Reasoning* reas = isNameExist(name, NameTy::SYM);
+    if (reas != nullptr)
+        return reas->syms.at(name);
+    else
+        throw std::invalid_argument("No sym.\n");
+}
+Variable Reasoning::getV(const std::string& name) const
+{
+    const Reasoning* reas = isNameExist(name, NameTy::VAR);
+    if (reas != nullptr)
+        return reas->vars.at(name);
+    else
+        throw std::invalid_argument("No sym.\n");
+}
+MathType Reasoning::getT(const std::string& name) const
+{
+    const Reasoning* reas = isNameExist(name, NameTy::MT);
+    if (reas != nullptr)
+        return reas->types.at(name);
+    else
+        throw std::invalid_argument("No sym.\n");
+}
+
+void Reasoning::viewSetOfNames(std::set<std::string>& set,
+                               const NameTy& type) const
+{
+    names.viewSetOfNames(set, type);
+    if (parent != nullptr)
+        parent->viewSetOfNames(set, type);
+}
+
+void Reasoning::print(std::ostream& out) const
+{
+    for (size_t i = 0; i < subs.size(); ++i)
     {
-        S.insert(s);
-        names.addSym(s.getName(), Namespace::NameTy::SYM);
+        out << '[' << i << "]:\n";
+        subs[i]->print(out);
     }
 }
-
-bool Signature::isSym(const Symbol& sym) const
-{ return (S.find(sym) != S.end()); }
-
-Signature logical_sign({{"\\lnot ", {logical_mt}, logical_mt}, {"\\lor ", {2, logical_mt}, logical_mt},
-                        {"\\land ", {2, logical_mt}, logical_mt}, {"\\Rightarrow ", {2, logical_mt}, logical_mt}});
-
-/*Symbol* Signature::getS(const std::string& name) const
-{ return S.get(name); }
-
-unsigned Signature::arity(const std::string& name) const
-{
-    if (isSym(name))
-        return getS(name)->getArity();
-    else
-        return static_cast<unsigned>(-1);
-}*/

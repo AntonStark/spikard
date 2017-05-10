@@ -28,7 +28,7 @@ private:
     const std::string name;
 public:
     Named(const std::string& _name) : name(_name) {}
-    ~Named() {}
+    virtual ~Named() {}
     Named(const Named& one) : name(one.name) {}
 
     std::string getName() const { return name; }
@@ -48,28 +48,19 @@ public:
     bool operator< (const Label& other) const;
 };
 
-class MathType
+class MathType : public Named
 {
-private:
-    std::string type;
 public:
-    MathType(std::string _type) : type(_type) {}
-    MathType(const MathType& one) : type(one.type) {}
-    ~MathType() {}
-    const MathType& operator=(const MathType& one)
-    {
-        if (one.type != this->type)
-            this->type = one.type;
-        return *this;
-    }
+    MathType(std::string _type) : Named(_type) {}
+    virtual ~MathType() {}
+    MathType(const MathType& one) : Named(one) {}
+
     bool operator== (const MathType& other) const;
     bool operator!= (const MathType& other) const
     { return (!(this->operator==)(other)); }
     bool operator<(const MathType& other) const;
 };
-extern MathType natural_mt;
 extern MathType logical_mt;
-extern MathType set_mt;
 
 // Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
 // Важно, что с априорной информацией о типах упрощается парсер.
@@ -92,7 +83,7 @@ public:
     MathType getArgType() const { return argT.front(); }
     bool matchArgType(const std::list<MathType> otherArgT) const
     { return (otherArgT == argT); }
-    MathType getRetType() const { return retT; }
+    MathType getType() const { return retT; }
     bool operator< (const Map& other) const;
 };
 
@@ -147,7 +138,7 @@ public:
 class ParenSymbol : public virtual Printable
 {
 private:
-    class nArg_arity_error;
+    class argN_argType_error;
 
     // Внимание! ParenSymbol владеет своими аргументами,
     // к передаваемым указателям применяется глубокое копирование
@@ -171,17 +162,18 @@ class Term : public Terms, public Symbol, public ParenSymbol
 {
 public:
     Term(Symbol f, std::list<std::reference_wrapper<Terms> > _args)
-            : Terms(f.getRetType()), Symbol(f),
+            : Terms(f.getType()), Symbol(f),
               ParenSymbol(_args) { argCheck(f, _args); }
-    Term(std::pair<Symbol, std::list<std::reference_wrapper<Terms> > > pair)
-            : Term(pair.first, pair.second) {}
-    Term(const Term& one)
-            : Terms(one), Symbol(one), ParenSymbol(one) {}
+    Term(std::pair<Symbol,
+                   std::list<std::reference_wrapper<Terms> > >
+         pair) : Term(pair.first, pair.second) {}
+    Term(const Term& one) : Terms(one), Symbol(one), ParenSymbol(one) {}
     Term(Symbol f, std::list<Terms*> _args)
-            : Terms(f.getRetType()), Symbol(f),
+            : Terms(f.getType()), Symbol(f),
               ParenSymbol(_args) {argCheck(f, _args); }
     virtual ~Term() {}
 
+    using Terms::getType;
     virtual Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 };
@@ -196,10 +188,11 @@ private:
     Variable var;
     Terms* term;
 public:
+    //todo vars\var Отложил до реализации вывода специализацией и обобщением
     QuantedTerm(QType _type, Variable _var, Term _term) :
             type(_type), var(_var), term(_term.clone()), Terms(logical_mt)
     {
-        if (_term.getRetType() != logical_mt)
+        if (_term.getType() != logical_mt)
             throw std::invalid_argument("Квантификация не логического терма.\n");
     }
     QuantedTerm(QType _type, Variable _var, QuantedTerm _term) :
@@ -207,12 +200,12 @@ public:
     QuantedTerm(QType _type, Variable _var, Terms* _term) :
             type(_type), var(_var), term(_term->clone()), Terms(logical_mt)
     {
-        if (Term* t = static_cast<Term*>(_term))
+        if (Term* t = dynamic_cast<Term*>(_term))
         {
-            if (t->getRetType() != logical_mt)
+            if (t->getType() != logical_mt)
                 throw std::invalid_argument("Квантификация не логического терма.\n");
         }
-        else if (QuantedTerm* qt = static_cast<QuantedTerm*>(_term)) {}
+        else if (QuantedTerm* qt = dynamic_cast<QuantedTerm*>(_term)) {}
         else throw std::invalid_argument("Квантификация неизвестного вида.\n");
     }
     virtual ~QuantedTerm() {}

@@ -367,8 +367,7 @@ void registerVar(Reasoning& closure, std::string& source, unsigned indent)
     std::string name = source.substr(indent, nameLen);
     unsigned typeNameLen;
     MathType type = parseType(closure, source.substr(indent + nameLen + 8), typeNameLen);
-    Variable parsed(name, type);
-    closure.addVar(name, parsed);
+    closure.addVar(name, type);
     source.erase(indent + nameLen, 8+typeNameLen);
 }
 
@@ -481,5 +480,5 @@ void addStatement(Reasoning& reas, std::string source)
         if (parsed != nullptr)
             break;
     }
-    reas.addSub(new Statement(parsed));
+    reas.addSub(parsed);
 }
