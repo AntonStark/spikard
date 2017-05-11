@@ -120,8 +120,6 @@ int main(void)
     reas.addType(natural);
     reas.addType(group);
     reas.addType(real);
-    std::string input = "\\forall x\\typeof Natural asd \\exists g\\typeof Group a";
-    registerVars(reas, input);
 
     Symbol gr({">", {real, real}, logical_mt});
     reas.addSym(r);
@@ -133,8 +131,10 @@ int main(void)
     reas.addSym(ne);
     addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
     //todo меньше new/delete в термах, потом
-    reas[0].print(cerr);
+    reas.print(cerr);
 
 
+    cout<<flush;
+    cerr<<flush;
     return 0;
 }
