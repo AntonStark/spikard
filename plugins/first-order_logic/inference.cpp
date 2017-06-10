@@ -4,7 +4,7 @@
 
 #include "inference.hpp"
 
-Inference::Inference(FormulasFactory& _ff) : ff(_ff)
+/*Inference::Inference()
 {
     index = 0;
 
@@ -21,11 +21,11 @@ Inference::Inference(FormulasFactory& _ff) : ff(_ff)
     binary[8] = &Inference::A8;
     binary[9] = &Inference::A9;
 
-    /*A[12] = A12;
-    A[13] = A13;*/
+    *//*A[12] = A12;
+    A[13] = A13;*//*
 }
-Inference::Inference(FormulasFactory& _ff, const Theory& th)
-        : Inference(_ff)
+Inference::Inference(const Theory& th)
+        : Inference()
 {
     for (auto o : th.viewAx())
         pushTruth(o);
@@ -172,9 +172,9 @@ FCard Inference::A11(FCard A)
     }
     else
         return nullptr;
-}
+}*/
 
-void Inference::logging(std::initializer_list<FCard> in, std::initializer_list<FCard> out)
+/*void Inference::logging(std::initializer_list<FCard> in, std::initializer_list<FCard> out)
 {
     conclusions.insert(std::make_pair(in, out));
     for (auto o : out)
@@ -262,4 +262,4 @@ void Inference::print(PrintTy mode, std::ostream& out) const
             printItem(*it++, out);
         index = truth.size();
     }
-}
+}*/

@@ -64,6 +64,19 @@ Reasoning::~Reasoning()
         delete r;
 }
 
+Reasoning* Reasoning::get(RPath path)
+{
+    Reasoning* r = this;
+    while (path.size() != 0)
+    {
+        if (path.front()-1 >= r->subs.size())
+            return nullptr;
+        r = (*r)[path.front()-1];
+        path.pop_front();
+    }
+    return r;
+}
+
 Reasoning& Reasoning::startSub()
 {
     subs.push_back(new Reasoning(this));
@@ -73,6 +86,37 @@ void Reasoning::addSub(Terms* monom)
 {
     Reasoning* t = new Statement(this, monom);
     subs.push_back(t);
+}
+
+bool Reasoning::deduceMP(RPath pPremise, RPath pImpl)
+{
+    const Terms* premise;
+    if (Statement* sPremise = dynamic_cast<Statement*>(get(pPremise)))
+        premise = sPremise->get();
+    else
+        return false; //ошибочный pPremise
+
+    const Terms* impl;
+    if (Statement* sImpl = dynamic_cast<Statement*>(get(pImpl)))
+        impl = sImpl->get();
+    else
+        return false; //ошибочный pImpl
+    
+    if (const Term* tI = dynamic_cast<const Term*>(impl))
+    {
+        Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
+        if (!(tI->Symbol::operator==)(standardImpl))
+            return false;
+        const Terms* arg1 = tI->arg(1);
+        if (!arg1->doCompare(premise))
+            return false; //посылка импликации impl не совпадает с premise
+
+        Reasoning* st = new Statement(this, tI->arg(2), {premise, impl});
+        subs.push_back(st);
+        return true;
+    }
+    else
+        return false; //терм impl не является импликацией
 }
 
 const Reasoning* Reasoning::isNameExist(const std::string& name, const NameTy& type) const
@@ -90,6 +134,11 @@ void Reasoning::addSym(Symbol sym)
     std::string name = sym.getName();
     names.addSym(name, NameTy::SYM);
     syms.insert({name, sym});
+}
+void Reasoning::addSym(std::list<Symbol> syms)
+{
+    for (auto& s : syms)
+        addSym(s);
 }
 void Reasoning::addSym(const std::string& name,
                        std::list<MathType> argT, MathType retT)
@@ -162,7 +211,23 @@ void Reasoning::print(std::ostream& out) const
 {
     for (size_t i = 0; i < subs.size(); ++i)
     {
-        out << '[' << i << "]:\n";
+        out << '[' << i+1 << "]:\n";
         subs[i]->print(out);
     }
+}
+
+void Statement::print(std::ostream& out) const
+{
+    if (comment.length() != 0)
+        out << comment << std::endl;
+
+    if (const Variable* v = dynamic_cast<const Variable*>(monom))
+        v->print(out);
+    else if (const Term* t = dynamic_cast<const Term*>(monom))
+        t->print(out);
+    else if (const QuantedTerm* qt = dynamic_cast<const QuantedTerm*>(monom))
+        qt->print(out);
+    else
+        return;
+    out << std::endl;
 }

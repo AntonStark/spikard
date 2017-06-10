@@ -211,7 +211,7 @@ Term* parseTerm(const Reasoning& reas, Lexer::LexList& list)
         return nullptr;
     list.pop_front();
 
-    std::list<Terms*> terms;
+    std::vector<Terms*> terms;
     while (true)
     {
         if (list.front().tok == Token::rb)

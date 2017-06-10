@@ -24,6 +24,7 @@ private:
              std::set<std::string> > names;
 public:
     Namespace();
+    ~Namespace() {}
 
     bool isThatType(const std::string& name, const NameTy& type) const;
     bool isSomeSym(const std::string& name) const;
@@ -44,6 +45,7 @@ typedef Namespace::NameTy NameTy;
 
 /// Универсальный класс для описания иерархической единицы рассуждения
 /// Реализуется, что в разных разделах одни символы могут обозначать различные вещи
+class Statement;
 class Reasoning : virtual public Printable
 {
 private:
@@ -61,16 +63,22 @@ public:
     Reasoning() : parent(nullptr) {}
     virtual ~Reasoning();
 
-    Reasoning& getParent() const { return *parent; }
-    Reasoning& operator[] (size_t n) { return *subs[n]; }
+    typedef std::list<size_t> RPath;
+
+    Reasoning* getParent() const { return parent; }
+    Reasoning* operator[] (size_t n) { return subs[n]; }
+    Reasoning* get(RPath path);
 
     Reasoning& startSub();
     void addSub(Terms* monom);
+
+    bool deduceMP(RPath premise, RPath impl);
 
     const Reasoning* isNameExist(const std::string& name,
                                  const NameTy& type) const;
 
     void addSym(Symbol sym);
+    void addSym(std::list<Symbol> syms);
     void addSym(const std::string& name,
                 std::list<MathType> argT, MathType retT);
 
@@ -92,15 +100,18 @@ public:
 
 class Statement : virtual public Printable, public Reasoning
 {
+    const Terms* monom;
+    std::set<const Terms*> premise;
+    std::string comment;
 public:
-    Terms* monom;
-    Statement(Reasoning* _parent, Terms* _monom)
-            : Reasoning(_parent), monom(_monom) {}
-    Statement(Terms* _monom) : monom(_monom) {}
+    Statement(Reasoning* _parent, const Terms* _monom,
+              const std::set<const Terms*> _premise = {}, std::string _comment = "")
+            : Reasoning(_parent), monom(_monom), premise(_premise), comment(_comment) {}
     virtual ~Statement() {}
 
-    virtual void print(std::ostream& out = std::cout) const override
-    { monom->print(out); }
+    virtual void print(std::ostream& out = std::cout) const override;
+    const Terms* get() const
+    { return monom; }
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

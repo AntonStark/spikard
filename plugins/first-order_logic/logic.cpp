@@ -80,7 +80,7 @@ public:
     argN_argType_error()
             : std::invalid_argument("Кол-во или тип аргументов не соответствует символу.\n") {}
 };
-void ParenSymbol::argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args)
+void ParenSymbol::argCheck(Map f, std::vector<std::reference_wrapper<Terms> > _args)
 {
     std::list<MathType> _argsType;
     for (auto a : _args)
@@ -88,7 +88,7 @@ void ParenSymbol::argCheck(Map f, std::list<std::reference_wrapper<Terms> > _arg
     if (!f.matchArgType(_argsType))
         throw argN_argType_error();
 }
-void ParenSymbol::argCheck(Map f, std::list<Terms*> _args)
+void ParenSymbol::argCheck(Map f, std::vector<Terms*> _args)
 {
     std::list<MathType> _argsType;
     for (auto a : _args)
@@ -96,7 +96,7 @@ void ParenSymbol::argCheck(Map f, std::list<Terms*> _args)
     if (!f.matchArgType(_argsType))
         throw argN_argType_error();
 }
-ParenSymbol::ParenSymbol(std::list<std::reference_wrapper<Terms> > _args)
+ParenSymbol::ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args)
 {
     for (auto& a : _args)
     {
@@ -122,7 +122,7 @@ ParenSymbol::ParenSymbol(const ParenSymbol& one)
         args.push_back(a->clone());
 }
 
-ParenSymbol::ParenSymbol(std::list<Terms*> _args)
+ParenSymbol::ParenSymbol(std::vector<Terms*> _args)
 {
     for (auto a : _args)
     {

@@ -12,6 +12,7 @@
 #include <set>
 #include <map>
 #include <functional>
+#include <vector>
 
 class Printable
 {
@@ -48,13 +49,19 @@ public:
     bool operator< (const Label& other) const;
 };
 
+class Theory;
 class MathType : public Named
 {
+private:
+    Theory* definition;
 public:
-    MathType(std::string _type) : Named(_type) {}
+    MathType(std::string _type, Theory* _def = nullptr)
+            : Named(_type), definition(_def) {}
     virtual ~MathType() {}
-    MathType(const MathType& one) : Named(one) {}
+    MathType(const MathType& one)
+            : Named(one), definition(one.definition) {}
 
+    //fixme сравнение пока без учета definition
     bool operator== (const MathType& other) const;
     bool operator!= (const MathType& other) const
     { return (!(this->operator==)(other)); }
@@ -121,6 +128,7 @@ public:
     virtual bool isVariable() const { return false; }
     virtual Terms* clone() const = 0;
     MathType getType() const { return type; }
+    virtual bool doCompare(const Terms* other) const = 0;
 };
 
 class Variable : public Terms, public Label
@@ -133,6 +141,14 @@ public:
             Terms(one), Label(one) {}
     virtual bool isVariable() const override { return true; }
     virtual Variable* clone() const override { return (new Variable(*this)); }
+
+    virtual bool doCompare(const Terms* other) const override
+    {
+        if (const Variable* v = dynamic_cast<const Variable*>(other))
+            return (this->Label::operator==)(*v);
+        else
+            return false;
+    }
 };
 
 class ParenSymbol : public virtual Printable
@@ -142,33 +158,43 @@ private:
 
     // Внимание! ParenSymbol владеет своими аргументами,
     // к передаваемым указателям применяется глубокое копирование
-    std::list<Terms*> args;
+    std::vector<Terms*> args;
 protected:
     std::set<Variable> vars;
     // Это устаревшая версия
-    void argCheck(Map f, std::list<std::reference_wrapper<Terms> > _args);
-    void argCheck(Map f, std::list<Terms*> _args);
+    void argCheck(Map f, std::vector<std::reference_wrapper<Terms> > _args);
+    void argCheck(Map f, std::vector<Terms*> _args);
 public:
-    ParenSymbol(std::list<std::reference_wrapper<Terms> > _args);
+    ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args);
     ParenSymbol(const ParenSymbol& one);
     // Применяется глубокое копирование
-    ParenSymbol(std::list<Terms*> _args);
+    ParenSymbol(std::vector<Terms*> _args);
     virtual ~ParenSymbol();
 
     virtual void print(std::ostream& out = std::cout) const override;
+
+    const Terms* arg(size_t oneTwoThree) const
+    { return args[oneTwoThree-1]; }
+    bool operator==(const ParenSymbol& other) const
+    {
+        for (size_t i = 0; i < args.size(); ++i)
+            if (!args[i]->doCompare(other.args[i]))
+                return false;
+        return true;
+    }
 };
 
 class Term : public Terms, public Symbol, public ParenSymbol
 {
 public:
-    Term(Symbol f, std::list<std::reference_wrapper<Terms> > _args)
+    Term(Symbol f, std::vector<std::reference_wrapper<Terms> > _args)
             : Terms(f.getType()), Symbol(f),
               ParenSymbol(_args) { argCheck(f, _args); }
     Term(std::pair<Symbol,
-                   std::list<std::reference_wrapper<Terms> > >
+                   std::vector<std::reference_wrapper<Terms> > >
          pair) : Term(pair.first, pair.second) {}
     Term(const Term& one) : Terms(one), Symbol(one), ParenSymbol(one) {}
-    Term(Symbol f, std::list<Terms*> _args)
+    Term(Symbol f, std::vector<Terms*> _args)
             : Terms(f.getType()), Symbol(f),
               ParenSymbol(_args) {argCheck(f, _args); }
     virtual ~Term() {}
@@ -176,6 +202,14 @@ public:
     using Terms::getType;
     virtual Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
+
+    virtual bool doCompare(const Terms* other) const override
+    {
+        if (const Term* t = dynamic_cast<const Term*>(other))
+            return ((this->Symbol::operator==)(*t) && (this->ParenSymbol::operator==)(*t));
+        else
+            return false;
+    }
 };
 
 class QuantedTerm : virtual public Printable, public Terms
@@ -211,6 +245,14 @@ public:
     virtual ~QuantedTerm() {}
     virtual QuantedTerm* clone() const override { return (new QuantedTerm(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
+
+    virtual bool doCompare(const Terms* other) const override
+    {
+        if (const QuantedTerm* q = dynamic_cast<const QuantedTerm*>(other))
+            return ((type == q->type) && (var.doCompare(&q->var)) && (term->doCompare(q->term)));
+        else
+            return false;
+    }
 };
 
 #endif //TEST_BUILD_LOGIC_HPP

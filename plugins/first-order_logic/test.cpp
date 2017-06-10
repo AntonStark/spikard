@@ -129,10 +129,22 @@ int main(void)
     reas.addSym(ze);
     Symbol ne({"!=", {2, real}, logical_mt});
     reas.addSym(ne);
-    addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
+//    addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
     //todo меньше new/delete в термах, потом
     reas.print(cerr);
 
+
+    Reasoning logic;
+    logic.addType("Logical");
+    logic.addSym({n, o, a, r});
+    addStatement(logic, "\\forall A\\typeof Logical \\forall B\\typeof Logical \\Rightarrow (A, \\Rightarrow (B, A))");
+    addStatement(logic, "\\Rightarrow (A, \\Rightarrow (B, A))");
+    addStatement(logic, "A");
+    logic.deduceMP({3}, {2});
+    logic.print();
+    addStatement(logic, "B");
+    logic.deduceMP({5}, {4});
+    logic.print(std::cerr);
 
     cout<<flush;
     cerr<<flush;
