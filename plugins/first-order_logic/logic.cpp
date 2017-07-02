@@ -13,7 +13,10 @@ bool Map::operator==(const Map& one) const
 bool Symbol::operator==(const Symbol& one) const
 { return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
 bool MathType::operator==(const MathType& one) const
-{ return (this->Named::operator==)(one); }
+{
+    return (getName() == "any" || one.getName() == "any" ? true
+                                                         : (this->Named::operator==)(one));
+}
 
 bool Named::operator<(const Named& other) const
 { return (name < other.name); }
@@ -70,8 +73,8 @@ void Term::print(std::ostream &out) const
     Symbol::print(out);
     ParenSymbol::print(out);
 }
-void QuantedTerm::print(std::ostream &out) const
-{ out << word[type] << var << *term; }
+/*void QuantedTerm::print(std::ostream &out) const
+{ out << qword[type] << var << *term; }*/
 
 
 class ParenSymbol::argN_argType_error : public std::invalid_argument
@@ -80,15 +83,15 @@ public:
     argN_argType_error()
             : std::invalid_argument("Кол-во или тип аргументов не соответствует символу.\n") {}
 };
-void ParenSymbol::argCheck(Map f, std::vector<std::reference_wrapper<Terms> > _args)
+/*void ParenSymbol::checkArgs(Map f, std::vector<std::reference_wrapper<Terms> > _args)
 {
     std::list<MathType> _argsType;
     for (auto a : _args)
         _argsType.push_back(a.get().getType());
     if (!f.matchArgType(_argsType))
         throw argN_argType_error();
-}
-void ParenSymbol::argCheck(Map f, std::vector<Terms*> _args)
+}*/
+void ParenSymbol::checkArgs(Map f, std::vector<Terms*> _args) const
 {
     std::list<MathType> _argsType;
     for (auto a : _args)
@@ -96,13 +99,13 @@ void ParenSymbol::argCheck(Map f, std::vector<Terms*> _args)
     if (!f.matchArgType(_argsType))
         throw argN_argType_error();
 }
-ParenSymbol::ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args)
+/*ParenSymbol::ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args)
 {
     for (auto& a : _args)
     {
         Terms& ta = a.get();
         args.push_back(ta.clone());
-        if (ta.isVariable())
+        *//*if (ta.isVariable())
         {
             Variable v = static_cast<Variable&>(ta);
             vars.insert(v);
@@ -111,12 +114,12 @@ ParenSymbol::ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args)
         {
             Term t = static_cast<Term&>(ta);
             vars.insert(t.vars.begin(), t.vars.end());
-        }
+        }*//*
     }
-}
+}*/
 
 ParenSymbol::ParenSymbol(const ParenSymbol& one)
-        : vars(one.vars)
+        /*: vars(one.vars)*/
 {
     for (const auto& a : one.args)
         args.push_back(a->clone());
@@ -127,10 +130,10 @@ ParenSymbol::ParenSymbol(std::vector<Terms*> _args)
     for (auto a : _args)
     {
         args.push_back(a->clone());
-        if (Variable* v = dynamic_cast<Variable*>(a))
+        /*if (Variable* v = dynamic_cast<Variable*>(a))
             vars.insert(*v);
         else if (Term* t = dynamic_cast<Term*>(a))
-            vars.insert(t->vars.begin(), t->vars.end());
+            vars.insert(t->vars.begin(), t->vars.end());*/
     }
 }
 
@@ -140,6 +143,135 @@ ParenSymbol::~ParenSymbol()
         delete a;
 }
 
-std::map<QuantedTerm::QType, const std::string>
-        QuantedTerm::word = { {QuantedTerm::QType::FORALL,"\\forall "},
-                              {QuantedTerm::QType::EXISTS,"\\exists "} };
+bool ParenSymbol::operator==(const ParenSymbol& other) const
+{
+    for (size_t i = 0; i < args.size(); ++i)
+        if (!args[i]->doCompare(other.args[i]))
+            return false;
+    return true;
+}
+
+bool Variable::doCompare(const Terms* other) const
+{
+    if (const Variable* v = dynamic_cast<const Variable*>(other))
+        return (this->Label::operator==)(*v);
+    else
+        return false;
+}
+
+Terms* Variable::replace(const Terms* x, const Terms* t) const
+{
+    if (doCompare(x))
+        return t->clone();
+    else
+        return this->clone();
+}
+
+Terms* Variable::replace(Path where, const Terms* by) const
+{
+    if (where.size() == 0)
+        return by->clone();
+    else
+        return nullptr;
+}
+
+const Terms* Variable::get(Path path) const
+{
+    if (path.size() == 0)
+        return this;
+    else
+        return nullptr;
+}
+
+Term::Term(Symbol f, std::vector<Terms*> _args)
+        : Terms(f.getType()), Symbol(f), ParenSymbol(_args)
+{
+    checkArgs(f, _args);
+
+    for (auto& a : _args)
+    {
+        if (Variable* var = dynamic_cast<Variable*>(a))
+            free.insert(*var);
+        else if (Term* term = dynamic_cast<Term*>(a))
+            for (auto& v : term->free)
+                free.insert(v);
+    }
+}
+
+void Term::boundVar(Variable var)
+{
+    auto search = free.find(var);
+    if (search != free.end())
+        free.erase(search);
+    else
+        throw std::invalid_argument("Попытка ограничения не свободной перменной.\n");
+}
+
+std::map<Term::QType, const std::string>
+        Term::qword = { {Term::QType::FORALL,"\\forall "},
+                        {Term::QType::EXISTS,"\\exists "} };
+Symbol forall(Term::qword[Term::QType::FORALL], {MathType("any"), logical_mt}, logical_mt);
+Symbol exists(Term::qword[Term::QType::EXISTS], {MathType("any"), logical_mt}, logical_mt);
+
+bool Term::doCompare(const Terms* other) const
+{
+    if (const Term* t = dynamic_cast<const Term*>(other))
+        return ((this->Symbol::operator==)(*t) && (this->ParenSymbol::operator==)(*t));
+    else
+        return false;
+}
+
+Terms* Term::replace(const Terms* x, const Terms* t) const
+{
+    if (auto var = dynamic_cast<const Variable*>(x))
+    {
+        if (free.find(*var) == free.end())
+            return this->clone();
+        else
+        {
+            std::vector<Terms*> _args;
+            for (auto& arg : args)
+                _args.push_back(arg->replace(x, t));
+            return new Term(*this, _args);
+        }
+    }
+}
+
+Terms* Term::replace(Path where, const Terms* by) const
+{
+    if (where.size() == 0)
+        return by->clone();
+    else
+    {
+        auto n = where.front();
+        where.pop_front();
+        if (n > args.size())
+            return nullptr;
+        std::vector<Terms*> _args;
+        for (unsigned i = 0; i < args.size(); ++i)
+            if (i != n-1)
+                _args.push_back(args[i]->clone());
+            else
+                _args.push_back(args[i]->replace(where, by));
+        return (new Term(*this, _args));
+    }
+}
+
+const Terms* Term::get(Path path) const
+{
+    if (path.size() == 0)
+        return this;
+    else
+    {
+        auto n = path.front();
+        path.pop_front();
+        if (n > getArity())
+            return nullptr;
+        else
+            return arg(n)->get(path);
+    }
+}
+
+/*std::map<QuantedTerm::QType, const std::string>
+        QuantedTerm::qword = { {QuantedTerm::QType::FORALL,"\\forall "},
+                              {QuantedTerm::QType::EXISTS,"\\exists "} };*/

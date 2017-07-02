@@ -109,19 +109,22 @@ int main(void)
     Symbol a({"\\land ", {2, logical_mt}, logical_mt});
     Symbol r({"\\Rightarrow ", {2, logical_mt}, logical_mt});
 
-    Variable x("x", natural);
-    Variable one("1", natural);
-//    Term equ(ne, {x, one});
-
     Reasoning reas;
     MathType group("Group");
     MathType real("Real");
+    Variable x("x", real);
+    Variable one("1", real);
+
     reas.addType(logical_mt);
     reas.addType(natural);
     reas.addType(group);
     reas.addType(real);
 
-    Symbol gr({">", {real, real}, logical_mt});
+    /*Symbol gr({">", {real, real}, logical_mt});
+    Term t(gr, {&x, &one});
+    const Terms* sdf = new ForallTerm(x, &t);
+    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;*/
+
     reas.addSym(r);
 //    reas.addSym(gr);
     reas.addSym(">", {2, real}, logical_mt);
@@ -139,12 +142,23 @@ int main(void)
     logic.addSym({n, o, a, r});
     addStatement(logic, "\\forall A\\typeof Logical \\forall B\\typeof Logical \\Rightarrow (A, \\Rightarrow (B, A))");
     addStatement(logic, "\\Rightarrow (A, \\Rightarrow (B, A))");
-    addStatement(logic, "A");
+    logic.printNamespace();
+    logic.get({1})->print();
+    logic.get({1})->printNamespace();
+    /*addStatement(logic, "A");
     logic.deduceMP({3}, {2});
     logic.print();
+
     addStatement(logic, "B");
     logic.deduceMP({5}, {4});
     logic.print(std::cerr);
+    Term b(ne, {&x, &one});
+    logic.deduceSpec({1}, {5});
+    logic.deduceSpec({1}, {2}, {3});
+    logic.print();*/
+    /*std::cout << "*arg(2): " << *dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2) <<
+            "; dyncast<FT>: " << (dynamic_cast<const ForallTerm*>(dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2))!= nullptr) << std::endl;
+*/
 
     cout<<flush;
     cerr<<flush;

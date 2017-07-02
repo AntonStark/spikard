@@ -48,11 +48,11 @@ typedef Namespace::NameTy NameTy;
 class Statement;
 class Reasoning : virtual public Printable
 {
+public:
+    const Reasoning* parent;
 private:
     std::vector<Reasoning*> subs;
-    Reasoning* parent;
     Namespace names;
-
     std::map<std::string, Symbol  > syms;
     std::map<std::string, Variable> vars;
     std::map<std::string, MathType> types;
@@ -63,16 +63,21 @@ public:
     Reasoning() : parent(nullptr) {}
     virtual ~Reasoning();
 
-    typedef std::list<size_t> RPath;
+    Reasoning* get(Path path);
+    const Terms* getTerms(Path path) const;
 
-    Reasoning* getParent() const { return parent; }
-    Reasoning* operator[] (size_t n) { return subs[n]; }
-    Reasoning* get(RPath path);
+    Reasoning* startSub();
+    Statement* addSub(Terms* monom);
 
-    Reasoning& startSub();
-    void addSub(Terms* monom);
+    void popBack() { subs.pop_back(); }
 
-    bool deduceMP(RPath premise, RPath impl);
+    Terms* doMP  (const Terms* premise, const Terms* impl) const;
+    Terms* doSpec(const Terms* general, const Terms* t) const;
+//    Terms* doGen (const Terms* special, size_t numb, std::string name) const;
+
+    bool deduceMP(Path rpPremise, Path rpImpl);
+    bool deduceSpec(Path rpGeneral, Path rpT);
+    bool deduceSpec(Path rpGeneral, Path subTermPath, Path rpT);
 
     const Reasoning* isNameExist(const std::string& name,
                                  const NameTy& type) const;
@@ -96,22 +101,26 @@ public:
                         const NameTy& type) const;
 
     virtual void print(std::ostream& out = std::cout) const override;
+    void printNamespace(std::ostream& out = std::cout) const; //for_debug
 };
 
 class Statement : virtual public Printable, public Reasoning
 {
+public:
+    typedef std::set<Path> Premises;
+private:
     const Terms* monom;
-    std::set<const Terms*> premise;
+    Premises premise;
     std::string comment;
 public:
     Statement(Reasoning* _parent, const Terms* _monom,
-              const std::set<const Terms*> _premise = {}, std::string _comment = "")
+              const Premises& _premise = {}, std::string _comment = "")
             : Reasoning(_parent), monom(_monom), premise(_premise), comment(_comment) {}
     virtual ~Statement() {}
 
     virtual void print(std::ostream& out = std::cout) const override;
-    const Terms* get() const
-    { return monom; }
+    const Terms* get() const { return monom; }
+    void set(const Terms* _monom) { monom = _monom; }
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

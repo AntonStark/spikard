@@ -88,7 +88,7 @@ public:
     unsigned getArity() const { return /*arity*/argT.size(); }
     bool operator== (const Map& one) const;
     MathType getArgType() const { return argT.front(); }
-    bool matchArgType(const std::list<MathType> otherArgT) const
+    bool matchArgType(const std::list<MathType>& otherArgT) const
     { return (otherArgT == argT); }
     MathType getType() const { return retT; }
     bool operator< (const Map& other) const;
@@ -109,14 +109,15 @@ public:
     Symbol(const Symbol& one)
             : Label(one), Map(one) {}
     bool operator== (const Symbol& one) const;
-    typedef std::pair<std::string,
+    /*typedef std::pair<std::string,
                       std::pair<std::list<MathType>, MathType> > Sign;
     Symbol(const Sign& sign)
             : Symbol(sign.first,
-                     sign.second.first, sign.second.second) {}
+                     sign.second.first, sign.second.second) {}*/
     bool operator<(const Symbol& other) const;
 };
 
+typedef std::list<size_t> Path;
 class Terms : public virtual Printable
 {
 private:
@@ -129,6 +130,9 @@ public:
     virtual Terms* clone() const = 0;
     MathType getType() const { return type; }
     virtual bool doCompare(const Terms* other) const = 0;
+    virtual Terms* replace(const Terms* x, const Terms* t) const = 0;
+    virtual Terms* replace(Path where, const Terms* by) const = 0;
+    virtual const Terms* get(Path path) const = 0;
 };
 
 class Variable : public Terms, public Label
@@ -142,13 +146,10 @@ public:
     virtual bool isVariable() const override { return true; }
     virtual Variable* clone() const override { return (new Variable(*this)); }
 
-    virtual bool doCompare(const Terms* other) const override
-    {
-        if (const Variable* v = dynamic_cast<const Variable*>(other))
-            return (this->Label::operator==)(*v);
-        else
-            return false;
-    }
+    virtual bool doCompare(const Terms* other) const override;
+    virtual Terms* replace(const Terms* x, const Terms* t) const override;
+    virtual Terms* replace(Path where, const Terms* by) const override;
+    virtual const Terms* get(Path path) const override;
 };
 
 class ParenSymbol : public virtual Printable
@@ -156,16 +157,16 @@ class ParenSymbol : public virtual Printable
 private:
     class argN_argType_error;
 
+protected:
     // Внимание! ParenSymbol владеет своими аргументами,
     // к передаваемым указателям применяется глубокое копирование
     std::vector<Terms*> args;
-protected:
-    std::set<Variable> vars;
+    /*std::set<Variable> vars;*/
     // Это устаревшая версия
-    void argCheck(Map f, std::vector<std::reference_wrapper<Terms> > _args);
-    void argCheck(Map f, std::vector<Terms*> _args);
+//    void checkArgs(Map f, std::vector<std::reference_wrapper<Terms> > _args);
+    void checkArgs(Map f, std::vector<Terms*> _args) const;
 public:
-    ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args);
+//    ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args);
     ParenSymbol(const ParenSymbol& one);
     // Применяется глубокое копирование
     ParenSymbol(std::vector<Terms*> _args);
@@ -174,49 +175,74 @@ public:
     virtual void print(std::ostream& out = std::cout) const override;
 
     const Terms* arg(size_t oneTwoThree) const
-    { return args[oneTwoThree-1]; }
-    bool operator==(const ParenSymbol& other) const
-    {
-        for (size_t i = 0; i < args.size(); ++i)
-            if (!args[i]->doCompare(other.args[i]))
-                return false;
-        return true;
-    }
+    { return args.at(oneTwoThree-1); }
+    bool operator==(const ParenSymbol& other) const;
 };
 
 class Term : public Terms, public Symbol, public ParenSymbol
 {
+protected:
+    void boundVar(Variable var);
 public:
-    Term(Symbol f, std::vector<std::reference_wrapper<Terms> > _args)
+    typedef std::set<Variable> VarSet;
+    VarSet free;
+    /*Term(Symbol f, std::vector<std::reference_wrapper<Terms> > _args)
             : Terms(f.getType()), Symbol(f),
-              ParenSymbol(_args) { argCheck(f, _args); }
-    Term(std::pair<Symbol,
+              ParenSymbol(_args) { checkArgs(f, _args); }*/
+    /*Term(std::pair<Symbol,
                    std::vector<std::reference_wrapper<Terms> > >
-         pair) : Term(pair.first, pair.second) {}
-    Term(const Term& one) : Terms(one), Symbol(one), ParenSymbol(one) {}
-    Term(Symbol f, std::vector<Terms*> _args)
-            : Terms(f.getType()), Symbol(f),
-              ParenSymbol(_args) {argCheck(f, _args); }
+         pair) : Term(pair.first, pair.second) {}*/
+    Term(Symbol f, std::vector<Terms*> _args);
+    Term(const Term& one)
+            : Terms(one), Symbol(one), ParenSymbol(one), free(one.free) {}
     virtual ~Term() {}
 
     using Terms::getType;
     virtual Term* clone() const override { return (new Term(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
 
-    virtual bool doCompare(const Terms* other) const override
-    {
-        if (const Term* t = dynamic_cast<const Term*>(other))
-            return ((this->Symbol::operator==)(*t) && (this->ParenSymbol::operator==)(*t));
-        else
-            return false;
-    }
+    virtual bool doCompare(const Terms* other) const override;
+
+    enum class QType {FORALL, EXISTS};
+    static std::map<QType, const std::string> qword;
+
+    virtual Terms* replace(const Terms* x, const Terms* t) const override;
+    virtual Terms* replace(Path where, const Terms* by) const override;
+    virtual const Terms* get(Path path) const override;
 };
 
-class QuantedTerm : virtual public Printable, public Terms
+extern Symbol forall, exists;
+class ForallTerm : virtual public Printable, public Term
+{
+public:
+    ForallTerm(Variable var, Terms* term)
+            : Term(forall, {&var, term})
+    { Term::boundVar(var); }
+    ForallTerm(const ForallTerm& one) : Term(one) {}
+    virtual ForallTerm* clone() const override
+    { return (new ForallTerm(*this)); }
+
+    virtual ~ForallTerm() {}
+};
+
+class ExistsTerm : virtual public Printable, public Term
+{
+public:
+    ExistsTerm(Variable var, Terms* term)
+            : Term(exists, {&var, term})
+    { boundVar(var); }
+    ExistsTerm(const ExistsTerm& one) : Term(one) {}
+    virtual ExistsTerm* clone() const override
+    { return (new ExistsTerm(*this)); }
+
+    virtual ~ExistsTerm() {}
+};
+
+/*class QuantedTerm : virtual public Printable, public Terms
 {
 public:
     enum class QType {FORALL, EXISTS};
-    static std::map<QType, const std::string> word;
+    static std::map<QType, const std::string> qword;
 private:
     QType type;
     Variable var;
@@ -231,6 +257,7 @@ public:
     }
     QuantedTerm(QType _type, Variable _var, QuantedTerm _term) :
             type(_type), var(_var), term(_term.clone()), Terms(logical_mt) {}
+
     QuantedTerm(QType _type, Variable _var, Terms* _term) :
             type(_type), var(_var), term(_term->clone()), Terms(logical_mt)
     {
@@ -242,6 +269,8 @@ public:
         else if (QuantedTerm* qt = dynamic_cast<QuantedTerm*>(_term)) {}
         else throw std::invalid_argument("Квантификация неизвестного вида.\n");
     }
+    QuantedTerm(const QuantedTerm& one)
+            : type(one.type), var(one.var), term(one.term), Terms(one) {}
     virtual ~QuantedTerm() {}
     virtual QuantedTerm* clone() const override { return (new QuantedTerm(*this)); }
     virtual void print(std::ostream& out = std::cout) const override;
@@ -253,6 +282,6 @@ public:
         else
             return false;
     }
-};
+};*/
 
 #endif //TEST_BUILD_LOGIC_HPP

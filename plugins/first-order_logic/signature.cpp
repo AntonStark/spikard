@@ -64,59 +64,124 @@ Reasoning::~Reasoning()
         delete r;
 }
 
-Reasoning* Reasoning::get(RPath path)
+Reasoning* Reasoning::get(Path path)
 {
     Reasoning* r = this;
     while (path.size() != 0)
     {
         if (path.front()-1 >= r->subs.size())
             return nullptr;
-        r = (*r)[path.front()-1];
+        r = r->subs.at(path.front()-1);
         path.pop_front();
     }
     return r;
 }
+const Terms* Reasoning::getTerms(Path path) const
+{
+    const Reasoning* r = this;
+    while (path.size() != 0)
+    {
+        if (path.front()-1 >= r->subs.size())
+            return nullptr;
+        r = r->subs.at(path.front()-1);
+        path.pop_front();
+    }
 
-Reasoning& Reasoning::startSub()
+    if (auto sPremise = dynamic_cast<const Statement*>(r))
+        return sPremise->get();
+    else
+        return nullptr;
+}
+
+Reasoning* Reasoning::startSub()
 {
     subs.push_back(new Reasoning(this));
-    return *subs.back();
+    return subs.back();
 }
-void Reasoning::addSub(Terms* monom)
+Statement* Reasoning::addSub(Terms* monom)
 {
-    Reasoning* t = new Statement(this, monom);
-    subs.push_back(t);
+    Statement* st = new Statement(this, monom);
+    subs.push_back(st);
+    return st;
 }
 
-bool Reasoning::deduceMP(RPath pPremise, RPath pImpl)
-{
-    const Terms* premise;
-    if (Statement* sPremise = dynamic_cast<Statement*>(get(pPremise)))
-        premise = sPremise->get();
-    else
-        return false; //ошибочный pPremise
 
-    const Terms* impl;
-    if (Statement* sImpl = dynamic_cast<Statement*>(get(pImpl)))
-        impl = sImpl->get();
-    else
-        return false; //ошибочный pImpl
-    
+Terms* Reasoning::doMP(const Terms* premise, const Terms* impl) const
+{
     if (const Term* tI = dynamic_cast<const Term*>(impl))
     {
         Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
         if (!(tI->Symbol::operator==)(standardImpl))
-            return false;
-        const Terms* arg1 = tI->arg(1);
-        if (!arg1->doCompare(premise))
-            return false; //посылка импликации impl не совпадает с premise
+            return nullptr; //терм impl не является импликацией
 
-        Reasoning* st = new Statement(this, tI->arg(2), {premise, impl});
+        if (!tI->arg(1)->doCompare(premise))
+            return nullptr; //посылка импликации impl не совпадает с premise
+        return tI->arg(2)->clone();
+    }
+    else
+        return nullptr; //impl не является термом
+}
+Terms* Reasoning::doSpec(const Terms* general, const Terms* t) const
+{
+    if (const ForallTerm* fT = dynamic_cast<const ForallTerm*>(general))
+    {
+        if (fT->arg(1)->getType() == t->getType())
+            return fT->arg(2)->replace(fT->arg(1), t);
+    }
+    else
+        return nullptr;
+}
+
+bool Reasoning::deduceMP(Path rpPremise, Path rpImpl)
+{
+    const Terms* premise = getTerms(rpPremise);
+    const Terms* impl = getTerms(rpImpl);
+    if (!premise || !impl)
+        return false; //ошибочный rpPremise и/или rpImpl
+
+    if (Terms* mp = doMP(premise, impl))
+    {
+        Reasoning* st = new Statement(this, mp, {rpPremise, rpImpl});
         subs.push_back(st);
         return true;
     }
     else
-        return false; //терм impl не является импликацией
+        return false;
+}
+bool Reasoning::deduceSpec(Path rpGeneral, Path rpT)
+{
+    const Terms* general = getTerms(rpGeneral);
+    const Terms* t = getTerms(rpT);
+    if (!general || !t)
+        return false; //ошибочный rpGeneral и/или pT
+
+    if (Terms* spec = doSpec(general, t))
+    {
+        Reasoning* st = new Statement(this, spec, {rpGeneral});
+        subs.push_back(st);
+        return true;
+    }
+    else
+        return false;
+}
+bool Reasoning::deduceSpec(Path rpGeneral, Path subTermPath, Path rpT)
+{
+    const Terms* general = getTerms(rpGeneral);
+    const Terms* t = getTerms(rpT);
+    if (!general || !t)
+        return false; //ошибочный rpGeneral и/или pT
+    const Terms* concreteGen = general->get(subTermPath);
+    if (!concreteGen)
+        return false; //ошибочно задан подтерм-квантор
+
+    if (Terms* spec = doSpec(concreteGen, t))
+    {
+        Reasoning* st = new Statement(this, general->replace(subTermPath, spec), {rpGeneral});
+        subs.push_back(st);
+        return true;
+    }
+    else
+        return false;
 }
 
 const Reasoning* Reasoning::isNameExist(const std::string& name, const NameTy& type) const
@@ -216,6 +281,27 @@ void Reasoning::print(std::ostream& out) const
     }
 }
 
+void Reasoning::printNamespace(std::ostream& out) const
+{
+    out << "SYMS" << std::endl;
+    out << "------------" << std::endl;
+    for (const auto& s : syms)
+        out << s.first << std::endl;
+    out << "------------" << std::endl;
+
+    out << "VARS" << std::endl;
+    out << "------------" << std::endl;
+    for (const auto& v : vars)
+        out << v.first << std::endl;
+    out << "------------" << std::endl;
+
+    out << "TYPES" << std::endl;
+    out << "------------" << std::endl;
+    for (const auto& t : types)
+        out << t.first << std::endl;
+    out << "------------" << std::endl;
+}
+
 void Statement::print(std::ostream& out) const
 {
     if (comment.length() != 0)
@@ -225,8 +311,8 @@ void Statement::print(std::ostream& out) const
         v->print(out);
     else if (const Term* t = dynamic_cast<const Term*>(monom))
         t->print(out);
-    else if (const QuantedTerm* qt = dynamic_cast<const QuantedTerm*>(monom))
-        qt->print(out);
+    /*else if (const QuantedTerm* qt = dynamic_cast<const QuantedTerm*>(monom))
+        qt->print(out);*/
     else
         return;
     out << std::endl;

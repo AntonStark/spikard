@@ -12,9 +12,9 @@
 
 //TODO мысли о рефакторинге:
 /*-1)-Interpr -> Parser
- * 2) class Lexeme. Lexeme::operator==(Lexer::Token)
- * 3) std::string Lexeme::value() const;
- * 4) Lexeme.second.second = indent -> lexLen
+ *-2)-class Lexeme. Lexeme::operator==(Lexer::Token)
+ *-3)-std::string Lexeme::value() const;
+ * 4) Lexeme.second.second = indent -> lexLen (???)
  *-5)-addV/getV -> makeVar
  *-6)-checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
  */
@@ -75,6 +75,6 @@ public:
 };
 
 Terms* parseTerms(const Reasoning& reas, Lexer::LexList& list);
-void addStatement(Reasoning&, std::string source);
+bool addStatement(Reasoning&, std::string source);
 
 #endif //TEST_BUILD_INTERPR_HPP

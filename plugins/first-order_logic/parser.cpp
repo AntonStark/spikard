@@ -57,8 +57,8 @@ Lexer::Lexer(Reasoning& _closure) : closure(_closure)
     for (auto s : buf)
         words[s] = Token::T;*/
 
-    words[QuantedTerm::word[QuantedTerm::QType::FORALL]]= Token::Q;
-    words[QuantedTerm::word[QuantedTerm::QType::EXISTS]]= Token::Q;
+    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::FORALL]]= Token::Q;
+    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::EXISTS]]= Token::Q;
     words[","] = Token::c;  words[" "] = Token::s;
     words["("] = Token::lb; words[")"] = Token::rb;
 }
@@ -178,14 +178,14 @@ void Lexer::recognize(std::string source)
     }
 }
 
-QuantedTerm* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
+Terms* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
-    QuantedTerm::QType type;
-    if (list.front().val == QuantedTerm::word[QuantedTerm::QType::EXISTS])
-        type = QuantedTerm::QType::EXISTS;
+    Term::QType type;
+    if (list.front().val == Term::qword[Term::QType::FORALL])
+        type = Term::QType::FORALL;
     else
-        type = QuantedTerm::QType::FORALL;
+        type = Term::QType::EXISTS;
     list.pop_front();
 
     if (list.front().tok != Token::V)
@@ -196,12 +196,16 @@ QuantedTerm* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
     Terms* term = parseTerms(reas, list);
     if (term == nullptr)
         return nullptr;
-    QuantedTerm* qterm = new QuantedTerm(type, var, term);
+    Term* qterm;
+    if (type == Term::QType::FORALL)
+        qterm = new ForallTerm(var, term);
+    else
+        qterm = new ExistsTerm(var, term);
     delete term;
     return qterm;
 }
 
-Term* parseTerm(const Reasoning& reas, Lexer::LexList& list)
+Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
     Symbol s = reas.getS(list.front().val);
@@ -267,19 +271,30 @@ Terms* parseTerms(const Reasoning& reas, Lexer::LexList& list)
     }
 }
 
-void addStatement(Reasoning& reas, std::string source)
+bool addStatement(Reasoning& reas, std::string source)
 {
-    Lexer lex(reas);
+    Statement* closure = reas.addSub(nullptr);
+
+    Lexer lex(*closure);
     lex.recognize(source);
 
     Terms* parsed = nullptr;
     for (auto r : lex.lastResult)
     {
-        parsed = parseTerms(reas, r);
+        parsed = parseTerms(*closure, r);
         if (parsed != nullptr)
             break;
     }
     //TODO выводить предупреждение о неоднозначности разбора, если в итоге получится больше одного варианта...
 
-    reas.addSub(parsed);
+    if (parsed != nullptr)
+    {
+        closure->set(parsed);
+        return true;
+    }
+    else
+    {
+        reas.popBack();
+        return false;
+    }
 }
