@@ -1,1 +1,1 @@
-add_subdirectory(first-order_logic)
+add_subdirectory(mathlang)

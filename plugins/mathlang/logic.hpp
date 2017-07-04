@@ -77,15 +77,14 @@ class Map
 {
 private:
     const std::list<MathType> argT;
-//    const unsigned arity;
     const MathType retT;
 public:
-    Map(const std::list<MathType>& _argT, /*unsigned _arity,*/ MathType _retT)
-            : argT(_argT), /*arity(_arity),*/ retT(_retT) {}
+    Map(const std::list<MathType>& _argT, MathType _retT)
+            : argT(_argT), retT(_retT) {}
     virtual ~Map() {}
-    Map(const Map& one) : argT(one.argT), /*arity(one.arity),*/ retT(one.retT) {}
+    Map(const Map& one) : argT(one.argT), retT(one.retT) {}
 
-    unsigned getArity() const { return /*arity*/argT.size(); }
+    unsigned getArity() const { return argT.size(); }
     bool operator== (const Map& one) const;
     MathType getArgType() const { return argT.front(); }
     bool matchArgType(const std::list<MathType>& otherArgT) const
@@ -102,18 +101,13 @@ class Symbol : public Label, public Map
 {
 public:
     Symbol(const std::string& _name,
-           std::list<MathType> _argT, /*unsigned _arity,*/ MathType _retT)
-            : Label(_name), Map(_argT, /*_arity,*/ _retT) {}
+           std::list<MathType> _argT, MathType _retT)
+            : Label(_name), Map(_argT, _retT) {}
 
     virtual ~Symbol() {}
     Symbol(const Symbol& one)
             : Label(one), Map(one) {}
     bool operator== (const Symbol& one) const;
-    /*typedef std::pair<std::string,
-                      std::pair<std::list<MathType>, MathType> > Sign;
-    Symbol(const Sign& sign)
-            : Symbol(sign.first,
-                     sign.second.first, sign.second.second) {}*/
     bool operator<(const Symbol& other) const;
 };
 
@@ -162,11 +156,8 @@ protected:
     // к передаваемым указателям применяется глубокое копирование
     std::vector<Terms*> args;
     /*std::set<Variable> vars;*/
-    // Это устаревшая версия
-//    void checkArgs(Map f, std::vector<std::reference_wrapper<Terms> > _args);
     void checkArgs(Map f, std::vector<Terms*> _args) const;
 public:
-//    ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args);
     ParenSymbol(const ParenSymbol& one);
     // Применяется глубокое копирование
     ParenSymbol(std::vector<Terms*> _args);
@@ -186,12 +177,6 @@ protected:
 public:
     typedef std::set<Variable> VarSet;
     VarSet free;
-    /*Term(Symbol f, std::vector<std::reference_wrapper<Terms> > _args)
-            : Terms(f.getType()), Symbol(f),
-              ParenSymbol(_args) { checkArgs(f, _args); }*/
-    /*Term(std::pair<Symbol,
-                   std::vector<std::reference_wrapper<Terms> > >
-         pair) : Term(pair.first, pair.second) {}*/
     Term(Symbol f, std::vector<Terms*> _args);
     Term(const Term& one)
             : Terms(one), Symbol(one), ParenSymbol(one), free(one.free) {}
@@ -237,51 +222,5 @@ public:
 
     virtual ~ExistsTerm() {}
 };
-
-/*class QuantedTerm : virtual public Printable, public Terms
-{
-public:
-    enum class QType {FORALL, EXISTS};
-    static std::map<QType, const std::string> qword;
-private:
-    QType type;
-    Variable var;
-    Terms* term;
-public:
-    //todo vars\var Отложил до реализации вывода специализацией и обобщением
-    QuantedTerm(QType _type, Variable _var, Term _term) :
-            type(_type), var(_var), term(_term.clone()), Terms(logical_mt)
-    {
-        if (_term.getType() != logical_mt)
-            throw std::invalid_argument("Квантификация не логического терма.\n");
-    }
-    QuantedTerm(QType _type, Variable _var, QuantedTerm _term) :
-            type(_type), var(_var), term(_term.clone()), Terms(logical_mt) {}
-
-    QuantedTerm(QType _type, Variable _var, Terms* _term) :
-            type(_type), var(_var), term(_term->clone()), Terms(logical_mt)
-    {
-        if (Term* t = dynamic_cast<Term*>(_term))
-        {
-            if (t->getType() != logical_mt)
-                throw std::invalid_argument("Квантификация не логического терма.\n");
-        }
-        else if (QuantedTerm* qt = dynamic_cast<QuantedTerm*>(_term)) {}
-        else throw std::invalid_argument("Квантификация неизвестного вида.\n");
-    }
-    QuantedTerm(const QuantedTerm& one)
-            : type(one.type), var(one.var), term(one.term), Terms(one) {}
-    virtual ~QuantedTerm() {}
-    virtual QuantedTerm* clone() const override { return (new QuantedTerm(*this)); }
-    virtual void print(std::ostream& out = std::cout) const override;
-
-    virtual bool doCompare(const Terms* other) const override
-    {
-        if (const QuantedTerm* q = dynamic_cast<const QuantedTerm*>(other))
-            return ((type == q->type) && (var.doCompare(&q->var)) && (term->doCompare(q->term)));
-        else
-            return false;
-    }
-};*/
 
 #endif //TEST_BUILD_LOGIC_HPP

@@ -28,10 +28,6 @@ bool Map::operator<(const Map& other) const
 {
     if (argT < other.argT) return true;
     else if (other.argT < argT) return false;
-
-    /*else if (arity < other.arity) return true;
-    else if (other.arity < arity) return false;*/
-
     else return (retT < other.retT);
 }
 bool Symbol::operator<(const Symbol& other) const
@@ -73,8 +69,6 @@ void Term::print(std::ostream &out) const
     Symbol::print(out);
     ParenSymbol::print(out);
 }
-/*void QuantedTerm::print(std::ostream &out) const
-{ out << qword[type] << var << *term; }*/
 
 
 class ParenSymbol::argN_argType_error : public std::invalid_argument
@@ -83,14 +77,7 @@ public:
     argN_argType_error()
             : std::invalid_argument("Кол-во или тип аргументов не соответствует символу.\n") {}
 };
-/*void ParenSymbol::checkArgs(Map f, std::vector<std::reference_wrapper<Terms> > _args)
-{
-    std::list<MathType> _argsType;
-    for (auto a : _args)
-        _argsType.push_back(a.get().getType());
-    if (!f.matchArgType(_argsType))
-        throw argN_argType_error();
-}*/
+
 void ParenSymbol::checkArgs(Map f, std::vector<Terms*> _args) const
 {
     std::list<MathType> _argsType;
@@ -99,24 +86,6 @@ void ParenSymbol::checkArgs(Map f, std::vector<Terms*> _args) const
     if (!f.matchArgType(_argsType))
         throw argN_argType_error();
 }
-/*ParenSymbol::ParenSymbol(std::vector<std::reference_wrapper<Terms> > _args)
-{
-    for (auto& a : _args)
-    {
-        Terms& ta = a.get();
-        args.push_back(ta.clone());
-        *//*if (ta.isVariable())
-        {
-            Variable v = static_cast<Variable&>(ta);
-            vars.insert(v);
-        }
-        else
-        {
-            Term t = static_cast<Term&>(ta);
-            vars.insert(t.vars.begin(), t.vars.end());
-        }*//*
-    }
-}*/
 
 ParenSymbol::ParenSymbol(const ParenSymbol& one)
         /*: vars(one.vars)*/
@@ -128,13 +97,7 @@ ParenSymbol::ParenSymbol(const ParenSymbol& one)
 ParenSymbol::ParenSymbol(std::vector<Terms*> _args)
 {
     for (auto a : _args)
-    {
         args.push_back(a->clone());
-        /*if (Variable* v = dynamic_cast<Variable*>(a))
-            vars.insert(*v);
-        else if (Term* t = dynamic_cast<Term*>(a))
-            vars.insert(t->vars.begin(), t->vars.end());*/
-    }
 }
 
 ParenSymbol::~ParenSymbol()
@@ -271,7 +234,3 @@ const Terms* Term::get(Path path) const
             return arg(n)->get(path);
     }
 }
-
-/*std::map<QuantedTerm::QType, const std::string>
-        QuantedTerm::qword = { {QuantedTerm::QType::FORALL,"\\forall "},
-                              {QuantedTerm::QType::EXISTS,"\\exists "} };*/
