@@ -141,11 +141,13 @@ int main(void)
     logic.addType("Logical");
     logic.addSym({n, o, a, r});
     addStatement(logic, "\\forall A\\typeof Logical \\forall B\\typeof Logical \\Rightarrow (A, \\Rightarrow (B, A))");
+    logic.addVar("A", logic.getT("Logical"));
+    logic.addVar("B", logic.getT("Logical"));
     addStatement(logic, "\\Rightarrow (A, \\Rightarrow (B, A))");
     logic.printNamespace();
     logic.get({1})->print();
     logic.get({1})->printNamespace();
-    /*addStatement(logic, "A");
+    addStatement(logic, "A");
     logic.deduceMP({3}, {2});
     logic.print();
 
@@ -155,7 +157,7 @@ int main(void)
     Term b(ne, {&x, &one});
     logic.deduceSpec({1}, {5});
     logic.deduceSpec({1}, {2}, {3});
-    logic.print();*/
+    logic.print();
     /*std::cout << "*arg(2): " << *dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2) <<
             "; dyncast<FT>: " << (dynamic_cast<const ForallTerm*>(dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2))!= nullptr) << std::endl;
 */
