@@ -13,16 +13,31 @@ std::vector<std::string> lineToWords(std::string, std::string);
 class bad_req_ex : public std::exception
 {
 private:
-    std::string mess;
+    const std::string mess;
 public:
     bad_req_ex(const char *msg)
             : exception(), mess(msg) {}
-    virtual const char* what() const noexcept
-    {
-        return mess.c_str();
-    }
+    virtual const char* what() const noexcept override
+    { return mess.c_str(); }
     virtual ~bad_req_ex() {}
-};;
+};
+
+class add_handler : public std::exception
+{
+public:
+    const std::string key;
+    const std::string value;
+    add_handler(const char *_key, const char *_value)
+            : exception(), key(_key), value(_value) {}
+
+    virtual const char* what() const noexcept override
+    {
+        std::stringstream wh;
+        wh << "Установить заголовок <" << key << ":" << value << ">";
+        return wh.str().c_str();
+    }
+    virtual ~add_handler() {}
+};
 
 void myToLower(std::string&);
 

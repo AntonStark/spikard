@@ -124,6 +124,7 @@ void Core::methodsCfg()
     methods.insert(make_pair("end", &Core::end));
     methods.insert(make_pair("plugIn", &Core::plugIn));
     methods.insert(make_pair("plugOut", &Core::plugOut));
+    methods.insert(make_pair("getInterface", &Core::getInterface));
     methods.insert(make_pair("getMan", &Core::getMan));
 }
 
@@ -515,7 +516,8 @@ void Core::plugIn(vector<string> cmdArgs)
         cout<<ex.what()<<endl;
     }
     ifaceRefresh();
-    return;
+    throw add_handler("interface-update-required", "yes");
+//    return;
 }
 
 void Core::plugOut(vector<string> cmdArgs)
@@ -542,7 +544,34 @@ void Core::plugOut(vector<string> cmdArgs)
         SO_inWork.erase(it);
     }
     ifaceRefresh();
-    return;
+    throw add_handler("interface-update-required", "yes");
+//    return;
+}
+
+void Core::getInterface(std::vector<std::string> cmdArgs)
+{
+    if (cmdArgs.size() != 0)
+    {
+        if (cmdArgs[0] == "?")
+        {
+            cout << "<getInterface> - \
+Служебная команда для запроса словаря доступных вызовов."<<endl;
+            return;
+        }
+        else if (cmdArgs[0] == "*")
+        {
+            cout << "getInterface"<<endl;
+            return;
+        }
+    }
+
+    map<string, string> iFace = coreIface.getIface();
+    auto ifit = iFace.begin();
+    while (ifit != iFace.end())
+    {
+        cout << ifit->first << ':' << ifit->second << endl;
+        ++ifit;
+    }
 }
 
 void Core::printListOfComands()

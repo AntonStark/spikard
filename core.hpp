@@ -15,6 +15,8 @@
 #include <vector>
 #include <sstream>
 
+#include "InnerRequest.hpp"
+
 class exit_ex {};
 class no_fun_ex {};
 class sh_obj_err : public std::exception
@@ -145,6 +147,8 @@ private:
     void plugIn(std::vector<std::string>);
 
     void plugOut(std::vector<std::string>);
+
+    void getInterface(std::vector<std::string>);
 
     void printListOfComands();
 

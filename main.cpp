@@ -76,6 +76,38 @@ void printHelloMsg()
     return;
 }
 
+void collapseBr(string& line, list<string>& collapsed)
+{
+    size_t from, b, bb;
+    from = 0;
+    while (true)
+    {
+        b = line.find('"', from);
+        if (b == string::npos)
+            return;
+        bb = line.find('"', b + 1);
+        if (bb == string::npos)
+            return;
+        collapsed.push_back(line.substr(b + 1, bb - b - 1));
+        line.replace(b, bb - b + 1, " \"\" "); //Длина содержимого bb-b-1. +2 сами кавычки = bb-b+1
+        from = b+3; //На b теперь находится ' ' и дальше два '\"'
+    }
+}
+
+void expandBr(vector<string>& cmdArgs, list<string> collapsed)
+{
+    for (int i = 0; i < cmdArgs.size(); ++i)
+    {
+        if (collapsed.empty())
+            break;
+        if (cmdArgs[i] == "\"\"")
+        {
+            cmdArgs[i] = collapsed.front();
+            collapsed.pop_front();
+        }
+    }
+}
+
 void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
 {
     unsigned long s = line.find(' ');
@@ -86,13 +118,21 @@ void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
     else {
         cmdName = line.substr(0, s);
         line.erase(0, s+1);
+
+        list<string> collapsed;
+        collapseBr(line, collapsed);
+
         s = line.find(' ');
         while (s != string::npos) {
-            cmdArgs.push_back(line.substr(0, s));
+            if (s != 0)
+                cmdArgs.push_back(line.substr(0, s));
             line.erase(0, s+1);
             s = line.find(' ');
         }
-        cmdArgs.push_back(line);
+        if (!line.empty())
+            cmdArgs.push_back(line);
+
+        expandBr(cmdArgs, collapsed);
     }
     return;
 }
@@ -119,7 +159,7 @@ void reqHandler(map<int, Core*>& cores)
             cerr << "Не удаётся принять запрос" << endl;
             break;
         }
-        cout << "Принят запрос от id=";
+        cerr << "Принят запрос от id=";
 
         InnerRequest cliRequest, cliRespond;
         try
@@ -129,13 +169,9 @@ void reqHandler(map<int, Core*>& cores)
 
         Core *localCore;
         string userIdStr = cliRequest.getH("user-id");
-        /*if (userIdStr.size() == 0)
-        {
-            cerr << "В запросе нет заголовка \"user-id\", отброшено." << endl;
-            continue;
-        }*/
         int userId = atoi(userIdStr.c_str());
-        cout << userId << "; " << flush;
+        cerr << userId << "; " << flush;
+
         if (userId == 0)
         {
             bad_id: ;
@@ -151,7 +187,7 @@ void reqHandler(map<int, Core*>& cores)
             }
             stringstream t; t<<userId; userIdStr = t.str();
             cliRespond.setH("user-id", userIdStr);
-            cout << "Присвоен id=" << userId << "; " << flush;
+            cerr << "Присвоен id=" << userId << "; " << flush;
         }
         else    //уже есть user-id
         {
@@ -174,32 +210,24 @@ void reqHandler(map<int, Core*>& cores)
         streambuf *backup;
         backup = cout.rdbuf();
         cout.rdbuf(hear.rdbuf());
-        if (reqStr == "getInterface")
-        {
-            map<string, string> localIFace = localCore->coreIface.getIface();
-            auto ifit = localIFace.begin();
-            while (ifit != localIFace.end())
-            {
-                cout << ifit->first << ':' << ifit->second << endl;
-                ++ifit;
-            }
-        }
-        else
-        {
-            string cmdName;
-            vector<string> cmdArgs;
-            parseComand(reqStr, cmdName, cmdArgs);
 
-            cerr << "Вызов: [" << cmdName << "] {";
-            for (string arg : cmdArgs)
-                cerr << arg << ", ";
-            cerr << "};" << flush;
+        string cmdName;
+        vector<string> cmdArgs;
+        parseComand(reqStr, cmdName, cmdArgs);
+        cerr << "Вызов: [" << cmdName << "] {";
+        for (string arg : cmdArgs)
+            cerr << arg << ", ";
+        cerr << "};" << flush;
 
-            try
-            { localCore->call(cmdName, cmdArgs); }
-            catch (no_fun_ex)
-            { cerr << "Обращение к несуществующей функции!;" << flush; }
-        }
+        try
+        { localCore->call(cmdName, cmdArgs); }
+        catch (no_fun_ex)
+        { cerr << "Обращение к несуществующей функции!;" << flush; }
+        catch (add_handler& hInfo)
+        { cliRespond.setH(hInfo.key, hInfo.value); }
+        catch  (std::exception& e)
+        { cerr << e.what() << endl; }
+
         cout.rdbuf(backup);
         cliRespond.setB(hear.str());
 
