@@ -42,7 +42,7 @@ void registerVar(Reasoning& closure, std::string& source, unsigned indent)
     source.erase(indent + nameLen, 8+typeNameLen);
 }
 
-Lexer::Lexer(Reasoning& _closure) : closure(_closure)
+Lexer::Lexer(Reasoning _closure) : closure(_closure)
 {
     std::set<std::string> buf;
     closure.viewSetOfNames(buf, NameTy::SYM);
@@ -57,13 +57,12 @@ Lexer::Lexer(Reasoning& _closure) : closure(_closure)
     for (auto s : buf)
         words[s] = Token::T;*/
 
-    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::FORALL]]= Token::Q;
-    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::EXISTS]]= Token::Q;
+    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::FORALL]] = Token::Q;
+    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::EXISTS]] = Token::Q;
     words[","] = Token::c;  words[" "] = Token::s;
     words["("] = Token::lb; words[")"] = Token::rb;
 }
 
-//todo работает то?
 void Lexer::refreshWords(NameTy type)
 {
     Token tok;

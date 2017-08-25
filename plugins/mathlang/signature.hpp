@@ -17,8 +17,8 @@ class Namespace
 public:
     enum class NameTy {SYM, VAR, MT};
 private:
-    class sym_doubling;
-    class no_sym;
+    class name_doubling;
+    class no_name;
 
     std::map<NameTy,
              std::set<std::string> > names;

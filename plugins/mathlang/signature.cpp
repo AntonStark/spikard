@@ -4,17 +4,17 @@
 
 #include "signature.hpp"
 
-class Namespace::sym_doubling : public std::invalid_argument
+class Namespace::name_doubling : public std::invalid_argument
 {
 public:
-    sym_doubling(const std::string& symName)
-            : std::invalid_argument("Попытка дублирования символа \"" + symName +"\".\n") {}
+    name_doubling(const std::string& symName)
+            : std::invalid_argument("Попытка дублирования имени \"" + symName +"\".\n") {}
 };
-class Namespace::no_sym : public std::invalid_argument
+class Namespace::no_name : public std::invalid_argument
 {
 public:
-    no_sym(const std::string& symName)
-            : std::invalid_argument("Cимвол \"" + symName + "\" не определён.\n") {}
+    no_name(const std::string& symName)
+            : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
 };
 
 Namespace::Namespace()
@@ -34,18 +34,18 @@ bool Namespace::isSomeSym(const std::string& name) const
 void Namespace::checkSym(const std::string& name, const NameTy& type) const
 {
     if (!isThatType(name, type))
-        throw no_sym(name);
+        throw no_name(name);
 }
 void Namespace::checkSym(const std::string& name) const
 {
     if (!isSomeSym(name))
-        throw no_sym(name);
+        throw no_name(name);
 }
 
 void Namespace::addSym(const std::string& name, const NameTy& type)
 {
     if (isSomeSym(name))
-        throw sym_doubling(name);
+        throw name_doubling(name);
     else
         names.at(type).insert(name);
 }
@@ -54,7 +54,7 @@ void Namespace::delSym(const std::string& name, const NameTy& type)
     if (isThatType(name, type))
         names.at(type).erase(name);
     else
-        throw no_sym(name);
+        throw no_name(name);
 }
 
 
