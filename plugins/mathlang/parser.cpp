@@ -42,7 +42,7 @@ void registerVar(Reasoning& closure, std::string& source, unsigned indent)
     source.erase(indent + nameLen, 8+typeNameLen);
 }
 
-Lexer::Lexer(Reasoning _closure) : closure(_closure)
+Lexer::Lexer(Reasoning& _closure) : closure(_closure)
 {
     std::set<std::string> buf;
     closure.viewSetOfNames(buf, NameTy::SYM);
@@ -165,7 +165,7 @@ void Lexer::recognize(std::string source)
         }
         for (auto w : words)
         {
-            if ( mayFollow(pair.second.back().tok, w.second)
+            if ( (pair.second.empty() ? true : mayFollow(pair.second.back().tok, w.second)) //Если pair.second ещё пуст, то условие следования выполнено автоматически
                   && matchIndented(source, pair.first, w.first))
             {
                 size_t newIndent = pair.first + w.first.length();

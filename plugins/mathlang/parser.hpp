@@ -47,7 +47,7 @@ public:
 
     std::map<std::string, Token> words;
 
-    Lexer(Reasoning R);
+    Lexer(Reasoning& R);
 
     void refreshWords(NameTy type);
 
