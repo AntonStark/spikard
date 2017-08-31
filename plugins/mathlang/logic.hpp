@@ -49,19 +49,15 @@ public:
     bool operator< (const Label& other) const;
 };
 
-class Theory;
 class MathType : public Named
 {
-private:
-    Theory* definition;
 public:
-    MathType(std::string _type, Theory* _def = nullptr)
-            : Named(_type), definition(_def) {}
+    MathType(std::string _type)
+            : Named(_type) {}
     virtual ~MathType() {}
     MathType(const MathType& one)
-            : Named(one), definition(one.definition) {}
+            : Named(one) {}
 
-    //fixme сравнение пока без учета definition
     bool operator== (const MathType& other) const;
     bool operator!= (const MathType& other) const
     { return (!(this->operator==)(other)); }

@@ -2,7 +2,6 @@
 #include "logic.hpp"
 #include "signature.hpp"
 #include "parser.hpp"
-//#include "inference.hpp"
 
 using namespace std;
 
@@ -134,7 +133,7 @@ int main(void)
     reas.addSym(ne);
 //    addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
     //todo меньше new/delete в термах, потом
-    reas.print(cerr);
+//    reas.print(cerr);
 
 
     Reasoning logic;
@@ -144,23 +143,25 @@ int main(void)
     logic.addVar("A", logic.getT("Logical"));
     logic.addVar("B", logic.getT("Logical"));
     addStatement(logic, "\\Rightarrow (A, \\Rightarrow (B, A))");
-    logic.printNamespace();
+//    logic.printNamespace();
     logic.get({1})->print();
-    logic.get({1})->printNamespace();
+//    logic.get({1})->printNamespace();
     addStatement(logic, "A");
     logic.deduceMP({3}, {2});
     logic.print();
 
     addStatement(logic, "B");
     logic.deduceMP({5}, {4});
-    logic.print(std::cerr);
+//    logic.print(std::cerr);
     Term b(ne, {&x, &one});
     logic.deduceSpec({1}, {5});
     logic.deduceSpec({1}, {2}, {3});
-    logic.print();
+//    logic.print();
     /*std::cout << "*arg(2): " << *dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2) <<
             "; dyncast<FT>: " << (dynamic_cast<const ForallTerm*>(dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2))!= nullptr) << std::endl;
 */
+
+
 
     cout<<flush;
     cerr<<flush;
