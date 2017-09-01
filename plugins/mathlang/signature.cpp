@@ -317,3 +317,23 @@ void Statement::print(std::ostream& out) const
         return;
     out << std::endl;
 }
+
+HierarchyItem::HierarchyItem(Section* _parent)
+        : parent(_parent) { parent->push(this); }
+HierarchyItem::~HierarchyItem()
+{
+    for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
+        delete s;           // они должны создаваться в куче
+}
+
+Section::Section(Section* _parent, const std::string& _title)
+        : HierarchyItem(_parent), title(_title)
+{
+    auto parent = getParent();
+    if (parent)
+        atTheEnd = parent->atTheEnd;
+}
+Section::Section(const std::string& _title)
+        : HierarchyItem(), title(_title) {}
+void Section::pushDefType(std::string typeName)
+{ /*new DefType(this, typeName);*/ }

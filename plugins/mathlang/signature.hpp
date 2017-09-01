@@ -123,4 +123,51 @@ public:
     void set(const Terms* _monom) { monom = _monom; }
 };
 
+//TODO ФУНКЦИОНАЛ ДОЛЖЕН БЫТЬ НЕОБХОДИМЫМ И ДОСТАТОЧНЫМ
+class Section;
+class HierarchyItem // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
+{
+private:
+    Section* parent;
+    std::list<HierarchyItem*> subs;
+    void push(HierarchyItem* sub) { subs.push_back(sub); }
+protected:
+    HierarchyItem(Section*);
+    Section* getParent() const { return parent; }
+public:
+    HierarchyItem() : parent(nullptr) {}
+    virtual ~HierarchyItem();
+    HierarchyItem(const HierarchyItem&) = delete;
+    HierarchyItem& operator=(const HierarchyItem&) = delete;
+};
+
+class Section : public HierarchyItem
+// Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
+{
+private:
+    std::string title;
+    Namespace atTheEnd; // Здесь хранится NS, соответсвующее концу Section,
+                        // потому что запись ведётся именно в конец.
+                        // Вставки Def-ов влекут обновление.
+
+    Section(Section*, const std::string& = "");
+    Section(const Section&) = delete;
+    Section& operator=(const Section&) = delete;
+    friend class AbstrDef;
+    void registerName(NameTy type, std::string& name)
+    { atTheEnd.addSym(name, type); }
+public:
+    Section(const std::string& = "");
+    virtual ~Section() {}
+
+    //  Таким образом есть два варианта организации размещения
+    //  с соблюдением владения со стороны старшего в иерархии:
+    //  1) DefType::create(closure, "Logical");
+    //  2) closure->pushDefType("Logical");
+    //  Первый способ выглядит более громоздко, а второй перегружает
+    //  интерфейс Section посторонним функционалом, но пусть так
+    void pushDefType(std::string typeName);
+};
+
+
 #endif //TEST_BUILD_SIGNATURE_HPP
