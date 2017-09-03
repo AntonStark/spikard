@@ -132,7 +132,7 @@ private:
     std::list<HierarchyItem*> subs;
     void push(HierarchyItem* sub) { subs.push_back(sub); }
 protected:
-    HierarchyItem(Section*);
+    HierarchyItem(Section* _parent);
     Section* getParent() const { return parent; }
 public:
     HierarchyItem() : parent(nullptr) {}
@@ -141,6 +141,7 @@ public:
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 };
 
+class AbstrDef;
 class Section : public HierarchyItem
 // Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
 {
@@ -149,15 +150,17 @@ private:
     Namespace atTheEnd; // Здесь хранится NS, соответсвующее концу Section,
                         // потому что запись ведётся именно в конец.
                         // Вставки Def-ов влекут обновление.
+    std::map<std::string, AbstrDef*> index;
 
-    Section(Section*, const std::string& = "");
+    Section(Section*, const std::string& _title = "");
     Section(const Section&) = delete;
     Section& operator=(const Section&) = delete;
+
     friend class AbstrDef;
-    void registerName(NameTy type, std::string& name)
-    { atTheEnd.addSym(name, type); }
+    void registerName(NameTy type, const std::string& name, AbstrDef* where);
+    MathType getType(const std::string& typeName);
 public:
-    Section(const std::string& = "");
+    Section(const std::string& _title = "");
     virtual ~Section() {}
 
     //  Таким образом есть два варианта организации размещения
@@ -167,7 +170,67 @@ public:
     //  Первый способ выглядит более громоздко, а второй перегружает
     //  интерфейс Section посторонним функционалом, но пусть так
     void pushDefType(std::string typeName);
+    void pushDefVar(std::string varName, std::string typeName);
+    void pushDefSym(std::string symName, std::list<std::string> argT, std::string retT);
 };
 
+/*class LineFactory
+{
+    Section* owner;
+public:
+    LineFactory(Section* _owner) : owner(_owner) {}
+    virtual ~LineFactory() {}
 
+    virtual void makeDefType(std::string& typeName) = 0;
+};*/
+
+class AbstrDef : public HierarchyItem
+// Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
+{
+private:
+    AbstrDef(const AbstrDef&) = delete;
+    AbstrDef& operator=(const AbstrDef&) = delete;
+public:
+    AbstrDef(Section* closure, NameTy type, const std::string& name);
+    virtual ~AbstrDef() {}
+};
+
+class DefType : public AbstrDef
+{
+private:
+    MathType typeInfo;
+    friend class Section;
+    DefType(Section* closure, const std::string& typeName);
+    DefType(const DefType&) = delete;
+    DefType& operator=(const DefType&) = delete;
+public:
+    virtual ~DefType() {}
+    MathType get() const { return typeInfo; }
+//    static void create(Section* closure, std::string& typeName) { new DefType(closure, typeName); }
+};
+
+class DefVar : public AbstrDef
+{
+private:
+    Variable varInfo;
+    friend class Section;
+    DefVar(Section* closure, const std::string& varName, MathType mathType);
+    DefVar(const DefVar&) = delete;
+    DefVar& operator=(const DefVar&) = delete;
+public:
+    virtual ~DefVar() {}
+};
+
+class DefSym : public AbstrDef
+{
+private:
+    Symbol symInfo;
+    friend class Section;
+    DefSym(Section* closure, const std::string& symName,
+           std::list<MathType> argT, MathType retT);
+    DefSym(const DefSym&) = delete;
+    DefSym& operator=(const DefSym&) = delete;
+public:
+    virtual ~DefSym() {}
+};
 #endif //TEST_BUILD_SIGNATURE_HPP

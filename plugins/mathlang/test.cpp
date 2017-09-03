@@ -161,7 +161,10 @@ int main(void)
             "; dyncast<FT>: " << (dynamic_cast<const ForallTerm*>(dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2))!= nullptr) << std::endl;
 */
 
-
+    Section theorem;
+    theorem.pushDefType("Logical");
+    theorem.pushDefVar("A", "Logical");
+    theorem.pushDefSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
 
     cout<<flush;
     cerr<<flush;

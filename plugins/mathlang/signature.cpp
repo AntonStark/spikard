@@ -331,9 +331,43 @@ Section::Section(Section* _parent, const std::string& _title)
 {
     auto parent = getParent();
     if (parent)
+    {
         atTheEnd = parent->atTheEnd;
+        index = parent->index;
+    }
 }
 Section::Section(const std::string& _title)
         : HierarchyItem(), title(_title) {}
+void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
+{
+    atTheEnd.addSym(name, type);
+    index.insert({name, where});
+}
+MathType Section::getType(const std::string& typeName)
+{
+    AbstrDef* where = index.at(typeName);
+    if (DefType* dt = dynamic_cast<DefType*>(where))
+        return dt->get();
+}
 void Section::pushDefType(std::string typeName)
-{ /*new DefType(this, typeName);*/ }
+{ new DefType(this, typeName); }
+void Section::pushDefVar(std::string varName, std::string typeName)
+{ new DefVar(this, varName, getType(typeName)); }
+void Section::pushDefSym(std::string symName, std::list<std::string> argT, std::string retT)
+{
+    std::list<MathType> argMT;
+    for (auto& a : argT)
+        argMT.push_back(getType(a));
+    new DefSym(this, symName, argMT, getType(retT));
+}
+
+AbstrDef::AbstrDef(Section* closure, NameTy type, const std::string& name)
+        : HierarchyItem(closure)
+{ closure->registerName(type, name, this); }
+
+DefType::DefType(Section* closure, const std::string& typeName)
+        : AbstrDef(closure, NameTy::MT, typeName), typeInfo(typeName) {}
+DefVar::DefVar(Section* closure, const std::string& varName, MathType mathType)
+        : AbstrDef(closure, NameTy::VAR, varName), varInfo(varName, mathType) {}
+DefSym::DefSym(Section* closure, const std::string& symName, std::list<MathType> argT, MathType retT)
+        : AbstrDef(closure, NameTy::SYM, symName), symInfo(symName, argT, retT) {}
