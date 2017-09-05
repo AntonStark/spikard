@@ -345,9 +345,14 @@ void Section::registerName(NameTy type, const std::string& name, AbstrDef* where
 }
 MathType Section::getType(const std::string& typeName)
 {
-    AbstrDef* where = index.at(typeName);
-    if (DefType* dt = dynamic_cast<DefType*>(where))
-        return dt->get();
+    if (atTheEnd.isThatType(typeName, NameTy::MT))
+    {
+        AbstrDef* where = index.at(typeName);
+        if (DefType* dt = dynamic_cast<DefType*>(where))
+            return *dt;
+    }
+    else
+        throw std::invalid_argument("Неизвестное имя типа.");
 }
 void Section::pushDefType(std::string typeName)
 { new DefType(this, typeName); }
@@ -366,8 +371,8 @@ AbstrDef::AbstrDef(Section* closure, NameTy type, const std::string& name)
 { closure->registerName(type, name, this); }
 
 DefType::DefType(Section* closure, const std::string& typeName)
-        : AbstrDef(closure, NameTy::MT, typeName), typeInfo(typeName) {}
+        : AbstrDef(closure, NameTy::MT, typeName), MathType(typeName) {}
 DefVar::DefVar(Section* closure, const std::string& varName, MathType mathType)
-        : AbstrDef(closure, NameTy::VAR, varName), varInfo(varName, mathType) {}
+        : AbstrDef(closure, NameTy::VAR, varName), Variable(varName, mathType) {}
 DefSym::DefSym(Section* closure, const std::string& symName, std::list<MathType> argT, MathType retT)
-        : AbstrDef(closure, NameTy::SYM, symName), symInfo(symName, argT, retT) {}
+        : AbstrDef(closure, NameTy::SYM, symName), Symbol(symName, argT, retT) {}

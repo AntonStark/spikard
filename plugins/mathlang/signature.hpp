@@ -195,24 +195,20 @@ public:
     virtual ~AbstrDef() {}
 };
 
-class DefType : public AbstrDef
+class DefType : public AbstrDef, public MathType
 {
 private:
-    MathType typeInfo;
     friend class Section;
     DefType(Section* closure, const std::string& typeName);
     DefType(const DefType&) = delete;
     DefType& operator=(const DefType&) = delete;
 public:
     virtual ~DefType() {}
-    MathType get() const { return typeInfo; }
-//    static void create(Section* closure, std::string& typeName) { new DefType(closure, typeName); }
 };
 
-class DefVar : public AbstrDef
+class DefVar : public AbstrDef, public Variable
 {
 private:
-    Variable varInfo;
     friend class Section;
     DefVar(Section* closure, const std::string& varName, MathType mathType);
     DefVar(const DefVar&) = delete;
@@ -221,10 +217,9 @@ public:
     virtual ~DefVar() {}
 };
 
-class DefSym : public AbstrDef
+class DefSym : public AbstrDef, public Symbol
 {
 private:
-    Symbol symInfo;
     friend class Section;
     DefSym(Section* closure, const std::string& symName,
            std::list<MathType> argT, MathType retT);
