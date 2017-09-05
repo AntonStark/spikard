@@ -12,6 +12,31 @@
 
 #include "logic.hpp"
 
+class Section;
+class AbstrDef;
+class NameSpaceIndex
+{
+public:
+    enum class NameTy {SYM, VAR, MT};
+private:
+    std::map<std::string, NameTy> names;
+    std::map<std::string, AbstrDef*> index;
+
+    class name_doubling;
+    class no_name;
+
+    friend class Section;
+    void add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
+public:
+    bool isThatType(const std::string& name, const NameTy& type) const;
+    bool isSomeType(const std::string& name) const;
+
+//    std::set<std::string> getNames(NameTy type) const;
+    MathType getT(const std::string& name) const;
+    Variable getV(const std::string& name) const;
+    Symbol   getS(const std::string& name) const;
+};
+
 class Namespace
 {
 public:
@@ -147,21 +172,19 @@ class Section : public HierarchyItem
 {
 private:
     std::string title;
-    Namespace atTheEnd; // Здесь хранится NS, соответсвующее концу Section,
-                        // потому что запись ведётся именно в конец.
-                        // Вставки Def-ов влекут обновление.
-    std::map<std::string, AbstrDef*> index;
-
     Section(Section*, const std::string& _title = "");
     Section(const Section&) = delete;
     Section& operator=(const Section&) = delete;
 
     friend class AbstrDef;
-    void registerName(NameTy type, const std::string& name, AbstrDef* where);
+    void registerName(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
     MathType getType(const std::string& typeName);
 public:
     Section(const std::string& _title = "");
     virtual ~Section() {}
+    NameSpaceIndex index;       // Здесь хранится NSI, соответсвующее концу Section,
+                                // потому что запись ведётся именно в конец.
+                                // Вставки Def-ов влекут обновление.
 
     //  Таким образом есть два варианта организации размещения
     //  с соблюдением владения со стороны старшего в иерархии:
@@ -191,7 +214,7 @@ private:
     AbstrDef(const AbstrDef&) = delete;
     AbstrDef& operator=(const AbstrDef&) = delete;
 public:
-    AbstrDef(Section* closure, NameTy type, const std::string& name);
+    AbstrDef(Section* closure, NameSpaceIndex::NameTy type, const std::string& name);
     virtual ~AbstrDef() {}
 };
 

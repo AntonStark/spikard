@@ -4,6 +4,57 @@
 
 #include "signature.hpp"
 
+class NameSpaceIndex::name_doubling : public std::invalid_argument
+{
+public:
+    name_doubling(const std::string& symName)
+            : std::invalid_argument("Попытка дублирования имени \"" + symName +"\".\n") {}
+};
+class NameSpaceIndex::no_name : public std::invalid_argument
+{
+public:
+    no_name(const std::string& symName)
+            : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
+};
+
+void NameSpaceIndex::add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where)
+{
+    if (!isSomeType(name))
+    {
+        names.insert({name, type});
+        index.insert({name, where});
+    }
+    else
+        throw name_doubling(name);
+}
+
+bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const
+{
+    auto search = names.find(name);
+    return (search != names.end() && search->second == type);
+}
+bool NameSpaceIndex::isSomeType(const std::string& name) const
+{ return (names.find(name) != names.end()); }
+
+MathType NameSpaceIndex::getT(const std::string& name) const
+{
+    if (isThatType(name, NameTy::MT))
+        return *dynamic_cast<DefType*>(index.at(name));
+    throw no_name(name);
+}
+Variable NameSpaceIndex::getV(const std::string& name) const
+{
+    if (isThatType(name, NameTy::VAR))
+        return *dynamic_cast<DefVar*>(index.at(name));
+    throw no_name(name);
+}
+Symbol NameSpaceIndex::getS(const std::string& name) const
+{
+    if (isThatType(name, NameTy::SYM))
+        return *dynamic_cast<DefSym*>(index.at(name));
+    throw no_name(name);
+}
+
 class Namespace::name_doubling : public std::invalid_argument
 {
 public:
@@ -331,29 +382,14 @@ Section::Section(Section* _parent, const std::string& _title)
 {
     auto parent = getParent();
     if (parent)
-    {
-        atTheEnd = parent->atTheEnd;
         index = parent->index;
-    }
 }
 Section::Section(const std::string& _title)
         : HierarchyItem(), title(_title) {}
-void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
-{
-    atTheEnd.addSym(name, type);
-    index.insert({name, where});
-}
+void Section::registerName(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where)
+{ index.add(type, name, where); }
 MathType Section::getType(const std::string& typeName)
-{
-    if (atTheEnd.isThatType(typeName, NameTy::MT))
-    {
-        AbstrDef* where = index.at(typeName);
-        if (DefType* dt = dynamic_cast<DefType*>(where))
-            return *dt;
-    }
-    else
-        throw std::invalid_argument("Неизвестное имя типа.");
-}
+{ return index.getT(typeName); }
 void Section::pushDefType(std::string typeName)
 { new DefType(this, typeName); }
 void Section::pushDefVar(std::string varName, std::string typeName)
@@ -366,13 +402,13 @@ void Section::pushDefSym(std::string symName, std::list<std::string> argT, std::
     new DefSym(this, symName, argMT, getType(retT));
 }
 
-AbstrDef::AbstrDef(Section* closure, NameTy type, const std::string& name)
+AbstrDef::AbstrDef(Section* closure, NameSpaceIndex::NameTy type, const std::string& name)
         : HierarchyItem(closure)
 { closure->registerName(type, name, this); }
 
 DefType::DefType(Section* closure, const std::string& typeName)
-        : AbstrDef(closure, NameTy::MT, typeName), MathType(typeName) {}
+        : AbstrDef(closure, NameSpaceIndex::NameTy::MT, typeName), MathType(typeName) {}
 DefVar::DefVar(Section* closure, const std::string& varName, MathType mathType)
-        : AbstrDef(closure, NameTy::VAR, varName), Variable(varName, mathType) {}
+        : AbstrDef(closure, NameSpaceIndex::NameTy::VAR, varName), Variable(varName, mathType) {}
 DefSym::DefSym(Section* closure, const std::string& symName, std::list<MathType> argT, MathType retT)
-        : AbstrDef(closure, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
+        : AbstrDef(closure, NameSpaceIndex::NameTy::SYM, symName), Symbol(symName, argT, retT) {}
