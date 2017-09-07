@@ -114,29 +114,22 @@ int main(void)
     Variable x("x", real);
     Variable one("1", real);
 
-    reas.addType(logical_mt);
-    reas.addType(natural);
-    reas.addType(group);
-    reas.addType(real);
+
 
     /*Symbol gr({">", {real, real}, logical_mt});
     Term t(gr, {&x, &one});
     const Terms* sdf = new ForallTerm(x, &t);
     std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;*/
 
-    reas.addSym(r);
 //    reas.addSym(gr);
-    reas.addSym(">", {2, real}, logical_mt);
     Symbol ze({"0", {}, real});
-    reas.addSym(ze);
     Symbol ne({"!=", {2, real}, logical_mt});
-    reas.addSym(ne);
 //    addStatement(reas, "\\forall \\epsilon\\typeof Real \\Rightarrow (>(\\epsilon, 0()), \\exists N\\typeof Real !=(0(), N))");
     //todo меньше new/delete в термах, потом
 //    reas.print(cerr);
 
 
-    Reasoning logic;
+    /*Reasoning logic;
     logic.addType("Logical");
     logic.addSym({n, o, a, r});
     addStatement(logic, "\\forall A\\typeof Logical \\forall B\\typeof Logical \\Rightarrow (A, \\Rightarrow (B, A))");
@@ -155,7 +148,7 @@ int main(void)
 //    logic.print(std::cerr);
     Term b(ne, {&x, &one});
     logic.deduceSpec({1}, {5});
-    logic.deduceSpec({1}, {2}, {3});
+    logic.deduceSpec({1}, {2}, {3});*/
 //    logic.print();
     /*std::cout << "*arg(2): " << *dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2) <<
             "; dyncast<FT>: " << (dynamic_cast<const ForallTerm*>(dynamic_cast<const Term*>(logic.getTerms({1}))->arg(2))!= nullptr) << std::endl;
@@ -165,6 +158,8 @@ int main(void)
     theorem.pushDefType("Logical");
     theorem.pushDefVar("A", "Logical");
     theorem.pushDefSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
+    theorem.pushDefVar("B", "Logical");
+    theorem.pushAxiom("\\Rightarrow (A, B)");
 
     cout<<flush;
     cerr<<flush;

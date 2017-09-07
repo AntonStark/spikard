@@ -64,59 +64,6 @@ Symbol NameSpaceIndex::getS(const std::string& name) const
     throw no_name(name);
 }
 
-class Namespace::name_doubling : public std::invalid_argument
-{
-public:
-    name_doubling(const std::string& symName)
-            : std::invalid_argument("Попытка дублирования имени \"" + symName +"\".\n") {}
-};
-class Namespace::no_name : public std::invalid_argument
-{
-public:
-    no_name(const std::string& symName)
-            : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
-};
-
-Namespace::Namespace()
-{
-    names[NameTy::SYM] = {};
-    names[NameTy::VAR] = {};
-    names[NameTy::MT] = {};
-}
-
-bool Namespace::isThatType(const std::string& name, const NameTy& type) const
-{ return (names.at(type).find(name) != names.at(type).end()); }
-bool Namespace::isSomeSym(const std::string& name) const
-{ return (isThatType(name, NameTy::SYM) ||
-          isThatType(name, NameTy::VAR) ||
-          isThatType(name, NameTy::MT)); }
-
-void Namespace::checkSym(const std::string& name, const NameTy& type) const
-{
-    if (!isThatType(name, type))
-        throw no_name(name);
-}
-void Namespace::checkSym(const std::string& name) const
-{
-    if (!isSomeSym(name))
-        throw no_name(name);
-}
-
-void Namespace::addSym(const std::string& name, const NameTy& type)
-{
-    if (isSomeSym(name))
-        throw name_doubling(name);
-    else
-        names.at(type).insert(name);
-}
-void Namespace::delSym(const std::string& name, const NameTy& type)
-{
-    if (isThatType(name, type))
-        names.at(type).erase(name);
-    else
-        throw no_name(name);
-}
-
 
 Reasoning::~Reasoning()
 {
@@ -152,19 +99,6 @@ const Terms* Reasoning::getTerms(Path path) const
     else
         return nullptr;
 }
-
-Reasoning* Reasoning::startSub()
-{
-    subs.push_back(new Reasoning(this));
-    return subs.back();
-}
-Statement* Reasoning::addSub(Terms* monom)
-{
-    Statement* st = new Statement(this, monom);
-    subs.push_back(st);
-    return st;
-}
-
 
 Terms* Reasoning::doMP(const Terms* premise, const Terms* impl) const
 {
@@ -244,94 +178,6 @@ bool Reasoning::deduceSpec(Path rpGeneral, Path subTermPath, Path rpT)
         return false;
 }
 
-const Reasoning* Reasoning::isNameExist(const std::string& name, const NameTy& type) const
-{
-    if (names.isThatType(name, type))
-        return this;
-    else if (parent != nullptr)
-        return parent->isNameExist(name, type);
-    else
-        return nullptr;
-}
-
-void Reasoning::addSym(Symbol sym)
-{
-    std::string name = sym.getName();
-    names.addSym(name, NameTy::SYM);
-    syms.insert({name, sym});
-}
-void Reasoning::addSym(std::list<Symbol> syms)
-{
-    for (auto& s : syms)
-        addSym(s);
-}
-void Reasoning::addSym(const std::string& name,
-                       std::list<MathType> argT, MathType retT)
-{
-    Symbol sym(name, argT, retT);
-    names.addSym(name, NameTy::SYM);
-    syms.insert({name, sym});
-}
-
-void Reasoning::addVar(Variable var)
-{
-    std::string name = var.getName();
-    names.addSym(name, NameTy::VAR);
-    vars.insert({name, var});
-}
-void Reasoning::addVar(const std::string& name, MathType type)
-{
-    names.addSym(name, NameTy::VAR);
-    Variable var(name, type);
-    vars.insert({name, var});
-}
-
-void Reasoning::addType(MathType type)
-{
-    std::string name = type.getName();
-    names.addSym(name, NameTy::MT);
-    types.insert({name, type});
-}
-void Reasoning::addType(const std::string& name)
-{
-    names.addSym(name, NameTy::MT);
-    MathType type(name);
-    types.insert({name, type});
-}
-
-Symbol Reasoning::getS(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::SYM);
-    if (reas != nullptr)
-        return reas->syms.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-Variable Reasoning::getV(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::VAR);
-    if (reas != nullptr)
-        return reas->vars.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-MathType Reasoning::getT(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::MT);
-    if (reas != nullptr)
-        return reas->types.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-
-void Reasoning::viewSetOfNames(std::set<std::string>& set,
-                               const NameTy& type) const
-{
-    names.viewSetOfNames(set, type);
-    if (parent != nullptr)
-        parent->viewSetOfNames(set, type);
-}
-
 void Reasoning::print(std::ostream& out) const
 {
     for (size_t i = 0; i < subs.size(); ++i)
@@ -339,27 +185,6 @@ void Reasoning::print(std::ostream& out) const
         out << '[' << i+1 << "]:\n";
         subs[i]->print(out);
     }
-}
-
-void Reasoning::printNamespace(std::ostream& out) const
-{
-    out << "SYMS" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& s : syms)
-        out << s.first << std::endl;
-    out << "------------" << std::endl;
-
-    out << "VARS" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& v : vars)
-        out << v.first << std::endl;
-    out << "------------" << std::endl;
-
-    out << "TYPES" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& t : types)
-        out << t.first << std::endl;
-    out << "------------" << std::endl;
 }
 
 void Statement::print(std::ostream& out) const
