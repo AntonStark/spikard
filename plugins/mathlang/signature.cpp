@@ -395,27 +395,29 @@ Section::Section(Section* _parent, const std::string& _title)
 }
 Section::Section(const std::string& _title)
         : HierarchyItem(), title(_title) {}
-void Section::registerName(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where)
+
+void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
 { atTheEnd.add(type, name, where); }
-void Section::pushDefType(std::string typeName)
+
+void Section::pushSection(const std::string& title)
+{ new Section(this, title); }
+void Section::pushDefType(const std::string& typeName)
 { new DefType(this, typeName); }
-void Section::pushDefVar(std::string varName, std::string typeName)
+void Section::pushDefVar(const std::string& varName, const std::string& typeName)
 { new DefVar(this, varName, index().getT(typeName)); }
-void Section::pushDefSym(std::string symName, std::list<std::string> argT, std::string retT)
+void Section::pushDefSym(const std::string& symName, const std::list<std::string>& argT, const std::string& retT)
 {
     std::list<MathType> argMT;
     for (auto& a : argT)
         argMT.push_back(index().getT(a));
     new DefSym(this, symName, argMT, index().getT(retT));
 }
+void Section::pushAxiom(const std::string& axiom)
+{ new Axiom(this, axiom); }
 
-AbstrDef::AbstrDef(Section* closure, NameSpaceIndex::NameTy type, const std::string& name)
-        : HierarchyItem(closure)
-{ closure->registerName(type, name, this); }
-
-DefType::DefType(Section* closure, const std::string& typeName)
-        : AbstrDef(closure, NameSpaceIndex::NameTy::MT, typeName), MathType(typeName) {}
-DefVar::DefVar(Section* closure, const std::string& varName, MathType mathType)
-        : AbstrDef(closure, NameSpaceIndex::NameTy::VAR, varName), Variable(varName, mathType) {}
-DefSym::DefSym(Section* closure, const std::string& symName, std::list<MathType> argT, MathType retT)
-        : AbstrDef(closure, NameSpaceIndex::NameTy::SYM, symName), Symbol(symName, argT, retT) {}
+Axiom::Axiom(Section* closure, std::string source)
+        : Section(closure), Term(parse(this, source))
+{
+    if (getType() != logical_mt)
+        throw std::invalid_argument("Аксиома должна быть логического типа.\n");
+}

@@ -44,8 +44,7 @@ Lexer::Lexer(Axiom* _where) : where(_where)
 MathType parseType(const NameSpaceIndex& names, const std::string& source, unsigned& len)
 {
     unsigned typeNameLen = 1;
-    std::set<std::string> types = names.getNames(NameTy::MT);
-    while (types.find(source.substr(0, typeNameLen)) == types.end())
+    while (!names.isThatType(source.substr(0, typeNameLen), NameTy::MT))
         if (typeNameLen == source.length())
             throw std::invalid_argument("Не найдено имя типа - неверный формат.\n");
         else

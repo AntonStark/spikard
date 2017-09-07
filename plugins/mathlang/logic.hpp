@@ -97,7 +97,7 @@ class Symbol : public Label, public Map
 {
 public:
     Symbol(const std::string& _name,
-           std::list<MathType> _argT, MathType _retT)
+           const std::list<MathType>& _argT, MathType _retT)
             : Label(_name), Map(_argT, _retT) {}
 
     virtual ~Symbol() {}

@@ -25,7 +25,7 @@ private:
     class name_doubling;
     class no_name;
 public:
-    void add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
+    void add(NameTy type, const std::string& name, AbstrDef* where);
     bool isThatType(const std::string& name, const NameTy& type) const;
     bool isSomeType(const std::string& name) const;
 
@@ -193,9 +193,11 @@ public:
     //  2) closure->pushDefType("Logical");
     //  Первый способ выглядит более громоздко, а второй перегружает
     //  интерфейс Section посторонним функционалом, но пусть так
-    void pushDefType(std::string typeName);
-    void pushDefVar(std::string varName, std::string typeName);
-    void pushDefSym(std::string symName, std::list<std::string> argT, std::string retT);
+    void pushSection(const std::string& title = "");
+    void pushDefType(const std::string& typeName);
+    void pushDefVar (const std::string& varName, const std::string& typeName);
+    void pushDefSym (const std::string& symName, const std::list<std::string>& argT, const std::string& retT);
+    void pushAxiom  (const std::string& axiom);
 };
 
 /*class LineFactory
@@ -215,7 +217,8 @@ private:
     AbstrDef(const AbstrDef&) = delete;
     AbstrDef& operator=(const AbstrDef&) = delete;
 public:
-    AbstrDef(Section* closure, NameSpaceIndex::NameTy type, const std::string& name);
+    AbstrDef(Section* closure, NameTy type, const std::string& name)
+            : HierarchyItem(closure) { closure->registerName(type, name, this); }
     virtual ~AbstrDef() {}
 };
 
@@ -223,7 +226,8 @@ class DefType : public AbstrDef, public MathType
 {
 private:
     friend class Section;
-    DefType(Section* closure, const std::string& typeName);
+    DefType(Section* closure, const std::string& typeName)
+            : AbstrDef(closure, NameTy::MT, typeName), MathType(typeName) {}
     DefType(const DefType&) = delete;
     DefType& operator=(const DefType&) = delete;
 public:
@@ -234,7 +238,8 @@ class DefVar : public AbstrDef, public Variable
 {
 private:
     friend class Section;
-    DefVar(Section* closure, const std::string& varName, MathType mathType);
+    DefVar(Section* closure, const std::string& varName, MathType mathType)
+            : AbstrDef(closure, NameTy::VAR, varName), Variable(varName, mathType) {}
     DefVar(const DefVar&) = delete;
     DefVar& operator=(const DefVar&) = delete;
 public:
@@ -246,7 +251,8 @@ class DefSym : public AbstrDef, public Symbol
 private:
     friend class Section;
     DefSym(Section* closure, const std::string& symName,
-           std::list<MathType> argT, MathType retT);
+           const std::list<MathType>& argT, MathType retT)
+            : AbstrDef(closure, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
     DefSym(const DefSym&) = delete;
     DefSym& operator=(const DefSym&) = delete;
 public:
@@ -255,15 +261,17 @@ public:
 
 extern Term parse(Axiom* where, std::string source);
 class Axiom : private Section, public Term
-// Этот класс представляет аксиомы.
+// Этот класс представляет аксиомы. Наследование от Section из-за
+// необходиомости хранить переменные при кванторах
 {
+private:
+    friend class Section;
     friend class Lexer;
-    Axiom(Section* closure, std::string source)
-            : Section(closure), Term(parse(this, source))
-    {
-        if (getType() != logical_mt)
-            throw std::invalid_argument("Аксиома должна быть логического типа.\n");
-    }
+    Axiom(Section* closure, std::string source);
+    Axiom(const Axiom&) = delete;
+    Axiom& operator=(const Axiom&) = delete;
+public:
+    virtual ~Axiom() {}
 };
 
 /*class Inference : public AStatement
