@@ -24,18 +24,17 @@ private:
 
     class name_doubling;
     class no_name;
-
-    friend class Section;
-    void add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
 public:
+    void add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
     bool isThatType(const std::string& name, const NameTy& type) const;
     bool isSomeType(const std::string& name) const;
 
-//    std::set<std::string> getNames(NameTy type) const;
+    std::set<std::string> getNames(NameTy type) const;
     MathType getT(const std::string& name) const;
     Variable getV(const std::string& name) const;
     Symbol   getS(const std::string& name) const;
 };
+typedef NameSpaceIndex::NameTy NameTy;
 
 class Namespace
 {
@@ -66,7 +65,7 @@ public:
             set.insert(w);
     }
 };
-typedef Namespace::NameTy NameTy;
+//typedef Namespace::NameTy NameTy;
 
 /// Универсальный класс для описания иерархической единицы рассуждения
 /// Реализуется, что в разных разделах одни символы могут обозначать различные вещи
@@ -78,6 +77,7 @@ public:
 private:
     std::vector<Reasoning*> subs;
     Namespace names;
+    typedef Namespace::NameTy NameTy;
     std::map<std::string, Symbol  > syms;
     std::map<std::string, Variable> vars;
     std::map<std::string, MathType> types;
@@ -167,25 +167,26 @@ public:
 };
 
 class AbstrDef;
+class Axiom;
 class Section : public HierarchyItem
 // Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
 {
 private:
     std::string title;
+    NameSpaceIndex atTheEnd;    // Здесь хранится NSI, соответсвующее концу Section,
+                                // потому что запись ведётся именно в конец.
+                                // Вставки Def-ов влекут обновление.
+    friend class Axiom;
     Section(Section*, const std::string& _title = "");
     Section(const Section&) = delete;
     Section& operator=(const Section&) = delete;
 
     friend class AbstrDef;
-    void registerName(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where);
-    MathType getType(const std::string& typeName);
+    void registerName(NameTy type, const std::string& name, AbstrDef* where);
 public:
     Section(const std::string& _title = "");
     virtual ~Section() {}
-    NameSpaceIndex index;       // Здесь хранится NSI, соответсвующее концу Section,
-                                // потому что запись ведётся именно в конец.
-                                // Вставки Def-ов влекут обновление.
-
+    const NameSpaceIndex& index() const { return atTheEnd; }
     //  Таким образом есть два варианта организации размещения
     //  с соблюдением владения со стороны старшего в иерархии:
     //  1) DefType::create(closure, "Logical");
@@ -251,4 +252,21 @@ private:
 public:
     virtual ~DefSym() {}
 };
+
+extern Term parse(Axiom* where, std::string source);
+class Axiom : private Section, public Term
+// Этот класс представляет аксиомы.
+{
+    friend class Lexer;
+    Axiom(Section* closure, std::string source)
+            : Section(closure), Term(parse(this, source))
+    {
+        if (getType() != logical_mt)
+            throw std::invalid_argument("Аксиома должна быть логического типа.\n");
+    }
+};
+
+/*class Inference : public AStatement
+// Этот класс представлет следствие.
+{};*/
 #endif //TEST_BUILD_SIGNATURE_HPP

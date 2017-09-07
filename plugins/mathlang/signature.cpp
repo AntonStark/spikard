@@ -36,6 +36,15 @@ bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) con
 bool NameSpaceIndex::isSomeType(const std::string& name) const
 { return (names.find(name) != names.end()); }
 
+std::set<std::string> NameSpaceIndex::getNames(NameTy type) const
+{
+    std::set<std::string> buf;
+    for (auto& n : names)
+        if (n.second == type)
+            buf.insert(n.first);
+    return buf;
+}
+
 MathType NameSpaceIndex::getT(const std::string& name) const
 {
     if (isThatType(name, NameTy::MT))
@@ -382,24 +391,22 @@ Section::Section(Section* _parent, const std::string& _title)
 {
     auto parent = getParent();
     if (parent)
-        index = parent->index;
+        atTheEnd = parent->atTheEnd;
 }
 Section::Section(const std::string& _title)
         : HierarchyItem(), title(_title) {}
 void Section::registerName(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where)
-{ index.add(type, name, where); }
-MathType Section::getType(const std::string& typeName)
-{ return index.getT(typeName); }
+{ atTheEnd.add(type, name, where); }
 void Section::pushDefType(std::string typeName)
 { new DefType(this, typeName); }
 void Section::pushDefVar(std::string varName, std::string typeName)
-{ new DefVar(this, varName, getType(typeName)); }
+{ new DefVar(this, varName, index().getT(typeName)); }
 void Section::pushDefSym(std::string symName, std::list<std::string> argT, std::string retT)
 {
     std::list<MathType> argMT;
     for (auto& a : argT)
-        argMT.push_back(getType(a));
-    new DefSym(this, symName, argMT, getType(retT));
+        argMT.push_back(index().getT(a));
+    new DefSym(this, symName, argMT, index().getT(retT));
 }
 
 AbstrDef::AbstrDef(Section* closure, NameSpaceIndex::NameTy type, const std::string& name)
