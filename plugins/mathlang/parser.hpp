@@ -11,7 +11,7 @@
 #include "signature.hpp"
 
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
-Term parse(Axiom* where, std::string source);
+Term* parse(Axiom* where, std::string source);
 
 class Lexer
 {
@@ -47,7 +47,7 @@ private:
     void registerVars(std::string& source);
     void refreshWords(NameTy type);
 
-    friend Term parse(Axiom* where, std::string source);
+    friend Term* parse(Axiom* where, std::string source);
     void recognize(std::string source);
 
     // Вообще, это функционал парсера

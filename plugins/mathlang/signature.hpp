@@ -36,53 +36,6 @@ public:
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
-class Statement;
-class Reasoning : virtual public Printable
-{
-public:
-    const Reasoning* parent;
-private:
-    std::vector<Reasoning*> subs;
-protected:
-    Reasoning(Reasoning* _parent) : parent(_parent) {}
-public:
-    Reasoning() : parent(nullptr) {}
-    virtual ~Reasoning();
-
-    Reasoning* get(Path path);
-    const Terms* getTerms(Path path) const;
-
-    Terms* doMP  (const Terms* premise, const Terms* impl) const;
-    Terms* doSpec(const Terms* general, const Terms* t) const;
-//    Terms* doGen (const Terms* special, size_t numb, std::string name) const;
-
-    bool deduceMP(Path rpPremise, Path rpImpl);
-    bool deduceSpec(Path rpGeneral, Path rpT);
-    bool deduceSpec(Path rpGeneral, Path subTermPath, Path rpT);
-
-    virtual void print(std::ostream& out = std::cout) const override;
-};
-
-class Statement : virtual public Printable, public Reasoning
-{
-public:
-    typedef std::set<Path> Premises;
-private:
-    const Terms* monom;
-    Premises premise;
-    std::string comment;
-public:
-    Statement(Reasoning* _parent, const Terms* _monom,
-              const Premises& _premise = {}, std::string _comment = "")
-            : Reasoning(_parent), monom(_monom), premise(_premise), comment(_comment) {}
-    virtual ~Statement() {}
-
-    virtual void print(std::ostream& out = std::cout) const override;
-    const Terms* get() const { return monom; }
-    void set(const Terms* _monom) { monom = _monom; }
-};
-
-//TODO ФУНКЦИОНАЛ ДОЛЖЕН БЫТЬ НЕОБХОДИМЫМ И ДОСТАТОЧНЫМ
 class Section;
 class HierarchyItem // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
@@ -93,6 +46,8 @@ private:
 protected:
     HierarchyItem(Section* _parent);
     Section* getParent() const { return parent; }
+    HierarchyItem* get(Path path);
+    const Terms* getTerms(Path pathToTerm);
 public:
     HierarchyItem() : parent(nullptr) {}
     virtual ~HierarchyItem();
@@ -132,17 +87,10 @@ public:
     void pushDefVar (const std::string& varName, const std::string& typeName);
     void pushDefSym (const std::string& symName, const std::list<std::string>& argT, const std::string& retT);
     void pushAxiom  (const std::string& axiom);
+    void doMP   (const std::string& pPremise, const std::string& pImpl);
+    void doSpec (const std::string& pToSpec, const std::string& pToVar);
+    void doGen  (const std::string& pToGen,  const std::string& pToVar);
 };
-
-/*class LineFactory
-{
-    Section* owner;
-public:
-    LineFactory(Section* _owner) : owner(_owner) {}
-    virtual ~LineFactory() {}
-
-    virtual void makeDefType(std::string& typeName) = 0;
-};*/
 
 class AbstrDef : public HierarchyItem
 // Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
@@ -193,12 +141,20 @@ public:
     virtual ~DefSym() {}
 };
 
-extern Term parse(Axiom* where, std::string source);
-class Axiom : private Section, public Term
+class Statement
+{
+public:
+    virtual const Terms* get() = 0;
+};
+
+extern Term* parse(Axiom* where, std::string source);
+class Axiom : private Section, public Statement
 // Этот класс представляет аксиомы. Наследование от Section из-за
 // необходиомости хранить переменные при кванторах
 {
 private:
+    const Terms* data;
+
     friend class Section;
     friend class Lexer;
     Axiom(Section* closure, std::string source);
@@ -206,9 +162,68 @@ private:
     Axiom& operator=(const Axiom&) = delete;
 public:
     virtual ~Axiom() {}
+    virtual const Terms* get() override { return data; }
 };
 
-/*class Inference : public AStatement
-// Этот класс представлет следствие.
-{};*/
+class AbstrInf : public HierarchyItem, public Statement
+// Этот класс представлет абстрактное следствие.
+{
+public:
+    enum class InfTy {MP, GEN, SPEC};
+    class bad_inf;
+private:
+    std::set<Path> premises;
+    InfTy type;
+    
+    AbstrInf(const AbstrInf&) = delete;
+    AbstrInf& operator=(const AbstrInf&) = delete;
+public:
+    AbstrInf(Section* closure, InfTy _type, Path pArg1, Path pArg2)
+            : HierarchyItem(closure), premises({pArg1, pArg2}), type(_type) {}
+    virtual ~AbstrInf() {}
+};
+
+Terms* modusPonens(const Terms* premise, const Terms* impl);
+class InfMP : public AbstrInf
+{
+private:
+    Terms* data;
+    friend class Section;
+    InfMP(Section* closure, Path pArg1, Path pArg2);
+    InfMP(const InfMP&) = delete;
+    InfMP& operator=(const InfMP&) = delete;
+public:
+    virtual ~InfMP() {}
+    virtual const Terms* get() override { return data; }
+};
+
+Terms* specialization(const Terms* general, const Terms* t);
+class InfSpec : public AbstrInf
+{
+private:
+    Terms* data;
+    friend class Section;
+    InfSpec(Section* closure, Path pArg1, Path pArg2);
+    InfSpec(const InfSpec&) = delete;
+    InfSpec& operator=(const InfSpec&) = delete;
+public:
+    virtual ~InfSpec() {}
+    virtual const Terms* get() override { return data; }
+};
+
+Term*   generalization  (const Terms* toGen, const Terms* x);
+class InfGen : public AbstrInf
+{
+private:
+    Terms* data;
+    friend class Section;
+    InfGen(Section* closure, Path pArg1, Path pArg2);
+    InfGen(const InfGen&) = delete;
+    InfGen& operator=(const InfGen&) = delete;
+public:
+    virtual ~InfGen() {}
+    virtual const Terms* get() override { return data; }
+};
+
+Path mkPath(std::string source);
 #endif //TEST_BUILD_SIGNATURE_HPP

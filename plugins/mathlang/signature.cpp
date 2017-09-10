@@ -65,150 +65,36 @@ Symbol NameSpaceIndex::getS(const std::string& name) const
 }
 
 
-Reasoning::~Reasoning()
-{
-    for (auto& r : subs)
-        delete r;
-}
-
-Reasoning* Reasoning::get(Path path)
-{
-    Reasoning* r = this;
-    while (path.size() != 0)
-    {
-        if (path.front()-1 >= r->subs.size())
-            return nullptr;
-        r = r->subs.at(path.front()-1);
-        path.pop_front();
-    }
-    return r;
-}
-const Terms* Reasoning::getTerms(Path path) const
-{
-    const Reasoning* r = this;
-    while (path.size() != 0)
-    {
-        if (path.front()-1 >= r->subs.size())
-            return nullptr;
-        r = r->subs.at(path.front()-1);
-        path.pop_front();
-    }
-
-    if (auto sPremise = dynamic_cast<const Statement*>(r))
-        return sPremise->get();
-    else
-        return nullptr;
-}
-
-Terms* Reasoning::doMP(const Terms* premise, const Terms* impl) const
-{
-    if (const Term* tI = dynamic_cast<const Term*>(impl))
-    {
-        Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
-        if (!(tI->Symbol::operator==)(standardImpl))
-            return nullptr; //терм impl не является импликацией
-
-        if (!tI->arg(1)->doCompare(premise))
-            return nullptr; //посылка импликации impl не совпадает с premise
-        return tI->arg(2)->clone();
-    }
-    else
-        return nullptr; //impl не является термом
-}
-Terms* Reasoning::doSpec(const Terms* general, const Terms* t) const
-{
-    if (const ForallTerm* fT = dynamic_cast<const ForallTerm*>(general))
-    {
-        if (fT->arg(1)->getType() == t->getType())
-            return fT->arg(2)->replace(fT->arg(1), t);
-    }
-    else
-        return nullptr;
-}
-
-bool Reasoning::deduceMP(Path rpPremise, Path rpImpl)
-{
-    const Terms* premise = getTerms(rpPremise);
-    const Terms* impl = getTerms(rpImpl);
-    if (!premise || !impl)
-        return false; //ошибочный rpPremise и/или rpImpl
-
-    if (Terms* mp = doMP(premise, impl))
-    {
-        Reasoning* st = new Statement(this, mp, {rpPremise, rpImpl});
-        subs.push_back(st);
-        return true;
-    }
-    else
-        return false;
-}
-bool Reasoning::deduceSpec(Path rpGeneral, Path rpT)
-{
-    const Terms* general = getTerms(rpGeneral);
-    const Terms* t = getTerms(rpT);
-    if (!general || !t)
-        return false; //ошибочный rpGeneral и/или pT
-
-    if (Terms* spec = doSpec(general, t))
-    {
-        Reasoning* st = new Statement(this, spec, {rpGeneral});
-        subs.push_back(st);
-        return true;
-    }
-    else
-        return false;
-}
-bool Reasoning::deduceSpec(Path rpGeneral, Path subTermPath, Path rpT)
-{
-    const Terms* general = getTerms(rpGeneral);
-    const Terms* t = getTerms(rpT);
-    if (!general || !t)
-        return false; //ошибочный rpGeneral и/или pT
-    const Terms* concreteGen = general->get(subTermPath);
-    if (!concreteGen)
-        return false; //ошибочно задан подтерм-квантор
-
-    if (Terms* spec = doSpec(concreteGen, t))
-    {
-        Reasoning* st = new Statement(this, general->replace(subTermPath, spec), {rpGeneral});
-        subs.push_back(st);
-        return true;
-    }
-    else
-        return false;
-}
-
-void Reasoning::print(std::ostream& out) const
-{
-    for (size_t i = 0; i < subs.size(); ++i)
-    {
-        out << '[' << i+1 << "]:\n";
-        subs[i]->print(out);
-    }
-}
-
-void Statement::print(std::ostream& out) const
-{
-    if (comment.length() != 0)
-        out << comment << std::endl;
-
-    if (const Variable* v = dynamic_cast<const Variable*>(monom))
-        v->print(out);
-    else if (const Term* t = dynamic_cast<const Term*>(monom))
-        t->print(out);
-    /*else if (const QuantedTerm* qt = dynamic_cast<const QuantedTerm*>(monom))
-        qt->print(out);*/
-    else
-        return;
-    out << std::endl;
-}
-
 HierarchyItem::HierarchyItem(Section* _parent)
         : parent(_parent) { parent->push(this); }
 HierarchyItem::~HierarchyItem()
 {
     for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
         delete s;           // они должны создаваться в куче
+}
+HierarchyItem* HierarchyItem::get(Path path)
+{
+    HierarchyItem* root = this;
+    while (root->getParent())
+        root = root->getParent();
+    HierarchyItem* target = root;
+    while (path.size() != 0)
+    {
+        if (path.front() > target->subs.size())
+            return nullptr;
+        target = *std::next(target->subs.begin(), path.front()-1);
+        path.pop_front();
+    }
+    return target;
+}
+const Terms* HierarchyItem::getTerms(Path pathToTerm)
+{
+    if (auto t = dynamic_cast<Statement*>(get(pathToTerm)))
+        return t->get();
+    else if (auto v = dynamic_cast<DefVar*>(get(pathToTerm)))
+        return v;
+    else
+        return nullptr;
 }
 
 Section::Section(Section* _parent, const std::string& _title)
@@ -239,10 +125,102 @@ void Section::pushDefSym(const std::string& symName, const std::list<std::string
 }
 void Section::pushAxiom(const std::string& axiom)
 { new Axiom(this, axiom); }
+void Section::doMP(const std::string& pPremise, const std::string& pImpl)
+{ new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
+void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
+{ new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
+void Section::doGen(const std::string& pToGen, const std::string& pToVar)
+{ new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 
 Axiom::Axiom(Section* closure, std::string source)
-        : Section(closure), Term(parse(this, source))
+        : Section(closure), data(parse(this, source))
 {
-    if (getType() != logical_mt)
+    if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
 }
+
+Path mkPath(std::string source)
+{
+    // string  ->  list<size_t>
+    // (1.2.2) }-> {1,2,2}
+    Path target;
+    std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
+                                  {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
+                                  {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
+    unsigned buf = 0;
+    for (int i = 1; i < source.length()-1; ++i)
+    {
+        auto search = digits.find(source[i]);
+        if (search != digits.end())
+        {
+            buf *= 10;
+            buf += search->second;
+        }
+        else if (source[i] == '.')
+        {
+            target.push_back(buf);
+            buf = 0;
+        }
+        else
+            throw std::invalid_argument("Путь \"" + source + "\" некорректен.");
+    }
+    target.push_back(buf);
+    return target;
+}
+
+class AbstrInf::bad_inf : public std::invalid_argument
+{
+public:
+    bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
+};
+
+Terms* modusPonens(const Terms* premise, const Terms* impl)
+{
+    if (const Term* tI = dynamic_cast<const Term*>(impl))
+    {
+        Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
+        if (!(tI->Symbol::operator==)(standardImpl))
+            return nullptr; //терм impl не является импликацией
+
+        if (!tI->arg(1)->doCompare(premise))
+            return nullptr; //посылка импликации impl не совпадает с premise
+        return tI->arg(2)->clone();
+    }
+    else
+        return nullptr; //impl не является термом
+}
+InfMP::InfMP(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::MP, pArg1, pArg2),
+          data(modusPonens(getTerms(pArg1), getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }
+
+Terms* specialization(const Terms* general, const Terms* t)
+{
+    if (const ForallTerm* fT = dynamic_cast<const ForallTerm*>(general))
+    {
+        if (fT->arg(1)->getType() == t->getType())
+            return fT->arg(2)->replace(fT->arg(1), t);
+    }
+    else
+        return nullptr;
+}
+InfSpec::InfSpec(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::SPEC, pArg1, pArg2),
+          data(specialization(getTerms(pArg1), getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }
+
+Term* generalization  (const Terms* toGen, const Terms* x)
+{
+    if (const Variable* v = dynamic_cast<const Variable*>(x))
+    {
+        if (const Term* tG = dynamic_cast<const Term*>(toGen))
+            if (tG->free.find(*v) != tG->free.end())
+                return new ForallTerm(*v, tG->clone());
+    }
+    else
+        return nullptr;
+}
+InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
+          data(generalization(getTerms(pArg1), getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }

@@ -191,35 +191,6 @@ void MathlangPlugin::loadReas(vector<string> cmdArgs)
         return;
 }
 
-Path mkPath(std::string source)
-{
-    // string  ->  list<size_t>
-    // (1.2.2) }-> {1,2,2}
-    Path target;
-    map<char, unsigned> digits = {{'0', 0}, {'1', 1},
-                              {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
-                              {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
-    unsigned buf = 0;
-    for (int i = 1; i < source.length()-1; ++i)
-    {
-        auto search = digits.find(source[i]);
-        if (search != digits.end())
-        {
-            buf *= 10;
-            buf += search->second;
-        }
-        else if (source[i] == '.')
-        {
-            target.push_back(buf);
-            buf = 0;
-        }
-        else
-            return {};
-    }
-    target.push_back(buf);
-    return target;
-}
-
 void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 {
     if (funcInfo(cmdArgs, "MP",

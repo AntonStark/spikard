@@ -275,7 +275,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
     }
 }
 
-Term parse(Axiom* where, std::string source)
+Term* parse(Axiom* where, std::string source)
 {
     Lexer lex(where);
     lex.recognize(source);
@@ -290,6 +290,6 @@ Term parse(Axiom* where, std::string source)
     // todo выводить предупреждение о неоднозначности разбора,
     // todo если в итоге получится больше одного варианта...
     if (Term* t = dynamic_cast<Term*>(parsed))
-        return *t;
+        return t;
     throw std::invalid_argument("Не удалось пострить терм по строке \"" + source + "\".\n");
 }
