@@ -31,12 +31,14 @@ int main(void)
     Symbol ne({"!=", {2, real}, logical_mt});
     //todo меньше new/delete в термах, потом
 
-    Section theorem;
-    theorem.pushDefType("Logical");
-    theorem.pushDefVar("A", "Logical");
-    theorem.pushDefSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
-    theorem.pushDefVar("B", "Logical");
-    theorem.pushAxiom("\\Rightarrow (A, B)");
+    Section theorem("Название раздела");
+    theorem.defType("Logical");
+    theorem.defVar("A", "Logical");
+    theorem.defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
+    theorem.defVar("B", "Logical");
+    theorem.addAxiom("\\Rightarrow (A, B)");
+    theorem.print(cout);
+
     theorem.doMP("(2)", "(5)");
 
     cout<<flush;

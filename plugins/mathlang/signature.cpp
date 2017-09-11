@@ -17,7 +17,8 @@ public:
             : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
 };
 
-void NameSpaceIndex::add(NameSpaceIndex::NameTy type, const std::string& name, AbstrDef* where)
+void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
+                         const std::string& name, AbstrDef* where)
 {
     if (!isSomeType(name))
     {
@@ -89,12 +90,19 @@ HierarchyItem* HierarchyItem::get(Path path)
 }
 const Terms* HierarchyItem::getTerms(Path pathToTerm)
 {
-    if (auto t = dynamic_cast<Statement*>(get(pathToTerm)))
+    HierarchyItem* termItem = get(pathToTerm);
+    if (auto t = dynamic_cast<Statement*>(termItem))
         return t->get();
-    else if (auto v = dynamic_cast<DefVar*>(get(pathToTerm)))
+    else if (auto v = dynamic_cast<DefVar*>(termItem))
         return v;
     else
         return nullptr;
+}
+void HierarchyItem::print(std::ostream& out) const
+{
+    size_t n = 1;
+    for (const auto& s : subs)
+        out << '(' << n++ << "): " << *s << std::endl;
 }
 
 Section::Section(Section* _parent, const std::string& _title)
@@ -112,18 +120,19 @@ void Section::registerName(NameTy type, const std::string& name, AbstrDef* where
 
 void Section::pushSection(const std::string& title)
 { new Section(this, title); }
-void Section::pushDefType(const std::string& typeName)
+void Section::defType(const std::string& typeName)
 { new DefType(this, typeName); }
-void Section::pushDefVar(const std::string& varName, const std::string& typeName)
+void Section::defVar(const std::string& varName, const std::string& typeName)
 { new DefVar(this, varName, index().getT(typeName)); }
-void Section::pushDefSym(const std::string& symName, const std::list<std::string>& argT, const std::string& retT)
+void Section::defSym(const std::string& symName,
+                     const std::list<std::string>& argT, const std::string& retT)
 {
     std::list<MathType> argMT;
     for (auto& a : argT)
         argMT.push_back(index().getT(a));
     new DefSym(this, symName, argMT, index().getT(retT));
 }
-void Section::pushAxiom(const std::string& axiom)
+void Section::addAxiom(const std::string& axiom)
 { new Axiom(this, axiom); }
 void Section::doMP(const std::string& pPremise, const std::string& pImpl)
 { new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
@@ -131,12 +140,40 @@ void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
 { new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
 void Section::doGen(const std::string& pToGen, const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
+void Section::print(std::ostream& out) const
+{
+    out << title << std::endl;
+    HierarchyItem::print(out);
+}
+
+void DefType::print(std::ostream& out) const
+{ out << "Объявлен тип " << getName() << "."; }
+void DefVar::print(std::ostream& out) const
+{ out << "Добавлена переменная " << getName() << " типа " << getType().getName() << "."; }
+void DefSym::print(std::ostream& out) const
+{
+    out << "Введен символ " << getName() << " : ";
+    auto argTypes = getSign().first;
+    if (argTypes.size() > 0)
+    {
+        out << argTypes.front().getName();
+        auto e = argTypes.end();
+        for (auto it = next(argTypes.begin()); it != e; ++it)
+            out << " x " << it->getName();
+    }
+    out << " -> " << getType().getName() << ".";
+}
 
 Axiom::Axiom(Section* closure, std::string source)
         : Section(closure), data(parse(this, source))
 {
     if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
+}
+void Axiom::print(std::ostream& out) const
+{
+    out << "Пусть ";
+    Statement::print(out);
 }
 
 Path mkPath(std::string source)
@@ -167,12 +204,42 @@ Path mkPath(std::string source)
     target.push_back(buf);
     return target;
 }
+std::string pathToStr(Path path)
+{
+    std::stringstream ss; ss << "(";
+    if (!path.empty())
+    {
+        ss << path.front();
+        auto e = path.end();
+        for (auto it = std::next(path.begin()); it != e; ++it)
+            ss << "." << *it;
+    }
+    ss << ")";
+    return ss.str();
+}
 
 class AbstrInf::bad_inf : public std::invalid_argument
 {
 public:
     bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
 };
+
+void AbstrInf::print(std::ostream& out) const
+{
+    out << "По ";
+    switch (type)
+    {
+        case InfTy::MP :
+            out << "MP ";   break;
+        case InfTy::SPEC :
+            out << "Spec "; break;
+        case InfTy::GEN :
+            out << "Gen ";  break;
+    }
+    out << "из " << pathToStr(*premises.begin()) << " и "
+    << pathToStr(*std::next(premises.begin())) << " следует: ";
+    Statement::print(out);
+}
 
 Terms* modusPonens(const Terms* premise, const Terms* impl)
 {
@@ -214,8 +281,8 @@ Term* generalization  (const Terms* toGen, const Terms* x)
     if (const Variable* v = dynamic_cast<const Variable*>(x))
     {
         if (const Term* tG = dynamic_cast<const Term*>(toGen))
-            if (tG->free.find(*v) != tG->free.end())
-                return new ForallTerm(*v, tG->clone());
+        if (tG->free.find(*v) != tG->free.end())
+            return new ForallTerm(*v, tG->clone());
     }
     else
         return nullptr;

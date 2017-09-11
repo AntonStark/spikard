@@ -9,6 +9,7 @@
 #include <set>
 #include <stdexcept>
 #include <vector>
+#include <sstream>
 
 #include "logic.hpp"
 
@@ -37,7 +38,8 @@ public:
 typedef NameSpaceIndex::NameTy NameTy;
 
 class Section;
-class HierarchyItem // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
+class HierarchyItem : public virtual Printable
+// Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
 private:
     Section* parent;
@@ -53,11 +55,13 @@ public:
     virtual ~HierarchyItem();
     HierarchyItem(const HierarchyItem&) = delete;
     HierarchyItem& operator=(const HierarchyItem&) = delete;
+
+    virtual void print(std::ostream& out) const override;
 };
 
 class AbstrDef;
 class Axiom;
-class Section : public HierarchyItem
+class Section : public HierarchyItem, public virtual Printable
 // Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
 {
 private:
@@ -79,17 +83,20 @@ public:
     //  Таким образом есть два варианта организации размещения
     //  с соблюдением владения со стороны старшего в иерархии:
     //  1) DefType::create(closure, "Logical");
-    //  2) closure->pushDefType("Logical");
+    //  2) closure->defType("Logical");
     //  Первый способ выглядит более громоздко, а второй перегружает
     //  интерфейс Section посторонним функционалом, но пусть так
     void pushSection(const std::string& title = "");
-    void pushDefType(const std::string& typeName);
-    void pushDefVar (const std::string& varName, const std::string& typeName);
-    void pushDefSym (const std::string& symName, const std::list<std::string>& argT, const std::string& retT);
-    void pushAxiom  (const std::string& axiom);
+    void defType(const std::string& typeName);
+    void defVar (const std::string& varName, const std::string& typeName);
+    void defSym (const std::string& symName,
+                 const std::list<std::string>& argT, const std::string& retT);
+    void addAxiom(const std::string& axiom);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec, const std::string& pToVar);
     void doGen  (const std::string& pToGen,  const std::string& pToVar);
+
+    virtual void print(std::ostream& out) const override;
 };
 
 class AbstrDef : public HierarchyItem
@@ -114,6 +121,7 @@ private:
     DefType& operator=(const DefType&) = delete;
 public:
     virtual ~DefType() {}
+    virtual void print(std::ostream& out) const override;
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -126,6 +134,7 @@ private:
     DefVar& operator=(const DefVar&) = delete;
 public:
     virtual ~DefVar() {}
+    virtual void print(std::ostream& out) const override;
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -139,16 +148,19 @@ private:
     DefSym& operator=(const DefSym&) = delete;
 public:
     virtual ~DefSym() {}
+    virtual void print(std::ostream& out) const override;
 };
 
-class Statement
+class Statement : public virtual Printable
 {
 public:
-    virtual const Terms* get() = 0;
+    virtual const Terms* get() const = 0;
+    virtual void print(std::ostream& out) const override
+    { out << *get(); }
 };
 
 extern Term* parse(Axiom* where, std::string source);
-class Axiom : private Section, public Statement
+class Axiom : public Section, public Statement
 // Этот класс представляет аксиомы. Наследование от Section из-за
 // необходиомости хранить переменные при кванторах
 {
@@ -162,7 +174,8 @@ private:
     Axiom& operator=(const Axiom&) = delete;
 public:
     virtual ~Axiom() {}
-    virtual const Terms* get() override { return data; }
+    virtual const Terms* get() const override { return data; }
+    virtual void print(std::ostream& out) const override;
 };
 
 class AbstrInf : public HierarchyItem, public Statement
@@ -181,6 +194,7 @@ public:
     AbstrInf(Section* closure, InfTy _type, Path pArg1, Path pArg2)
             : HierarchyItem(closure), premises({pArg1, pArg2}), type(_type) {}
     virtual ~AbstrInf() {}
+    virtual void print(std::ostream& out) const override;
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
@@ -194,7 +208,7 @@ private:
     InfMP& operator=(const InfMP&) = delete;
 public:
     virtual ~InfMP() {}
-    virtual const Terms* get() override { return data; }
+    virtual const Terms* get() const override { return data; }
 };
 
 Terms* specialization(const Terms* general, const Terms* t);
@@ -208,7 +222,7 @@ private:
     InfSpec& operator=(const InfSpec&) = delete;
 public:
     virtual ~InfSpec() {}
-    virtual const Terms* get() override { return data; }
+    virtual const Terms* get() const override { return data; }
 };
 
 Term*   generalization  (const Terms* toGen, const Terms* x);
@@ -222,7 +236,7 @@ private:
     InfGen& operator=(const InfGen&) = delete;
 public:
     virtual ~InfGen() {}
-    virtual const Terms* get() override { return data; }
+    virtual const Terms* get() const override { return data; }
 };
 
 Path mkPath(std::string source);

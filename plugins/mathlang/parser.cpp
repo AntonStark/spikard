@@ -65,7 +65,7 @@ void Lexer::registerVar(std::string& source, unsigned indent)
     std::string name = source.substr(indent, nameLen);
     unsigned typeNameLen;
     MathType type = parseType(where->index(), source.substr(indent + nameLen + 8), typeNameLen);
-    where->pushDefVar(name, type.getName());
+    where->defVar(name, type.getName());
     source.erase(indent + nameLen, 8+typeNameLen);
 }
 void Lexer::registerVars(std::string& source)
@@ -288,8 +288,8 @@ Term* parse(Axiom* where, std::string source)
             break;
     }
     // todo выводить предупреждение о неоднозначности разбора,
-    // todo если в итоге получится больше одного варианта...
+    // если в итоге получится больше одного варианта...
     if (Term* t = dynamic_cast<Term*>(parsed))
         return t;
-    throw std::invalid_argument("Не удалось пострить терм по строке \"" + source + "\".\n");
+    throw std::invalid_argument("Не удалось построить терм по строке \"" + source + "\".\n");
 }
