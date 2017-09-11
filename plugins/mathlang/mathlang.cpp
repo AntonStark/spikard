@@ -12,13 +12,13 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Reasoning reasoning;
+    Section reasoning;
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
     void addSym(vector<string> cmdArgs);
     void addVar(vector<string> cmdArgs);
-    void addStatement(vector<string> cmdArgs);
+    void addAxiom(vector<string> cmdArgs);
 
     void viewTypes(vector<string> cmdArgs);
     void viewSyms(vector<string> cmdArgs);
@@ -30,6 +30,7 @@ private:
 
     void deduceMP(vector<string> cmdArgs);
     void deduceSpec(vector<string> cmdArgs);
+    void deduceGen(vector<string> cmdArgs);
 
     map<string, void (MathlangPlugin::*)(vector<string>)> methods;
     void methodsCfg();
@@ -73,8 +74,8 @@ void MathlangPlugin::addType(vector<string> cmdArgs)
     if (cmdArgs.size() < 1)
         return;
     try {
-        reasoning.addType(cmdArgs[0]);
-        cout << "Объявлен тип " << cmdArgs[0] << "." << endl;
+        reasoning.defType(cmdArgs[0]);
+        reasoning.print(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
@@ -87,21 +88,10 @@ void MathlangPlugin::addSym(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    list<MathType> argTypes;
-    for (auto it = next(cmdArgs.begin()); it != prev(cmdArgs.end()); ++it)
-        argTypes.push_back(reasoning.getT(*it));
+    list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
     try {
-        reasoning.addSym(cmdArgs.front(), argTypes, cmdArgs.back());
-
-        cout << "Введен символ " << cmdArgs[0] << " : ";
-        if (argTypes.size() > 0)
-        {
-            cout << argTypes.front().getName();
-            auto e = argTypes.end();
-            for (auto it = next(argTypes.begin()); it != e; ++it)
-                cout << " x " << it->getName();
-        }
-        cout << " -> " << cmdArgs.back() << "." << endl;
+        reasoning.defSym(cmdArgs.front(), argTypes, cmdArgs.back());
+        reasoning.print(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
@@ -115,13 +105,13 @@ void MathlangPlugin::addVar(vector<string> cmdArgs)
     if (cmdArgs.size() < 2)
         return;
     try {
-        reasoning.addVar(cmdArgs[0], reasoning.getT(cmdArgs[1]));
-        cout << "Добавлена переменная " << cmdArgs[0] << " типа " << cmdArgs[1] << "." << endl;
+        reasoning.defVar(cmdArgs[0], reasoning.index().getT(cmdArgs[1]).getName());
+        reasoning.print(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
 
-void MathlangPlugin::addStatement(vector<string> cmdArgs)
+void MathlangPlugin::addAxiom(vector<string> cmdArgs)
 {
     if (funcInfo(cmdArgs, "пусть",
              "<пусть [statement]> - ввести утверждение statement."))
@@ -129,7 +119,8 @@ void MathlangPlugin::addStatement(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 1)
         return;
-    ::addStatement(reasoning, cmdArgs[0]);
+    reasoning.addAxiom(cmdArgs[0]);
+    reasoning.print(cout);
 }
 
 
@@ -139,9 +130,7 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs)
              "<типы> - перечислить уже определённые типы."))
         return;
 
-    set<string> buf;
-    reasoning.viewSetOfNames(buf, Namespace::NameTy::MT);
-    for (auto& b : buf)
+    for (auto& b : reasoning.index().getNames(NameTy::MT))
         cout << b << endl;
 }
 
@@ -151,9 +140,7 @@ void MathlangPlugin::viewSyms(vector<string> cmdArgs)
              "<символы> - перечислить уже определённые символы."))
         return;
 
-    set<string> buf;
-    reasoning.viewSetOfNames(buf, Namespace::NameTy::SYM);
-    for (auto& b : buf)
+    for (auto& b : reasoning.index().getNames(NameTy::SYM))
         cout << b << endl;
 }
 
@@ -163,9 +150,7 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs)
              "<переменные> - перечислить уже определённые переменные."))
         return;
 
-    set<string> buf;
-    reasoning.viewSetOfNames(buf, Namespace::NameTy::VAR);
-    for (auto& b : buf)
+    for (auto& b : reasoning.index().getNames(NameTy::VAR))
         cout << b << endl;
 }
 
@@ -174,7 +159,7 @@ void MathlangPlugin::viewReas(vector<string> cmdArgs)
     if (funcInfo(cmdArgs, "показать_рассуждение",
                  "<показать_рассуждение> - показать рассуждение целиком."))
         return;
-    cout << reasoning << endl;
+    reasoning.print(cout);
 }
 
 void MathlangPlugin::saveReas(vector<string> cmdArgs)
@@ -199,9 +184,8 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    Path pathPre = mkPath(cmdArgs[0]);
-    Path pathImpl = mkPath(cmdArgs[1]);
-    reasoning.deduceMP(pathPre, pathImpl);
+    reasoning.doMP(cmdArgs[0], cmdArgs[1]);
+    reasoning.print(cout);
 }
 
 void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
@@ -212,9 +196,20 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    Path pathGen = mkPath(cmdArgs[0]);
-    Path pathT = mkPath(cmdArgs[1]);
-    reasoning.deduceSpec(pathGen, pathT);
+    reasoning.doSpec(cmdArgs[0], cmdArgs[1]);
+    reasoning.print(cout);
+}
+
+void MathlangPlugin::deduceGen(vector<string> cmdArgs)
+{
+    if (funcInfo(cmdArgs, "gen",
+                 "<gen [PathToGen] [PathVar]> - применить правило вывода Gen для ToGen и Var."))
+        return;
+
+    if (cmdArgs.size() < 2)
+        return;
+    reasoning.doGen(cmdArgs[0], cmdArgs[1]);
+    reasoning.print(cout);
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
@@ -231,7 +226,7 @@ void MathlangPlugin::methodsCfg()
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
     methods.insert(make_pair("add_sym"  , &MathlangPlugin::addSym));
     methods.insert(make_pair("add_var"  , &MathlangPlugin::addVar));
-    methods.insert(make_pair("add_statement", &MathlangPlugin::addStatement));
+    methods.insert(make_pair("add_axiom", &MathlangPlugin::addAxiom));
 
     methods.insert(make_pair("view_types", &MathlangPlugin::viewTypes));
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));
@@ -243,6 +238,7 @@ void MathlangPlugin::methodsCfg()
 
     methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
     methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));
+    methods.insert(make_pair("deduce_Gen", &MathlangPlugin::deduceGen));
     // Сюда добавлять функционал плагина
 }
 
