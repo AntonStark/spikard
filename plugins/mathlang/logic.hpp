@@ -49,19 +49,15 @@ public:
     bool operator< (const Label& other) const;
 };
 
-class Theory;
 class MathType : public Named
 {
-private:
-    Theory* definition;
 public:
-    MathType(std::string _type, Theory* _def = nullptr)
-            : Named(_type), definition(_def) {}
+    MathType(std::string _type)
+            : Named(_type) {}
     virtual ~MathType() {}
     MathType(const MathType& one)
-            : Named(one), definition(one.definition) {}
+            : Named(one) {}
 
-    //fixme сравнение пока без учета definition
     bool operator== (const MathType& other) const;
     bool operator!= (const MathType& other) const
     { return (!(this->operator==)(other)); }
@@ -71,7 +67,7 @@ extern MathType logical_mt;
 
 // Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
 // Важно, что с априорной информацией о типах упрощается парсер.
-// fixme Это реализация неоднородного символа.
+// Это реализация неоднородного символа.
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 class Map
 {
@@ -91,6 +87,9 @@ public:
     { return (otherArgT == argT); }
     MathType getType() const { return retT; }
     bool operator< (const Map& other) const;
+
+    typedef std::pair<std::vector<MathType>, MathType> Signature;
+    Signature getSign() const { return {{argT.begin(), argT.end()}, retT}; }
 };
 
 /*=====================================================*/
@@ -101,7 +100,7 @@ class Symbol : public Label, public Map
 {
 public:
     Symbol(const std::string& _name,
-           std::list<MathType> _argT, MathType _retT)
+           const std::list<MathType>& _argT, MathType _retT)
             : Label(_name), Map(_argT, _retT) {}
 
     virtual ~Symbol() {}

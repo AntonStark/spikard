@@ -4,109 +4,262 @@
 
 #include "signature.hpp"
 
-class Namespace::name_doubling : public std::invalid_argument
+class NameSpaceIndex::name_doubling : public std::invalid_argument
 {
 public:
     name_doubling(const std::string& symName)
             : std::invalid_argument("Попытка дублирования имени \"" + symName +"\".\n") {}
 };
-class Namespace::no_name : public std::invalid_argument
+class NameSpaceIndex::no_name : public std::invalid_argument
 {
 public:
     no_name(const std::string& symName)
             : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
 };
 
-Namespace::Namespace()
+void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
+                         const std::string& name, AbstrDef* where)
 {
-    names[NameTy::SYM] = {};
-    names[NameTy::VAR] = {};
-    names[NameTy::MT] = {};
-}
-
-bool Namespace::isThatType(const std::string& name, const NameTy& type) const
-{ return (names.at(type).find(name) != names.at(type).end()); }
-bool Namespace::isSomeSym(const std::string& name) const
-{ return (isThatType(name, NameTy::SYM) ||
-          isThatType(name, NameTy::VAR) ||
-          isThatType(name, NameTy::MT)); }
-
-void Namespace::checkSym(const std::string& name, const NameTy& type) const
-{
-    if (!isThatType(name, type))
-        throw no_name(name);
-}
-void Namespace::checkSym(const std::string& name) const
-{
-    if (!isSomeSym(name))
-        throw no_name(name);
-}
-
-void Namespace::addSym(const std::string& name, const NameTy& type)
-{
-    if (isSomeSym(name))
+    if (!isSomeType(name))
+    {
+        names.insert({name, type});
+        index.insert({name, where});
+    }
+    else
         throw name_doubling(name);
-    else
-        names.at(type).insert(name);
 }
-void Namespace::delSym(const std::string& name, const NameTy& type)
+
+bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const
 {
-    if (isThatType(name, type))
-        names.at(type).erase(name);
-    else
-        throw no_name(name);
+    auto search = names.find(name);
+    return (search != names.end() && search->second == type);
+}
+bool NameSpaceIndex::isSomeType(const std::string& name) const
+{ return (names.find(name) != names.end()); }
+
+std::set<std::string> NameSpaceIndex::getNames(NameTy type) const
+{
+    std::set<std::string> buf;
+    for (auto& n : names)
+        if (n.second == type)
+            buf.insert(n.first);
+    return buf;
+}
+
+MathType NameSpaceIndex::getT(const std::string& name) const
+{
+    if (isThatType(name, NameTy::MT))
+        return *dynamic_cast<DefType*>(index.at(name));
+    throw no_name(name);
+}
+Variable NameSpaceIndex::getV(const std::string& name) const
+{
+    if (isThatType(name, NameTy::VAR))
+        return *dynamic_cast<DefVar*>(index.at(name));
+    throw no_name(name);
+}
+Symbol NameSpaceIndex::getS(const std::string& name) const
+{
+    if (isThatType(name, NameTy::SYM))
+        return *dynamic_cast<DefSym*>(index.at(name));
+    throw no_name(name);
 }
 
 
-Reasoning::~Reasoning()
+HierarchyItem::HierarchyItem(Section* _parent)
+        : parent(_parent) { parent->push(this); }
+HierarchyItem::~HierarchyItem()
 {
-    for (auto& r : subs)
-        delete r;
+    for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
+        delete s;           // они должны создаваться в куче
 }
-
-Reasoning* Reasoning::get(Path path)
+HierarchyItem* HierarchyItem::get(Path path)
 {
-    Reasoning* r = this;
+    /*HierarchyItem* root = this;
+    while (root->getParent())
+        root = root->getParent();*/
+    // теперь используются относительные пути
+    HierarchyItem* target = this;
     while (path.size() != 0)
     {
-        if (path.front()-1 >= r->subs.size())
+        if (path.front() > target->subs.size())
             return nullptr;
-        r = r->subs.at(path.front()-1);
+        if (path.front() < 1)
+            target = getParent();
+        else
+            target = *std::next(target->subs.begin(), path.front()-1);
         path.pop_front();
     }
-    return r;
+    return target;
 }
-const Terms* Reasoning::getTerms(Path path) const
+const Terms* HierarchyItem::getTerms(Path pathToTerm)
 {
-    const Reasoning* r = this;
-    while (path.size() != 0)
-    {
-        if (path.front()-1 >= r->subs.size())
-            return nullptr;
-        r = r->subs.at(path.front()-1);
-        path.pop_front();
-    }
-
-    if (auto sPremise = dynamic_cast<const Statement*>(r))
-        return sPremise->get();
+    HierarchyItem* termItem = get(pathToTerm);
+    if (auto t = dynamic_cast<Statement*>(termItem))
+        return t->get();
+    else if (auto v = dynamic_cast<DefVar*>(termItem))
+        return v;
     else
         return nullptr;
 }
-
-Reasoning* Reasoning::startSub()
+void HierarchyItem::print(std::ostream& out) const
 {
-    subs.push_back(new Reasoning(this));
-    return subs.back();
-}
-Statement* Reasoning::addSub(Terms* monom)
-{
-    Statement* st = new Statement(this, monom);
-    subs.push_back(st);
-    return st;
+    size_t n = 1;
+    for (const auto& s : subs)
+        out << '(' << n++ << "): " << *s << std::endl;
 }
 
+Section::Section(Section* _parent, const std::string& _title)
+        : HierarchyItem(_parent), title(_title)
+{
+    auto parent = getParent();
+    if (parent)
+        atTheEnd = parent->atTheEnd;
+}
+Section::Section(const std::string& _title)
+        : HierarchyItem(), title(_title) {}
 
-Terms* Reasoning::doMP(const Terms* premise, const Terms* impl) const
+void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
+{ atTheEnd.add(type, name, where); }
+
+void Section::startSection(const std::string& title)
+{ new Section(this, title); }
+Section* Section::getSub(const std::string& pToSub)
+{
+    if (auto s = dynamic_cast<Section*>( get(mkPath(pToSub)) ))
+        return s;
+    else
+        return nullptr;
+}
+void Section::defType(const std::string& typeName)
+{ new DefType(this, typeName); }
+void Section::defVar(const std::string& varName, const std::string& typeName)
+{ new DefVar(this, varName, index().getT(typeName)); }
+void Section::defSym(const std::string& symName,
+                     const std::list<std::string>& argT, const std::string& retT)
+{
+    std::list<MathType> argMT;
+    for (auto& a : argT)
+        argMT.push_back(index().getT(a));
+    new DefSym(this, symName, argMT, index().getT(retT));
+}
+void Section::addAxiom(const std::string& axiom)
+{ new Axiom(this, axiom); }
+void Section::doMP(const std::string& pPremise, const std::string& pImpl)
+{ new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
+void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
+{ new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
+void Section::doGen(const std::string& pToGen, const std::string& pToVar)
+{ new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
+void Section::print(std::ostream& out) const
+{ out << "Раздел, название \"" << title << "\"." << std::endl; }
+void Section::printB(std::ostream& out) const
+{
+    print(out);
+    HierarchyItem::print(out);
+}
+
+void DefType::print(std::ostream& out) const
+{ out << "Объявлен тип " << getName() << "."; }
+void DefVar::print(std::ostream& out) const
+{ out << "Добавлена переменная " << getName() << " типа " << getType().getName() << "."; }
+void DefSym::print(std::ostream& out) const
+{
+    out << "Введен символ " << getName() << " : ";
+    auto argTypes = getSign().first;
+    if (argTypes.size() > 0)
+    {
+        out << argTypes.front().getName();
+        auto e = argTypes.end();
+        for (auto it = next(argTypes.begin()); it != e; ++it)
+            out << " x " << it->getName();
+    }
+    out << " -> " << getType().getName() << ".";
+}
+
+Axiom::Axiom(Section* closure, std::string source)
+        : Section(closure), data(parse(this, source))
+{
+    if (data->getType() != logical_mt)
+        throw std::invalid_argument("Аксиома должна быть логического типа.\n");
+}
+void Axiom::print(std::ostream& out) const
+{
+    out << "Пусть ";
+    Statement::print(out);
+}
+
+Path mkPath(std::string source)
+{
+    // string  ->  list<size_t>
+    // (1.2.2) }-> {1,2,2}
+    Path target;
+    std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
+                                  {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
+                                  {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
+    if (source.front() == '(')
+    {
+        source.pop_back();
+        source.erase(source.begin());
+    }
+    unsigned buf = 0;
+    for (int i = 0; i < source.length(); ++i)
+    {
+        auto search = digits.find(source[i]);
+        if (search != digits.end())
+        {
+            buf *= 10;
+            buf += search->second;
+        }
+        else if (source[i] == '.')
+        {
+            target.push_back(buf);
+            buf = 0;
+        }
+        else
+            throw std::invalid_argument("Путь \"" + source + "\" некорректен.");
+    }
+    target.push_back(buf);
+    return target;
+}
+std::string pathToStr(Path path)
+{
+    std::stringstream ss; ss << "(";
+    if (!path.empty())
+    {
+        ss << path.front();
+        auto e = path.end();
+        for (auto it = std::next(path.begin()); it != e; ++it)
+            ss << "." << *it;
+    }
+    ss << ")";
+    return ss.str();
+}
+
+class AbstrInf::bad_inf : public std::invalid_argument
+{
+public:
+    bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
+};
+
+void AbstrInf::print(std::ostream& out) const
+{
+    out << "По ";
+    switch (type)
+    {
+        case InfTy::MP :
+            out << "MP ";   break;
+        case InfTy::SPEC :
+            out << "Spec "; break;
+        case InfTy::GEN :
+            out << "Gen ";  break;
+    }
+    out << "из " << pathToStr(*premises.begin()) << " и "
+    << pathToStr(*std::next(premises.begin())) << " следует: ";
+    Statement::print(out);
+}
+
+Terms* modusPonens(const Terms* premise, const Terms* impl)
 {
     if (const Term* tI = dynamic_cast<const Term*>(impl))
     {
@@ -121,7 +274,12 @@ Terms* Reasoning::doMP(const Terms* premise, const Terms* impl) const
     else
         return nullptr; //impl не является термом
 }
-Terms* Reasoning::doSpec(const Terms* general, const Terms* t) const
+InfMP::InfMP(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::MP, pArg1, pArg2),
+          data(modusPonens(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }
+
+Terms* specialization(const Terms* general, const Terms* t)
 {
     if (const ForallTerm* fT = dynamic_cast<const ForallTerm*>(general))
     {
@@ -131,189 +289,23 @@ Terms* Reasoning::doSpec(const Terms* general, const Terms* t) const
     else
         return nullptr;
 }
+InfSpec::InfSpec(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::SPEC, pArg1, pArg2),
+          data(specialization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }
 
-bool Reasoning::deduceMP(Path rpPremise, Path rpImpl)
+Term* generalization  (const Terms* toGen, const Terms* x)
 {
-    const Terms* premise = getTerms(rpPremise);
-    const Terms* impl = getTerms(rpImpl);
-    if (!premise || !impl)
-        return false; //ошибочный rpPremise и/или rpImpl
-
-    if (Terms* mp = doMP(premise, impl))
+    if (const Variable* v = dynamic_cast<const Variable*>(x))
     {
-        Reasoning* st = new Statement(this, mp, {rpPremise, rpImpl});
-        subs.push_back(st);
-        return true;
+        if (const Term* tG = dynamic_cast<const Term*>(toGen))
+        if (tG->free.find(*v) != tG->free.end())
+            return new ForallTerm(*v, tG->clone());
     }
-    else
-        return false;
-}
-bool Reasoning::deduceSpec(Path rpGeneral, Path rpT)
-{
-    const Terms* general = getTerms(rpGeneral);
-    const Terms* t = getTerms(rpT);
-    if (!general || !t)
-        return false; //ошибочный rpGeneral и/или pT
-
-    if (Terms* spec = doSpec(general, t))
-    {
-        Reasoning* st = new Statement(this, spec, {rpGeneral});
-        subs.push_back(st);
-        return true;
-    }
-    else
-        return false;
-}
-bool Reasoning::deduceSpec(Path rpGeneral, Path subTermPath, Path rpT)
-{
-    const Terms* general = getTerms(rpGeneral);
-    const Terms* t = getTerms(rpT);
-    if (!general || !t)
-        return false; //ошибочный rpGeneral и/или pT
-    const Terms* concreteGen = general->get(subTermPath);
-    if (!concreteGen)
-        return false; //ошибочно задан подтерм-квантор
-
-    if (Terms* spec = doSpec(concreteGen, t))
-    {
-        Reasoning* st = new Statement(this, general->replace(subTermPath, spec), {rpGeneral});
-        subs.push_back(st);
-        return true;
-    }
-    else
-        return false;
-}
-
-const Reasoning* Reasoning::isNameExist(const std::string& name, const NameTy& type) const
-{
-    if (names.isThatType(name, type))
-        return this;
-    else if (parent != nullptr)
-        return parent->isNameExist(name, type);
     else
         return nullptr;
 }
-
-void Reasoning::addSym(Symbol sym)
-{
-    std::string name = sym.getName();
-    names.addSym(name, NameTy::SYM);
-    syms.insert({name, sym});
-}
-void Reasoning::addSym(std::list<Symbol> syms)
-{
-    for (auto& s : syms)
-        addSym(s);
-}
-void Reasoning::addSym(const std::string& name,
-                       std::list<MathType> argT, MathType retT)
-{
-    Symbol sym(name, argT, retT);
-    names.addSym(name, NameTy::SYM);
-    syms.insert({name, sym});
-}
-
-void Reasoning::addVar(Variable var)
-{
-    std::string name = var.getName();
-    names.addSym(name, NameTy::VAR);
-    vars.insert({name, var});
-}
-void Reasoning::addVar(const std::string& name, MathType type)
-{
-    names.addSym(name, NameTy::VAR);
-    Variable var(name, type);
-    vars.insert({name, var});
-}
-
-void Reasoning::addType(MathType type)
-{
-    std::string name = type.getName();
-    names.addSym(name, NameTy::MT);
-    types.insert({name, type});
-}
-void Reasoning::addType(const std::string& name)
-{
-    names.addSym(name, NameTy::MT);
-    MathType type(name);
-    types.insert({name, type});
-}
-
-Symbol Reasoning::getS(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::SYM);
-    if (reas != nullptr)
-        return reas->syms.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-Variable Reasoning::getV(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::VAR);
-    if (reas != nullptr)
-        return reas->vars.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-MathType Reasoning::getT(const std::string& name) const
-{
-    const Reasoning* reas = isNameExist(name, NameTy::MT);
-    if (reas != nullptr)
-        return reas->types.at(name);
-    else
-        throw std::invalid_argument("No sym.\n");
-}
-
-void Reasoning::viewSetOfNames(std::set<std::string>& set,
-                               const NameTy& type) const
-{
-    names.viewSetOfNames(set, type);
-    if (parent != nullptr)
-        parent->viewSetOfNames(set, type);
-}
-
-void Reasoning::print(std::ostream& out) const
-{
-    for (size_t i = 0; i < subs.size(); ++i)
-    {
-        out << '[' << i+1 << "]:\n";
-        subs[i]->print(out);
-    }
-}
-
-void Reasoning::printNamespace(std::ostream& out) const
-{
-    out << "SYMS" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& s : syms)
-        out << s.first << std::endl;
-    out << "------------" << std::endl;
-
-    out << "VARS" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& v : vars)
-        out << v.first << std::endl;
-    out << "------------" << std::endl;
-
-    out << "TYPES" << std::endl;
-    out << "------------" << std::endl;
-    for (const auto& t : types)
-        out << t.first << std::endl;
-    out << "------------" << std::endl;
-}
-
-void Statement::print(std::ostream& out) const
-{
-    if (comment.length() != 0)
-        out << comment << std::endl;
-
-    if (const Variable* v = dynamic_cast<const Variable*>(monom))
-        v->print(out);
-    else if (const Term* t = dynamic_cast<const Term*>(monom))
-        t->print(out);
-    /*else if (const QuantedTerm* qt = dynamic_cast<const QuantedTerm*>(monom))
-        qt->print(out);*/
-    else
-        return;
-    out << std::endl;
-}
+InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
+        : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
+          data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+{ if (!data) throw bad_inf(); }

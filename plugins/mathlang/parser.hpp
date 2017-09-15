@@ -10,46 +10,16 @@
 
 #include "signature.hpp"
 
-//TODO мысли о рефакторинге:
-/*-1)-Interpr -> Parser
- *-2)-class Lexeme. Lexeme::operator==(Lexer::Token)
- *-3)-std::string Lexeme::value() const;
- * 4) Lexeme.second.second = indent -> lexLen (???)
- *-5)-addV/getV -> makeVar
- *-6)-checkBrackets/fwdPair... -> map<iterator, iterator> pairBracket;
- */
-
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
+Term* parse(Axiom* where, std::string source);
 
 class Lexer
 {
-private:
-    Reasoning& closure;
-    void registerVars(std::string& source);
 public:
     enum class Token {S, V, Q, /*T, to,*/
-                      c, s, lb, rb};
-    static std::string tokToStr(const Token& tok)
-    {
-        switch (tok)
-        {
-            case Token::S : return "S";
-            case Token::V : return "V";
-            case Token::Q : return "Q";
-            /*case Token::T : return "T";
-            case Token::to: return "to";*/
-            case Token::c : return "c";
-            case Token::s : return "s";
-            case Token::lb: return "lb";
-            case Token::rb: return "rb";
-        }
-    }
-
-    std::map<std::string, Token> words;
-
-    Lexer(Reasoning& R);
-
-    void refreshWords(NameTy type);
+                c, s, lb, rb};
+    static std::string tokToStr(const Token& tok);
+    Lexer(Axiom* _where);
 
     struct Lexeme
     {
@@ -68,13 +38,23 @@ public:
     };
     typedef std::list<Lexeme> LexList;
     typedef std::pair<size_t, LexList> PartialResolved;
-
+private:
+    Axiom* where;
+    std::map<std::string, Token> words;
     std::set<LexList> lastResult;
 
-    void recognize(std::string source);
-};
+    void registerVar(std::string& source, unsigned indent);
+    void registerVars(std::string& source);
+    void refreshWords(NameTy type);
 
-Terms* parseTerms(const Reasoning& reas, Lexer::LexList& list);
-bool addStatement(Reasoning&, std::string source);
+    friend Term* parse(Axiom* where, std::string source);
+    void recognize(std::string source);
+
+    // Вообще, это функционал парсера
+    // todo дорефакторить, чтобы они были аккуратно интегрированы
+    Term* parseQuantedTerm(Lexer::LexList& list);
+    Term* parseTerm(Lexer::LexList& list);
+    Terms* parseTerms(Lexer::LexList& list);
+};
 
 #endif //TEST_BUILD_INTERPR_HPP

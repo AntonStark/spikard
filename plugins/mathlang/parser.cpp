@@ -12,22 +12,49 @@ bool matchIndented(const std::string& source, const size_t indent, const std::st
         return (source.substr(indent, word.length()).compare(word) == 0);
 }
 
-MathType parseType(Reasoning& closure, const std::string& source, unsigned& len)
+std::string Lexer::tokToStr(const Token& tok)
+{
+    switch (tok)
+    {
+        case Token::S : return "S";
+        case Token::V : return "V";
+        case Token::Q : return "Q";
+            /*case Token::T : return "T";
+            case Token::to: return "to";*/
+        case Token::c : return "c";
+        case Token::s : return "s";
+        case Token::lb: return "lb";
+        case Token::rb: return "rb";
+    }
+}
+
+Lexer::Lexer(Axiom* _where) : where(_where)
+{
+    for (auto& s : where->index().getNames(NameTy::SYM))
+        words[s] = Token::S;
+    for (auto s : where->index().getNames(NameTy::VAR))
+        words[s] = Token::V;
+
+    words[ Term::qword[Term::QType::FORALL] ] = Token::Q;
+    words[ Term::qword[Term::QType::EXISTS] ] = Token::Q;
+    words[","] = Token::c;  words[" "] = Token::s;
+    words["("] = Token::lb; words[")"] = Token::rb;
+}
+
+MathType parseType(const NameSpaceIndex& names, const std::string& source, unsigned& len)
 {
     unsigned typeNameLen = 1;
-    const Reasoning* reas;
-    while ((reas = closure.isNameExist(source.substr(0, typeNameLen),
-                                       NameTy::MT)) == nullptr)
+    while (!names.isThatType(source.substr(0, typeNameLen), NameTy::MT))
         if (typeNameLen == source.length())
             throw std::invalid_argument("Не найдено имя типа - неверный формат.\n");
         else
             ++typeNameLen;
     std::string typeName = source.substr(0, typeNameLen);
     len = typeNameLen;
-    return reas->getT(typeName);
+    return names.getT(typeName);
 }
 // Из выражения вида "*\typeof <typeName>"
-void registerVar(Reasoning& closure, std::string& source, unsigned indent)
+void Lexer::registerVar(std::string& source, unsigned indent)
 {
     unsigned nameLen = 1;
     while (!matchIndented(source, indent+nameLen, "\\typeof "))
@@ -37,30 +64,16 @@ void registerVar(Reasoning& closure, std::string& source, unsigned indent)
             ++nameLen;
     std::string name = source.substr(indent, nameLen);
     unsigned typeNameLen;
-    MathType type = parseType(closure, source.substr(indent + nameLen + 8), typeNameLen);
-    closure.addVar(name, type);
+    MathType type = parseType(where->index(), source.substr(indent + nameLen + 8), typeNameLen);
+    where->defVar(name, type.getName());
     source.erase(indent + nameLen, 8+typeNameLen);
 }
-
-Lexer::Lexer(Reasoning& _closure) : closure(_closure)
+void Lexer::registerVars(std::string& source)
 {
-    std::set<std::string> buf;
-    closure.viewSetOfNames(buf, NameTy::SYM);
-    for (auto s : buf)
-        words[s] = Token::S;
-    buf.clear();
-    closure.viewSetOfNames(buf, NameTy::VAR);
-    for (auto s : buf)
-        words[s] = Token::V;
-    buf.clear();
-    /*R.viewSetOfNames(buf, NameTy::MT);
-    for (auto s : buf)
-        words[s] = Token::T;*/
-
-    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::FORALL]] = Token::Q;
-    words[/*Quanted*/Term::qword[/*Quanted*/Term::QType::EXISTS]] = Token::Q;
-    words[","] = Token::c;  words[" "] = Token::s;
-    words["("] = Token::lb; words[")"] = Token::rb;
+    for (unsigned i = 0; i < source.length(); ++i)
+        if (matchIndented(source, i, "\\forall ") ||
+            matchIndented(source, i, "\\exists "))
+            registerVar(source, i + 8);
 }
 
 void Lexer::refreshWords(NameTy type)
@@ -76,8 +89,7 @@ void Lexer::refreshWords(NameTy type)
         { /*tok = Token::T; break;*/return; }
     }
 
-    std::set<std::string> buf;
-    closure.viewSetOfNames(buf, type);
+    std::set<std::string> buf = where->index().getNames(type);
     // Сначала убираем имена, которые есть и не нужны.
     auto e = words.end();
     auto be = buf.end();
@@ -95,18 +107,9 @@ void Lexer::refreshWords(NameTy type)
         words[s] = tok;
 }
 
-void Lexer::registerVars(std::string& source)
-{
-    for (unsigned i = 0; i < source.length(); ++i)
-        if (matchIndented(source, i, "\\forall ") ||
-            matchIndented(source, i, "\\exists "))
-            registerVar(closure, source, i+8);
-}
-
 inline bool termBegin(const Lexer::Token& tok)
 { return (tok == Lexer::Token::Q || tok == Lexer::Token::lb || tok == Lexer::Token::S); }
 
-//fixme
 // 1) возможно, через проверку принадлежности multimap<one, two> будет лаконичнее
 // 2) ещё можно сделать set<pair<Token, Token> > и проверять принадлежность
 // 3) или map<Token, set<Token> >
@@ -165,8 +168,10 @@ void Lexer::recognize(std::string source)
         }
         for (auto w : words)
         {
-            if ( (pair.second.empty() ? true : mayFollow(pair.second.back().tok, w.second)) //Если pair.second ещё пуст, то условие следования выполнено автоматически
-                  && matchIndented(source, pair.first, w.first))
+            if ( (pair.second.empty() ? true : mayFollow(pair.second.back().tok, w.second))
+                 //Если pair.second ещё пуст, то условие следования выполнено автоматически
+                  && matchIndented(source, pair.first, w.first)
+                )
             {
                 size_t newIndent = pair.first + w.first.length();
                 LexList list = pair.second;
@@ -177,7 +182,7 @@ void Lexer::recognize(std::string source)
     }
 }
 
-Terms* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
+Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
     Term::QType type;
@@ -189,10 +194,10 @@ Terms* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
 
     if (list.front().tok != Token::V)
         return nullptr;
-    Variable var = reas.getV(list.front().val);
+    Variable var = where->index().getV(list.front().val);
     list.pop_front();
 
-    Terms* term = parseTerms(reas, list);
+    Terms* term = parseTerms(list);
     if (term == nullptr)
         return nullptr;
     Term* qterm;
@@ -204,10 +209,10 @@ Terms* parseQuantedTerm(const Reasoning& reas, Lexer::LexList& list)
     return qterm;
 }
 
-Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list)
+Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
-    Symbol s = reas.getS(list.front().val);
+    Symbol s = where->index().getS(list.front().val);
     list.pop_front();
 
     if (list.front().tok != Token::lb)
@@ -222,7 +227,7 @@ Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list)
             list.pop_front();
             break;
         }
-        Terms* nextT = parseTerms(reas, list);
+        Terms* nextT = parseTerms(list);
         if (nextT == nullptr)
             return nullptr;
         terms.push_back(nextT);
@@ -243,25 +248,25 @@ Terms* parseTerm(const Reasoning& reas, Lexer::LexList& list)
     return tterm;
 }
 
-Terms* parseTerms(const Reasoning& reas, Lexer::LexList& list)
+Terms* Lexer::parseTerms(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
     switch (list.front().tok)
     {
         case Token::Q :
-            return parseQuantedTerm(reas, list);
+            return parseQuantedTerm(list);
         case Token::S :
-            return parseTerm(reas, list);
+            return parseTerm(list);
         case Token::V:
         {
-            Variable* var = reas.getV(list.front().val).clone();
+            Variable* var = where->index().getV(list.front().val).clone();
             list.pop_front();
             return var;
         }
         case Token::lb:
         {
             list.pop_front();
-            Terms* bterm = parseTerms(reas, list);
+            Terms* bterm = parseTerms(list);
             list.pop_front();
             return bterm;
         }
@@ -270,30 +275,21 @@ Terms* parseTerms(const Reasoning& reas, Lexer::LexList& list)
     }
 }
 
-bool addStatement(Reasoning& reas, std::string source)
+Term* parse(Axiom* where, std::string source)
 {
-    Statement* closure = reas.addSub(nullptr);
-
-    Lexer lex(*closure);
+    Lexer lex(where);
     lex.recognize(source);
 
     Terms* parsed = nullptr;
     for (auto r : lex.lastResult)
     {
-        parsed = parseTerms(*closure, r);
-        if (parsed != nullptr)
+        parsed = lex.parseTerms(r);
+        if (parsed)
             break;
     }
-    //TODO выводить предупреждение о неоднозначности разбора, если в итоге получится больше одного варианта...
-
-    if (parsed != nullptr)
-    {
-        closure->set(parsed);
-        return true;
-    }
-    else
-    {
-        reas.popBack();
-        return false;
-    }
+    // todo выводить предупреждение о неоднозначности разбора,
+    // если в итоге получится больше одного варианта...
+    if (Term* t = dynamic_cast<Term*>(parsed))
+        return t;
+    throw std::invalid_argument("Не удалось построить терм по строке \"" + source + "\".\n");
 }
