@@ -49,10 +49,10 @@ protected:
     HierarchyItem(Section* _parent);
     Section* getParent() const { return parent; }
     HierarchyItem* get(Path path);
-    const Terms* getTerms(Path pathToTerm);
 public:
     HierarchyItem() : parent(nullptr) {}
     virtual ~HierarchyItem();
+    const Terms* getTerms(Path pathToTerm);
     HierarchyItem(const HierarchyItem&) = delete;
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 
@@ -86,7 +86,8 @@ public:
     //  2) closure->defType("Logical");
     //  Первый способ выглядит более громоздко, а второй перегружает
     //  интерфейс Section посторонним функционалом, но пусть так
-    void pushSection(const std::string& title = "");
+    void startSection(const std::string& title = "");
+    Section* getSub(const std::string& pToSub);
     void defType(const std::string& typeName);
     void defVar (const std::string& varName, const std::string& typeName);
     void defSym (const std::string& symName,
@@ -97,6 +98,7 @@ public:
     void doGen  (const std::string& pToGen,  const std::string& pToVar);
 
     virtual void print(std::ostream& out) const override;
+    void printB(std::ostream& out) const;
 };
 
 class AbstrDef : public HierarchyItem

@@ -75,15 +75,19 @@ HierarchyItem::~HierarchyItem()
 }
 HierarchyItem* HierarchyItem::get(Path path)
 {
-    HierarchyItem* root = this;
+    /*HierarchyItem* root = this;
     while (root->getParent())
-        root = root->getParent();
-    HierarchyItem* target = root;
+        root = root->getParent();*/
+    // теперь используются относительные пути
+    HierarchyItem* target = this;
     while (path.size() != 0)
     {
         if (path.front() > target->subs.size())
             return nullptr;
-        target = *std::next(target->subs.begin(), path.front()-1);
+        if (path.front() < 1)
+            target = getParent();
+        else
+            target = *std::next(target->subs.begin(), path.front()-1);
         path.pop_front();
     }
     return target;
@@ -118,8 +122,15 @@ Section::Section(const std::string& _title)
 void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
 { atTheEnd.add(type, name, where); }
 
-void Section::pushSection(const std::string& title)
+void Section::startSection(const std::string& title)
 { new Section(this, title); }
+Section* Section::getSub(const std::string& pToSub)
+{
+    if (auto s = dynamic_cast<Section*>( get(mkPath(pToSub)) ))
+        return s;
+    else
+        return nullptr;
+}
 void Section::defType(const std::string& typeName)
 { new DefType(this, typeName); }
 void Section::defVar(const std::string& varName, const std::string& typeName)
@@ -141,8 +152,10 @@ void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
 void Section::doGen(const std::string& pToGen, const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 void Section::print(std::ostream& out) const
+{ out << "Раздел, название \"" << title << "\"." << std::endl; }
+void Section::printB(std::ostream& out) const
 {
-    out << title << std::endl;
+    print(out);
     HierarchyItem::print(out);
 }
 
@@ -184,8 +197,13 @@ Path mkPath(std::string source)
     std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
                                   {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
                                   {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
+    if (source.front() == '(')
+    {
+        source.pop_back();
+        source.erase(source.begin());
+    }
     unsigned buf = 0;
-    for (int i = 1; i < source.length()-1; ++i)
+    for (int i = 0; i < source.length(); ++i)
     {
         auto search = digits.find(source[i]);
         if (search != digits.end())
@@ -258,7 +276,7 @@ Terms* modusPonens(const Terms* premise, const Terms* impl)
 }
 InfMP::InfMP(Section* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::MP, pArg1, pArg2),
-          data(modusPonens(getTerms(pArg1), getTerms(pArg2)))
+          data(modusPonens(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
 Terms* specialization(const Terms* general, const Terms* t)
@@ -273,7 +291,7 @@ Terms* specialization(const Terms* general, const Terms* t)
 }
 InfSpec::InfSpec(Section* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::SPEC, pArg1, pArg2),
-          data(specialization(getTerms(pArg1), getTerms(pArg2)))
+          data(specialization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
 Term* generalization  (const Terms* toGen, const Terms* x)
@@ -289,5 +307,5 @@ Term* generalization  (const Terms* toGen, const Terms* x)
 }
 InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
-          data(generalization(getTerms(pArg1), getTerms(pArg2)))
+          data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
