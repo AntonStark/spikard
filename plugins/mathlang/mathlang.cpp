@@ -12,7 +12,8 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Section reasoning;
+    Section storage;
+    Section* current;
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
@@ -23,10 +24,12 @@ private:
     void viewTypes(vector<string> cmdArgs);
     void viewSyms(vector<string> cmdArgs);
     void viewVars(vector<string> cmdArgs);
-    void viewReas(vector<string> cmdArgs);
 
-    void saveReas(vector<string> cmdArgs);
-    void loadReas(vector<string> cmdArgs);
+    void subSection (vector<string> cmdArgs);
+    void gotoSection(vector<string> cmdArgs);
+    void viewSection(vector<string> cmdArgs);
+    void saveSection(vector<string> cmdArgs);
+    void loadSection(vector<string> cmdArgs);
 
     void deduceMP(vector<string> cmdArgs);
     void deduceSpec(vector<string> cmdArgs);
@@ -74,8 +77,8 @@ void MathlangPlugin::addType(vector<string> cmdArgs)
     if (cmdArgs.size() < 1)
         return;
     try {
-        reasoning.defType(cmdArgs[0]);
-        reasoning.print(cout);
+        current->defType(cmdArgs[0]);
+        current->printB(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
@@ -90,8 +93,8 @@ void MathlangPlugin::addSym(vector<string> cmdArgs)
         return;
     list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
     try {
-        reasoning.defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-        reasoning.print(cout);
+        current->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
+        current->printB(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
@@ -105,8 +108,8 @@ void MathlangPlugin::addVar(vector<string> cmdArgs)
     if (cmdArgs.size() < 2)
         return;
     try {
-        reasoning.defVar(cmdArgs[0], reasoning.index().getT(cmdArgs[1]).getName());
-        reasoning.print(cout);
+        current->defVar(cmdArgs[0], current->index().getT(cmdArgs[1]).getName());
+        current->printB(cout);
     }
     catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
 }
@@ -119,8 +122,8 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 1)
         return;
-    reasoning.addAxiom(cmdArgs[0]);
-    reasoning.print(cout);
+    current->addAxiom(cmdArgs[0]);
+    current->printB(cout);
 }
 
 
@@ -130,7 +133,7 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs)
              "<типы> - перечислить уже определённые типы."))
         return;
 
-    for (auto& b : reasoning.index().getNames(NameTy::MT))
+    for (auto& b : current->index().getNames(NameTy::MT))
         cout << b << endl;
 }
 
@@ -140,7 +143,7 @@ void MathlangPlugin::viewSyms(vector<string> cmdArgs)
              "<символы> - перечислить уже определённые символы."))
         return;
 
-    for (auto& b : reasoning.index().getNames(NameTy::SYM))
+    for (auto& b : current->index().getNames(NameTy::SYM))
         cout << b << endl;
 }
 
@@ -150,26 +153,53 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs)
              "<переменные> - перечислить уже определённые переменные."))
         return;
 
-    for (auto& b : reasoning.index().getNames(NameTy::VAR))
+    for (auto& b : current->index().getNames(NameTy::VAR))
         cout << b << endl;
 }
 
-void MathlangPlugin::viewReas(vector<string> cmdArgs)
+void MathlangPlugin::subSection(vector<string> cmdArgs)
+{
+    if (funcInfo(cmdArgs, "подраздел",
+                 "<подраздел [название(необязательно)]> - начать подраздел с данным названием."))
+        return;
+
+    if (cmdArgs.size() > 0)
+        current->startSection(cmdArgs[0]);
+    else
+        current->startSection("");
+}
+
+void MathlangPlugin::gotoSection(vector<string> cmdArgs)
+{
+    if (funcInfo(cmdArgs, "перейти",
+                 "<перейти [PathToSection]> - перейти к Section с меткой PathToSection."))
+        return;
+
+    if (cmdArgs.size() < 1)
+        return;
+
+    Section* target = current->getSub(cmdArgs[0]);
+    if (target)
+        current = target;
+    current->printB(cout);
+}
+
+void MathlangPlugin::viewSection(vector<string> cmdArgs)
 {
     if (funcInfo(cmdArgs, "показать_рассуждение",
                  "<показать_рассуждение> - показать рассуждение целиком."))
         return;
-    reasoning.print(cout);
+    current->printB(cout);
 }
 
-void MathlangPlugin::saveReas(vector<string> cmdArgs)
+void MathlangPlugin::saveSection(vector<string> cmdArgs)
 {
     if (funcInfo(cmdArgs, "сохранить_рассуждение",
                  "<сохранить_рассуждение> - запись для последующего использования."))
         return;
 }
 
-void MathlangPlugin::loadReas(vector<string> cmdArgs)
+void MathlangPlugin::loadSection(vector<string> cmdArgs)
 {
     if (funcInfo(cmdArgs, "загрузить_рассуждение",
                  "<загрузить_рассуждение> - открыть ранее сохраненное."))
@@ -184,8 +214,8 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    reasoning.doMP(cmdArgs[0], cmdArgs[1]);
-    reasoning.print(cout);
+    current->doMP(cmdArgs[0], cmdArgs[1]);
+    current->printB(cout);
 }
 
 void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
@@ -196,8 +226,8 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    reasoning.doSpec(cmdArgs[0], cmdArgs[1]);
-    reasoning.print(cout);
+    current->doSpec(cmdArgs[0], cmdArgs[1]);
+    current->printB(cout);
 }
 
 void MathlangPlugin::deduceGen(vector<string> cmdArgs)
@@ -208,14 +238,15 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs)
 
     if (cmdArgs.size() < 2)
         return;
-    reasoning.doGen(cmdArgs[0], cmdArgs[1]);
-    reasoning.print(cout);
+    current->doGen(cmdArgs[0], cmdArgs[1]);
+    current->printB(cout);
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
-: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent)
+: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent), storage("Главный")
 {
     // Инициализация переменных здесь
+    current = &storage;
 
     methodsCfg();
     fabric = _fabric;
@@ -231,10 +262,12 @@ void MathlangPlugin::methodsCfg()
     methods.insert(make_pair("view_types", &MathlangPlugin::viewTypes));
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));
     methods.insert(make_pair("view_vars", &MathlangPlugin::viewVars));
-    methods.insert(make_pair("view_reas", &MathlangPlugin::viewReas));
 
-    methods.insert(make_pair("save_reas", &MathlangPlugin::saveReas));
-    methods.insert(make_pair("load_reas", &MathlangPlugin::loadReas));
+    methods.insert(make_pair("sub_section",  &MathlangPlugin::subSection));
+    methods.insert(make_pair("goto_section", &MathlangPlugin::gotoSection));
+    methods.insert(make_pair("view_section", &MathlangPlugin::viewSection));
+    methods.insert(make_pair("save_section", &MathlangPlugin::saveSection));
+    methods.insert(make_pair("load_section", &MathlangPlugin::loadSection));
 
     methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
     methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));

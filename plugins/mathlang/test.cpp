@@ -37,7 +37,7 @@ int main(void)
     theorem.defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
     theorem.defVar("B", "Logical");
     theorem.addAxiom("\\Rightarrow (A, B)");
-    theorem.print(cout);
+    theorem.HierarchyItem::print(cout);
 
     theorem.doMP("(2)", "(5)");
 
