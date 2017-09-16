@@ -309,3 +309,27 @@ InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
+
+json NameSpaceIndex::to_json() const
+{
+    json j;
+    j["names"] = names;
+//    j["index"] = index;
+    return j;
+}
+Serializable* NameSpaceIndex::from_json(const json& j)
+{
+
+}
+
+json Section::to_json() const
+{
+    json temp;
+
+
+    return temp;
+}
+Serializable* Section::from_json(const json& j)
+{
+
+}

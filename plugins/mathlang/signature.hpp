@@ -10,12 +10,21 @@
 #include <stdexcept>
 #include <vector>
 #include <sstream>
+#include "../../json.hpp"
 
 #include "logic.hpp"
 
+using json = nlohmann::json;
+class Serializable
+{
+public:
+    virtual json to_json() const = 0;
+    virtual Serializable* from_json(const json& j) = 0;
+};
+
 class Section;
 class AbstrDef;
-class NameSpaceIndex
+class NameSpaceIndex : public virtual Serializable
 {
 public:
     enum class NameTy {SYM, VAR, MT};
@@ -34,11 +43,14 @@ public:
     MathType getT(const std::string& name) const;
     Variable getV(const std::string& name) const;
     Symbol   getS(const std::string& name) const;
+
+    virtual json to_json() const override;
+    virtual Serializable* from_json(const json& j) override;
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
 class Section;
-class HierarchyItem : public virtual Printable
+class HierarchyItem : public virtual Printable, public virtual Serializable
 // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
 private:
@@ -57,6 +69,17 @@ public:
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 
     virtual void print(std::ostream& out) const override;
+
+    // fixme заглушка
+    virtual json to_json() const override
+    {
+        return json();
+    }
+
+    virtual Serializable* from_json(const json& j) override
+    {
+        return nullptr;
+    }
 };
 
 class AbstrDef;
@@ -99,6 +122,9 @@ public:
 
     virtual void print(std::ostream& out) const override;
     void printB(std::ostream& out) const;
+
+    virtual json to_json() const override;
+    virtual Serializable* from_json(const json& j) override;
 };
 
 class AbstrDef : public HierarchyItem

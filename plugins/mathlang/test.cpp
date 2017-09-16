@@ -47,21 +47,7 @@ int main(void)
     cout<<flush;
     cerr<<flush;
 
-    json j;
-    std::set<string> buf;
-    logic.viewSetOfNames(buf, Namespace::NameTy::MT);
-    j["types"] = buf;
-    buf.clear();
-    logic.viewSetOfNames(buf, Namespace::NameTy::VAR);
-    j["vars"] = buf;
-    buf.clear();
-    logic.viewSetOfNames(buf, Namespace::NameTy::SYM);
-    j["syms"] = buf;
-    j["subs"] = nullptr;
-
-    for (auto e : j)
-        cout << e << endl;
-
+    json j = theorem.index().to_json();
     cerr << j.dump();
 
     return 0;
