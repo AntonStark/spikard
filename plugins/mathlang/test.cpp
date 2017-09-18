@@ -39,16 +39,17 @@ int main(void)
     theorem.defVar("A", "Logical");
     theorem.defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
     theorem.defVar("B", "Logical");
-    theorem.addAxiom("\\Rightarrow (A, B)");
-    theorem.HierarchyItem::print(cout);
+    theorem.addAxiom("\\forall C\\typeof Logical \\Rightarrow (A, B)");
+    theorem.doSpec("5", "5.1");
+    theorem.doMP("(2)", "(6)");
+    theorem.printB(cout);
 
-    theorem.doMP("(2)", "(5)");
 
     cout<<flush;
     cerr<<flush;
 
-    json j = theorem.index().to_json();
-    cerr << j.dump();
+    json j = theorem.toJson();
+    cout << j.dump(2);
 
     return 0;
 }

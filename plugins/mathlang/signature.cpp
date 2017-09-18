@@ -21,27 +21,24 @@ void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
                          const std::string& name, AbstrDef* where)
 {
     if (!isSomeType(name))
-    {
-        names.insert({name, type});
-        index.insert({name, where});
-    }
+        data.insert({name, {type, where}});
     else
         throw name_doubling(name);
 }
 
 bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const
 {
-    auto search = names.find(name);
-    return (search != names.end() && search->second == type);
+    auto search = data.find(name);
+    return (search != data.end() && search->second.first == type);
 }
 bool NameSpaceIndex::isSomeType(const std::string& name) const
-{ return (names.find(name) != names.end()); }
+{ return (data.find(name) != data.end()); }
 
 std::set<std::string> NameSpaceIndex::getNames(NameTy type) const
 {
     std::set<std::string> buf;
-    for (auto& n : names)
-        if (n.second == type)
+    for (auto& n : data)
+        if (n.second.first == type)
             buf.insert(n.first);
     return buf;
 }
@@ -49,19 +46,19 @@ std::set<std::string> NameSpaceIndex::getNames(NameTy type) const
 MathType NameSpaceIndex::getT(const std::string& name) const
 {
     if (isThatType(name, NameTy::MT))
-        return *dynamic_cast<DefType*>(index.at(name));
+        return *dynamic_cast<DefType*>(data.at(name).second);
     throw no_name(name);
 }
 Variable NameSpaceIndex::getV(const std::string& name) const
 {
     if (isThatType(name, NameTy::VAR))
-        return *dynamic_cast<DefVar*>(index.at(name));
+        return *dynamic_cast<DefVar*>(data.at(name).second);
     throw no_name(name);
 }
 Symbol NameSpaceIndex::getS(const std::string& name) const
 {
     if (isThatType(name, NameTy::SYM))
-        return *dynamic_cast<DefSym*>(index.at(name));
+        return *dynamic_cast<DefSym*>(data.at(name).second);
     throw no_name(name);
 }
 
@@ -152,7 +149,7 @@ void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
 void Section::doGen(const std::string& pToGen, const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 void Section::print(std::ostream& out) const
-{ out << "Раздел, название \"" << title << "\"." << std::endl; }
+{ out << "Раздел \"" << title << "\"." << std::endl; }
 void Section::printB(std::ostream& out) const
 {
     print(out);
@@ -310,26 +307,65 @@ InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
-json NameSpaceIndex::to_json() const
-{
-    json j;
-    j["names"] = names;
-//    j["index"] = index;
-    return j;
-}
-Serializable* NameSpaceIndex::from_json(const json& j)
-{
 
-}
-
-json Section::to_json() const
+json HierarchyItem::toJson() const
 {
     json temp;
-
-
+    for (const auto& s : subs)
+        temp.push_back(s->toJson());
     return temp;
 }
-Serializable* Section::from_json(const json& j)
+json Section::toJson() const
+{
+    json temp;
+    temp["ItemType"] = "Section";
+    temp["ItemData"] = {"title", title};
+    temp["ItemSubs"] = HierarchyItem::toJson();
+    return temp;
+}
+json DefType::toJson() const
+{
+    json temp;
+    temp["ItemType"] = "DefType";
+    temp["ItemData"] = {"name", getName()};
+    return temp;
+}
+json DefVar::toJson() const
+{
+    json temp;
+    temp["ItemType"] = "DefVar";
+    temp["ItemData"] = { {"name", getName()},
+                         {"type", getType().getName()} };
+    return temp;
+}
+json DefSym::toJson() const
+{
+    json temp;
+    auto symInfo = getSign();
+    std::vector<std::string> argT;
+    for (const auto& a : symInfo.first)
+        argT.push_back(a.getName());
+
+    temp["ItemType"] = "DefSym";
+    temp["ItemData"] = { {"name", getName()},
+                         {"argT", argT},
+                         {"retT", symInfo.second.getName()}};
+    return temp;
+}
+json Axiom::toJson() const
+{
+    json temp;
+    std::stringstream ss;
+    data->print(ss);
+    temp["ItemType"] = "Axiom";
+    temp["ItemData"] = {"axiom", ss.str()};
+    temp["ItemSubs"] = HierarchyItem::toJson();
+    return temp;
+}
+
+Serializable* HierarchyItem::fromJson(Section *parent, const json &j) { return nullptr; }
+Serializable* Section::fromJson(Section *parent, const json &j)
 {
 
+    return nullptr;
 }

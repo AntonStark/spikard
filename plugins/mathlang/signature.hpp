@@ -14,23 +14,14 @@
 
 #include "logic.hpp"
 
-using json = nlohmann::json;
-class Serializable
-{
-public:
-    virtual json to_json() const = 0;
-    virtual Serializable* from_json(const json& j) = 0;
-};
-
 class Section;
 class AbstrDef;
-class NameSpaceIndex : public virtual Serializable
+class NameSpaceIndex
 {
 public:
     enum class NameTy {SYM, VAR, MT};
 private:
-    std::map<std::string, NameTy> names;
-    std::map<std::string, AbstrDef*> index;
+    std::map<std::string, std::pair<NameTy, AbstrDef*> > data;
 
     class name_doubling;
     class no_name;
@@ -43,13 +34,17 @@ public:
     MathType getT(const std::string& name) const;
     Variable getV(const std::string& name) const;
     Symbol   getS(const std::string& name) const;
-
-    virtual json to_json() const override;
-    virtual Serializable* from_json(const json& j) override;
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
 class Section;
+using json = nlohmann::json;
+class Serializable
+{
+public:
+    virtual json toJson() const = 0;
+    virtual Serializable* fromJson(Section *parent, const json &j) = 0;
+};
 class HierarchyItem : public virtual Printable, public virtual Serializable
 // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
@@ -70,16 +65,8 @@ public:
 
     virtual void print(std::ostream& out) const override;
 
-    // fixme заглушка
-    virtual json to_json() const override
-    {
-        return json();
-    }
-
-    virtual Serializable* from_json(const json& j) override
-    {
-        return nullptr;
-    }
+    virtual json toJson() const override;
+    virtual Serializable* fromJson(Section *parent, const json &j) override;
 };
 
 class AbstrDef;
@@ -123,8 +110,8 @@ public:
     virtual void print(std::ostream& out) const override;
     void printB(std::ostream& out) const;
 
-    virtual json to_json() const override;
-    virtual Serializable* from_json(const json& j) override;
+    virtual json toJson() const override;
+    virtual Serializable* fromJson(Section *, const json &j) override;
 };
 
 class AbstrDef : public HierarchyItem
@@ -150,6 +137,7 @@ private:
 public:
     virtual ~DefType() {}
     virtual void print(std::ostream& out) const override;
+    json toJson() const override;
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -163,6 +151,7 @@ private:
 public:
     virtual ~DefVar() {}
     virtual void print(std::ostream& out) const override;
+    json toJson() const override;
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -177,6 +166,7 @@ private:
 public:
     virtual ~DefSym() {}
     virtual void print(std::ostream& out) const override;
+    json toJson() const override;
 };
 
 class Statement : public virtual Printable
@@ -204,6 +194,8 @@ public:
     virtual ~Axiom() {}
     virtual const Terms* get() const override { return data; }
     virtual void print(std::ostream& out) const override;
+
+    json toJson() const override;
 };
 
 class AbstrInf : public HierarchyItem, public Statement
