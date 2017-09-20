@@ -37,14 +37,16 @@ public:
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
-class Section;
+class HierarchyItem;
 using json = nlohmann::json;
 class Serializable
 {
 public:
     virtual json toJson() const = 0;
-    virtual Serializable* fromJson(Section *parent, const json &j) = 0;
+    static HierarchyItem* fromJson(Section *parent, const json &j)
+    { return nullptr; }
 };
+class Section;
 class HierarchyItem : public virtual Printable, public virtual Serializable
 // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
@@ -66,7 +68,7 @@ public:
     virtual void print(std::ostream& out) const override;
 
     virtual json toJson() const override;
-    virtual Serializable* fromJson(Section *parent, const json &j) override;
+    static HierarchyItem* fromJson(Section *parent, const json& j);
 };
 
 class AbstrDef;
@@ -111,7 +113,7 @@ public:
     void printB(std::ostream& out) const;
 
     virtual json toJson() const override;
-    virtual Serializable* fromJson(Section *, const json &j) override;
+    static HierarchyItem* fromJson(Section *, const json& j);
 };
 
 class AbstrDef : public HierarchyItem

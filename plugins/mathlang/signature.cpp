@@ -319,8 +319,8 @@ json Section::toJson() const
 {
     json temp;
     temp["ItemType"] = "Section";
-    temp["ItemData"] = {"title", title};
-    temp["ItemSubs"] = HierarchyItem::toJson();
+    temp["ItemData"] = { {"title", title},
+                         {"subs", HierarchyItem::toJson()} };
     return temp;
 }
 json DefType::toJson() const
@@ -358,14 +358,23 @@ json Axiom::toJson() const
     std::stringstream ss;
     data->print(ss);
     temp["ItemType"] = "Axiom";
-    temp["ItemData"] = {"axiom", ss.str()};
-    temp["ItemSubs"] = HierarchyItem::toJson();
+    temp["ItemData"] = { {"axiom", ss.str()},
+                         {"subs", HierarchyItem::toJson()} };
     return temp;
 }
 
-Serializable* HierarchyItem::fromJson(Section *parent, const json &j) { return nullptr; }
-Serializable* Section::fromJson(Section *parent, const json &j)
+HierarchyItem* HierarchyItem::fromJson(Section *parent, const json& j)
 {
-
+    const std::string itemType = j.at("ItemType");
+    if (itemType == "Section")
+        parent->push(Section::fromJson(parent, j.at("ItemData")));
     return nullptr;
+}
+HierarchyItem* Section::fromJson(Section *parent, const json& j)
+{
+    auto section = new Section(parent, j.at("title"));
+    json subs = j.at("subs");
+    for (const auto& s : subs)
+        HierarchyItem::fromJson(section, s);
+    return section;
 }
