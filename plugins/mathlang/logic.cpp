@@ -69,6 +69,13 @@ void Term::print(std::ostream &out) const
     Symbol::print(out);
     ParenSymbol::print(out);
 }
+void Term::printQ(std::ostream& out) const
+{
+    Symbol::print(out);
+    auto var = dynamic_cast<const Variable*>(arg(1)); //по пострению arg(1) типа Variable*
+    out << var->getName() << "\\typeof " << var->getType().getName();
+    arg(2)->print(out);
+}
 
 
 class ParenSymbol::argN_argType_error : public std::invalid_argument

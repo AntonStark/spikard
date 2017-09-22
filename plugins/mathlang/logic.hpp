@@ -173,6 +173,7 @@ class Term : public Terms, public Symbol, public ParenSymbol
 {
 protected:
     void boundVar(Variable var);
+    void printQ(std::ostream& out = std::cout) const;
 public:
     typedef std::set<Variable> VarSet;
     VarSet free;
@@ -205,8 +206,9 @@ public:
     ForallTerm(const ForallTerm& one) : Term(one) {}
     virtual ForallTerm* clone() const override
     { return (new ForallTerm(*this)); }
-
     virtual ~ForallTerm() {}
+    virtual void print(std::ostream& out = std::cout) const override
+    { printQ(out); }
 };
 
 class ExistsTerm : virtual public Printable, public Term
@@ -218,8 +220,9 @@ public:
     ExistsTerm(const ExistsTerm& one) : Term(one) {}
     virtual ExistsTerm* clone() const override
     { return (new ExistsTerm(*this)); }
-
     virtual ~ExistsTerm() {}
+    virtual void print(std::ostream& out = std::cout) const override
+    { printQ(out); }
 };
 
 #endif //TEST_BUILD_LOGIC_HPP
