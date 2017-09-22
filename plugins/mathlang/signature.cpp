@@ -64,7 +64,11 @@ Symbol NameSpaceIndex::getS(const std::string& name) const
 
 
 HierarchyItem::HierarchyItem(Section* _parent)
-        : parent(_parent) { parent->push(this); }
+        : parent(_parent)
+{
+    if (parent)
+        parent->push(this);
+}
 HierarchyItem::~HierarchyItem()
 {
     for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
@@ -327,7 +331,7 @@ json DefType::toJson() const
 {
     json temp;
     temp["ItemType"] = "DefType";
-    temp["ItemData"] = {"name", getName()};
+    temp["ItemData"] = { {"name", getName()} };
     return temp;
 }
 json DefVar::toJson() const
@@ -358,23 +362,75 @@ json Axiom::toJson() const
     std::stringstream ss;
     data->print(ss);
     temp["ItemType"] = "Axiom";
-    temp["ItemData"] = { {"axiom", ss.str()},
-                         {"subs", HierarchyItem::toJson()} };
+    temp["ItemData"] = { {"axiom", ss.str()}/*,
+                         {"subs", HierarchyItem::toJson()}*/ };
+    return temp;
+}
+json AbstrInf::toJson() const
+{
+    json temp;
+    switch (type)
+    {
+        case InfTy::MP : { temp["ItemType"] = "InfMP"; break; }
+        case InfTy::GEN : { temp["ItemType"] = "InfGen"; break; }
+        case InfTy::SPEC : { temp["ItemType"] = "InfSpec"; break; }
+    }
+    temp["ItemData"] = { {"arg1", pathToStr(premises.at(0))},
+                         {"arg2", pathToStr(premises.at(1))} };
     return temp;
 }
 
-HierarchyItem* HierarchyItem::fromJson(Section *parent, const json& j)
+HierarchyItem* HierarchyItem::fromJson(const json& j, Section* parent)
 {
     const std::string itemType = j.at("ItemType");
     if (itemType == "Section")
-        parent->push(Section::fromJson(parent, j.at("ItemData")));
-    return nullptr;
+        return Section::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefType")
+        return DefType::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefVar")
+        return DefVar::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefSym")
+        return DefSym::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "Axiom")
+        return Axiom::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfMP")
+        return InfMP::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfSpec")
+        return InfSpec::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfGen")
+        return InfGen::fromJson(j.at("ItemData"), parent);
+    else
+        return nullptr;
 }
-HierarchyItem* Section::fromJson(Section *parent, const json& j)
+HierarchyItem* Section::fromJson(const json& j, Section* parent)
 {
     auto section = new Section(parent, j.at("title"));
     json subs = j.at("subs");
     for (const auto& s : subs)
-        HierarchyItem::fromJson(section, s);
+        HierarchyItem::fromJson(s, section);
     return section;
 }
+HierarchyItem* DefType::fromJson(const json& j, Section* parent)
+{ return new DefType(parent, j.at("name")); }
+HierarchyItem* DefVar::fromJson(const json& j, Section* parent)
+{
+    auto type = parent->index().getT(j.at("type"));
+    return new DefVar(parent, j.at("name"), type);
+}
+HierarchyItem* DefSym::fromJson(const json& j, Section* parent)
+{
+    std::list<MathType> argT;
+    auto index = parent->index();
+    for (const auto& t : j.at("argT"))
+        argT.push_back(index.getT(t));
+    MathType retT = parent->index().getT(j.at("retT"));
+    return new DefSym(parent, j.at("name"), argT, retT);
+}
+HierarchyItem* Axiom::fromJson(const json& j, Section* parent)
+{ return new Axiom(parent, j.at("axiom")); }
+HierarchyItem* InfMP::fromJson(const json& j, Section* parent)
+{ return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+HierarchyItem* InfSpec::fromJson(const json& j, Section* parent)
+{ return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+HierarchyItem* InfGen::fromJson(const json& j, Section* parent)
+{ return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }

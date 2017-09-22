@@ -44,12 +44,11 @@ int main(void)
     theorem.doMP("(2)", "(6)");
     theorem.printB(cout);
 
-
-    cout<<flush;
-    cerr<<flush;
-
     json j = theorem.toJson();
     cout << j.dump(2);
+    cout << endl << endl << flush;
+    HierarchyItem* rec = Section::fromJsonE(j);
+    dynamic_cast<Section*>(rec)->printB(cout);
 
     return 0;
 }

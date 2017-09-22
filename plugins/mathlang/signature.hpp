@@ -43,7 +43,7 @@ class Serializable
 {
 public:
     virtual json toJson() const = 0;
-    static HierarchyItem* fromJson(Section *parent, const json &j)
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr)
     { return nullptr; }
 };
 class Section;
@@ -66,9 +66,8 @@ public:
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 
     virtual void print(std::ostream& out) const override;
-
     virtual json toJson() const override;
-    static HierarchyItem* fromJson(Section *parent, const json& j);
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 class AbstrDef;
@@ -113,7 +112,9 @@ public:
     void printB(std::ostream& out) const;
 
     virtual json toJson() const override;
-    static HierarchyItem* fromJson(Section *, const json& j);
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+    static HierarchyItem* fromJsonE(const json& j)
+    { return fromJson(j.at("ItemData")); }
 };
 
 class AbstrDef : public HierarchyItem
@@ -140,6 +141,7 @@ public:
     virtual ~DefType() {}
     virtual void print(std::ostream& out) const override;
     json toJson() const override;
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -154,6 +156,7 @@ public:
     virtual ~DefVar() {}
     virtual void print(std::ostream& out) const override;
     json toJson() const override;
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -169,6 +172,7 @@ public:
     virtual ~DefSym() {}
     virtual void print(std::ostream& out) const override;
     json toJson() const override;
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 class Statement : public virtual Printable
@@ -198,6 +202,7 @@ public:
     virtual void print(std::ostream& out) const override;
 
     json toJson() const override;
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 class AbstrInf : public HierarchyItem, public Statement
@@ -207,7 +212,7 @@ public:
     enum class InfTy {MP, GEN, SPEC};
     class bad_inf;
 private:
-    std::set<Path> premises;
+    std::vector<Path> premises;
     InfTy type;
     
     AbstrInf(const AbstrInf&) = delete;
@@ -217,6 +222,7 @@ public:
             : HierarchyItem(closure), premises({pArg1, pArg2}), type(_type) {}
     virtual ~AbstrInf() {}
     virtual void print(std::ostream& out) const override;
+    virtual json toJson() const override;
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
@@ -231,6 +237,8 @@ private:
 public:
     virtual ~InfMP() {}
     virtual const Terms* get() const override { return data; }
+
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 Terms* specialization(const Terms* general, const Terms* t);
@@ -245,6 +253,8 @@ private:
 public:
     virtual ~InfSpec() {}
     virtual const Terms* get() const override { return data; }
+
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 Term*   generalization  (const Terms* toGen, const Terms* x);
@@ -259,6 +269,8 @@ private:
 public:
     virtual ~InfGen() {}
     virtual const Terms* get() const override { return data; }
+
+    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
 
 Path mkPath(std::string source);
