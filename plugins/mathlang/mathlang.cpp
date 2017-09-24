@@ -192,17 +192,50 @@ void MathlangPlugin::viewSection(vector<string> cmdArgs)
     current->printB(cout);
 }
 
+string userCheck(MathlangPlugin* _this)
+{
+    BaseModule* parent = _this->getParent();
+    while (BaseModule* p = parent->getParent())
+        parent = p;
+    Core* core;
+    if (!(core = dynamic_cast<Core*>(parent)))
+    {
+        cout << "Ошибка: сохранение не удалось по внутрненним причинам.";
+        return "";
+    }
+
+    string userName = core->user();
+    if (userName == "?")
+    {
+        cout << "Ошибка: сохранение и загрузка недоступны в анонимном режиме.";
+        return "";
+    }
+    return userName;
+}
 void MathlangPlugin::saveSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "сохранить_рассуждение",
-                 "<сохранить_рассуждение> - запись для последующего использования."))
+    if (funcInfo(cmdArgs, "сохранить",
+                 "<сохранить> - запись для последующего использования."))
         return;
+
+    string userName = userCheck(this);
+    if (userName.length() == 0)
+        return;
+
+    string fileName = userName + "/data/mathlang/section/" + current->getTitle();
+cerr << fileName;
+//    ofstream of(fileName);
+    ofstream of("../tmp/test.txt");
+//    ofstream of("test.txt"/*, std::ios::out | std::ios::trunc*/);
+    if (!of.is_open())
+        cout << "Ошибка: не удалось создать файл.";
+    of << "Проверка." << endl;
 }
 
 void MathlangPlugin::loadSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "загрузить_рассуждение",
-                 "<загрузить_рассуждение> - открыть ранее сохраненное."))
+    if (funcInfo(cmdArgs, "загрузить",
+                 "<загрузить> - открыть ранее сохраненное."))
         return;
 }
 

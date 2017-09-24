@@ -108,6 +108,7 @@ public:
     void doSpec (const std::string& pToSpec, const std::string& pToVar);
     void doGen  (const std::string& pToGen,  const std::string& pToVar);
 
+    std::string getTitle() const { return title; }
     virtual void print(std::ostream& out) const override;
     void printB(std::ostream& out) const;
 
