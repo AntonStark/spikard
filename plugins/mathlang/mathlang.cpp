@@ -12,8 +12,9 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Section storage;
+    Section* storage;
     Section* current;
+    void resetStorage(Section* _storage);
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
@@ -40,7 +41,7 @@ private:
     SharedObject* fabric;
 public:
     MathlangPlugin(BaseModule*, SharedObject*);
-    virtual ~MathlangPlugin() {}
+    virtual ~MathlangPlugin() { delete storage; }
     virtual void destroy() override
     { fabric->destroy(this); }
 
@@ -50,6 +51,13 @@ public:
     { (this->*methods[cmdName])(cmdArgs); }
     virtual void ifaceCfg() override;
 };
+
+void MathlangPlugin::resetStorage(Section* _storage)
+{
+    delete storage;
+    storage = _storage;
+    current = storage;
+}
 
 bool funcInfo(const vector<string>& cmdArgs, string cmd, string help)
 {
@@ -222,14 +230,11 @@ void MathlangPlugin::saveSection(vector<string> cmdArgs)
     if (userName.length() == 0)
         return;
 
-    string fileName = userName + "/data/mathlang/section/" + current->getTitle();
-cerr << fileName;
-//    ofstream of(fileName);
-    ofstream of("../tmp/test.txt");
-//    ofstream of("test.txt"/*, std::ios::out | std::ios::trunc*/);
-    if (!of.is_open())
+    string fileName = "/home/anton/development/spikard/users/" + userName + "/data/mathlang/section/" + current->getTitle();
+    ofstream osf(fileName);
+    if (!osf.is_open())
         cout << "Ошибка: не удалось создать файл.";
-    of << "Проверка." << endl;
+    osf << current->toJson().dump(2) << endl;
 }
 
 void MathlangPlugin::loadSection(vector<string> cmdArgs)
@@ -237,6 +242,26 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     if (funcInfo(cmdArgs, "загрузить",
                  "<загрузить> - открыть ранее сохраненное."))
         return;
+
+    if (cmdArgs.size() < 1)
+        return;
+
+    string userName = userCheck(this);
+    if (userName.length() == 0)
+        return;
+
+    string fileName = "/home/anton/development/spikard/users/" + userName + "/data/mathlang/section/" + cmdArgs[0];
+    ifstream isf(fileName);
+    if (!isf.is_open())
+        cout << "Ошибка: не удалось открыть файл.";
+
+    stringstream buf;
+    buf << isf.rdbuf();
+    json j = json::parse(buf.str());
+    HierarchyItem* read = Section::fromJsonE(j);
+    if (Section* s = dynamic_cast<Section*>(read))
+        resetStorage(s);
+    current->printB(cout);
 }
 
 void MathlangPlugin::deduceMP(vector<string> cmdArgs)
@@ -276,10 +301,11 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs)
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
-: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent), storage("Главный")
+: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent)
 {
     // Инициализация переменных здесь
-    current = &storage;
+    storage = new Section("Главный");
+    current = storage;
 
     methodsCfg();
     fabric = _fabric;

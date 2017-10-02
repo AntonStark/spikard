@@ -1,4 +1,5 @@
 #include <sstream>
+#include <fstream>
 #include "logic.hpp"
 #include "signature.hpp"
 #include "parser.hpp"
@@ -7,6 +8,15 @@
 using json = nlohmann::json;
 
 using namespace std;
+
+void testFN(string fileName)
+{
+    ofstream of(fileName);
+    if (!of.is_open())
+        cout << "Ошибка: не удалось создать файл \"" << fileName <<"\"." << endl;
+    else
+        cout << "Успех: \"" << fileName << "\"." << endl;
+}
 
 int main(void)
 {
@@ -23,6 +33,8 @@ int main(void)
     Variable x("x", real);
     Variable one("1", real);
 
+    //todo  1) показать_рассуждение -> показать
+    //todo  2) при обрыве работы происходит сохранение с именем autosave?
 
 
     /*Symbol gr({">", {real, real}, logical_mt});
@@ -48,7 +60,21 @@ int main(void)
     cout << j.dump(2);
     cout << endl << endl << flush;
     HierarchyItem* rec = Section::fromJsonE(j);
-    dynamic_cast<Section*>(rec)->printB(cout);
+//    dynamic_cast<Section*>(rec)->printB(cout);
+
+    cout << endl;
+   /* testFN("../tmp/test.txt");
+    testFN("test.txt");
+    testFN("./text.txt");*/
+    testFN("./tmp/text.txt");
+    testFN("tmp/text.txt");/*
+    testFN("/tmp/spikard/text.txt");
+    testFN("/tmp/text.txt");
+    testFN("~/development/spikard/text.txt");
+    testFN("/home/anton/development/spikard/text.txt");
+    testFN("/home/anton/development/text.txt");*/
+    testFN("/home/anton/development/spikard/ЭонТал/data/mathlang/section/test");
+
 
     return 0;
 }
