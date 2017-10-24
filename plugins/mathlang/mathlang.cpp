@@ -50,6 +50,7 @@ public:
     virtual void ask(string cmdName, vector<string> cmdArgs) override
     { (this->*methods[cmdName])(cmdArgs); }
     virtual void ifaceCfg() override;
+    stringstream &write(const INFO_TYPE &type) override;
 };
 
 void MathlangPlugin::resetStorage(Section* _storage)
@@ -356,6 +357,17 @@ void MathlangPlugin::ifaceCfg()
     }
     cout.rdbuf(backup);
     return;
+}
+
+stringstream& MathlangPlugin::write(const INFO_TYPE& type)
+{
+    // todo Написать Core* BaseModule::getRoot()
+    BaseModule* mod = this;
+    while (mod->getParent())
+        mod = mod->getParent();
+    Core* root = static_cast<Core*>(mod);
+
+    return root->write(type);
 }
 
 extern "C" BaseModule* create(BaseModule* _parent, SharedObject* _fabric)

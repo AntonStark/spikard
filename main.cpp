@@ -232,6 +232,9 @@ void reqHandler(map<int, Core*>& cores)
         cliRespond.setB(hear.str());
 
         FCGX_PutS("Content-type: text/html\r\n", request.out);
+        // Следующий заголовок для cross-domain request,
+        // для тестирования клиента с localhost
+        FCGX_PutS("Access-Control-Allow-Origin: *\r\n", request.out);
         FCGX_PutS("\r\n", request.out);
         FCGX_PutS(cliRespond.toStr().c_str(), request.out);
         FCGX_Finish_r(&request);

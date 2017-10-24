@@ -16,6 +16,8 @@
 #include <sstream>
 
 #include "InnerRequest.hpp"
+#include "json.hpp"
+using json = nlohmann::json;
 
 class exit_ex {};
 class no_fun_ex {};
@@ -41,6 +43,21 @@ struct ModuleInfo {
     ModuleInfo(std::string _name, std::string _ver, std::string _time) :
             name(_name), version(_ver), timeOfLastChange(_time) { }
 };
+
+// описывает типы информации в потоках вывода
+enum class INFO_TYPE {ANCL, TEXT, TEX_EXP};
+std::string toStr(const INFO_TYPE& infoType)
+{
+    switch (infoType)
+    {
+        case INFO_TYPE::ANCL :
+            return "ancillary";
+        case INFO_TYPE::TEXT :
+            return "text";
+        case INFO_TYPE ::TEX_EXP :
+            return "tex-expression";
+    }
+}
 
 class BaseModule {
 private:
@@ -87,6 +104,8 @@ public:
     void ifaceRefresh();
 
     virtual void ifaceCfg() = 0;
+
+    virtual std::stringstream& write(const INFO_TYPE&) = 0;
 };
 
 class SharedObject {
@@ -166,6 +185,9 @@ private:
     void noreload_init();
 
     std::map<std::string, SharedObject *> SO_inWork;
+
+    //словарь каналов вывода по типам информации
+    std::vector<std::pair<INFO_TYPE, std::stringstream> > outputs;
 public:
     Core();
 
@@ -179,6 +201,9 @@ public:
     void ask(std::string, std::vector<std::string>);
 
     void call(std::string, std::vector<std::string>);
+
+    std::stringstream& write(const INFO_TYPE&) override;
+    const json& collectOut();
 
     std::string user() const { return userName; }
 

@@ -186,6 +186,25 @@ void Core::call(string cmdName, vector<string> cmdArgs)
     return;
 }
 
+std::stringstream& Core::write(const INFO_TYPE& infoType)
+{
+    // fixme не уверен, что вызов ctor вотпрямтак зайдёт нормально
+    outputs.push_back({infoType, stringstream()});
+    return outputs.back().second;
+}
+
+const json& Core::collectOut()
+{
+    json temp;
+    for (const auto& e : outputs)
+    {
+        json::array_t entry = {toStr(e.first), e.second.str()};
+        temp.push_back(entry);
+    }
+    outputs.clear();
+    return temp;
+}
+
 /*****функционал_ядра*****************/
 /*void Core::logIn(vector<string> cmdArgs)
 {
@@ -516,6 +535,9 @@ void Core::plugIn(vector<string> cmdArgs)
         cout<<ex.what()<<endl;
     }
     ifaceRefresh();
+    // слипания заголовков не произойдет,
+    // т.к. новый вызов write порождает новую пару вывода
+    write(INFO_TYPE::ANCL) << "interface-update-required";
     throw add_handler("interface-update-required", "yes");
 //    return;
 }
