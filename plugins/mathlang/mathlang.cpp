@@ -15,6 +15,7 @@ private:
     Section* storage;
     Section* current;
     void resetStorage(Section* _storage);
+    string userCheck();
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
@@ -50,7 +51,7 @@ public:
     virtual void ask(string cmdName, vector<string> cmdArgs) override
     { (this->*methods[cmdName])(cmdArgs); }
     virtual void ifaceCfg() override;
-    stringstream &write(const INFO_TYPE &type) override;
+    virtual void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
 void MathlangPlugin::resetStorage(Section* _storage)
@@ -60,117 +61,106 @@ void MathlangPlugin::resetStorage(Section* _storage)
     current = storage;
 }
 
-bool funcInfo(const vector<string>& cmdArgs, string cmd, string help)
-{
-    if (cmdArgs.size() == 0)
-        return false;
-
-    if (cmdArgs[0] == "?")
-    {
-        cout << help << endl; return true;
-    }
-    else if (cmdArgs[0] == "*")
-    {
-        cout << cmd  << endl; return true;
-    }
-    else
-        return false;
+#define funcInfo(cmd, help) \
+{\
+    if (cmdArgs.size() > 0)\
+    {\
+        if (cmdArgs[0] == "?")\
+        {\
+	    write(INFO_TYPE::TXT, help); return;\
+        }\
+        else if (cmdArgs[0] == "*")\
+        {\
+	    cout << cmd << endl; return;\
+        }\
+    }\
 }
 //todo На стороне сервера: при подключении плагина <помощь> пополняется.
 void MathlangPlugin::addType(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "тип",
-                 "<тип [typeName]> - ввести тип typeName."))
-        return;
+    funcInfo("тип", "<тип [typeName]> - ввести тип typeName.")
 
     if (cmdArgs.size() < 1)
         return;
     try {
         current->defType(cmdArgs[0]);
         current->printB(cout);
+        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
     }
-    catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
+    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
 
 void MathlangPlugin::addSym(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "символ",
-             "<символ [symName] [argT]* [retT]> - ввести символ symName."))
-        return;
+    funcInfo("символ",
+             "<символ [symName] [argT]* [retT]> - ввести символ symName.")
 
     if (cmdArgs.size() < 2)
         return;
     list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
     try {
         current->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-        current->printB(cout);
+        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
     }
-    catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
+    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
 
 void MathlangPlugin::addVar(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "переменная",
-             "<переменная [varName] [varType]> - ввести переменную varName типа varType."))
-        return;
+    funcInfo("переменная",
+             "<переменная [varName] [varType]> - ввести переменную varName типа varType.")
 
     if (cmdArgs.size() < 2)
         return;
     try {
         current->defVar(cmdArgs[0], current->index().getT(cmdArgs[1]).getName());
-        current->printB(cout);
+        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
     }
-    catch (std::exception& e) { cout << "Ошибка: " << e.what() << endl; }
+    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
 
 void MathlangPlugin::addAxiom(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "пусть",
-             "<пусть [statement]> - ввести утверждение statement."))
-        return;
+    funcInfo("пусть", "<пусть [statement]> - ввести утверждение statement.")
 
     if (cmdArgs.size() < 1)
         return;
     current->addAxiom(cmdArgs[0]);
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 
 void MathlangPlugin::viewTypes(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "типы",
-             "<типы> - перечислить уже определённые типы."))
-        return;
+    funcInfo("типы", "<типы> - перечислить уже определённые типы.")
 
-    for (auto& b : current->index().getNames(NameTy::MT))
-        cout << b << endl;
+    write(INFO_TYPE::TXT, "Опеределены следующие типы:");
+    for (const auto& n : current->index().getNames(NameTy::MT))
+        write(INFO_TYPE::TXT, n);
 }
 
 void MathlangPlugin::viewSyms(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "символы",
-             "<символы> - перечислить уже определённые символы."))
-        return;
+    funcInfo("символы", "<символы> - перечислить уже определённые символы.")
 
-    for (auto& b : current->index().getNames(NameTy::SYM))
-        cout << b << endl;
+    write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
+    for (const auto& n : current->index().getNames(NameTy::SYM))
+        write(INFO_TYPE::TXT, n);
 }
 
 void MathlangPlugin::viewVars(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "переменные",
-             "<переменные> - перечислить уже определённые переменные."))
-        return;
+    funcInfo("переменные", "<переменные> - перечислить уже определённые переменные.")
 
-    for (auto& b : current->index().getNames(NameTy::VAR))
-        cout << b << endl;
+    write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
+    for (const auto& n : current->index().getNames(NameTy::VAR))
+        write(INFO_TYPE::TXT, n);
 }
 
 void MathlangPlugin::subSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "подраздел",
-                 "<подраздел [название(необязательно)]> - начать подраздел с данным названием."))
-        return;
+    funcInfo("подраздел",
+             "<подраздел [название(необязательно)]> - начать подраздел с данным названием.")
 
     if (cmdArgs.size() > 0)
         current->startSection(cmdArgs[0]);
@@ -180,9 +170,8 @@ void MathlangPlugin::subSection(vector<string> cmdArgs)
 
 void MathlangPlugin::gotoSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "перейти",
-                 "<перейти [PathToSection]> - перейти к Section с меткой PathToSection."))
-        return;
+    funcInfo("перейти",
+             "<перейти [PathToSection]> - перейти к Section с меткой PathToSection.")
 
     if (cmdArgs.size() < 1)
         return;
@@ -190,71 +179,70 @@ void MathlangPlugin::gotoSection(vector<string> cmdArgs)
     Section* target = current->getSub(cmdArgs[0]);
     if (target)
         current = target;
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 void MathlangPlugin::viewSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "показать_рассуждение",
-                 "<показать_рассуждение> - показать рассуждение целиком."))
-        return;
-    current->printB(cout);
+    funcInfo("показать_рассуждение",
+             "<показать_рассуждение> - показать рассуждение целиком.")
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
-string userCheck(MathlangPlugin* _this)
+string MathlangPlugin::userCheck()
 {
-    BaseModule* parent = _this->getParent();
+    BaseModule* parent = this->getParent();
     while (BaseModule* p = parent->getParent())
         parent = p;
     Core* core;
     if (!(core = dynamic_cast<Core*>(parent)))
     {
-        cout << "Ошибка: сохранение не удалось по внутрненним причинам.";
+        write(INFO_TYPE::TXT, "Ошибка: сохранение не удалось по внутрненним причинам.");
         return "";
     }
 
     string userName = core->user();
     if (userName == "?")
     {
-        cout << "Ошибка: сохранение и загрузка недоступны в анонимном режиме.";
+        write(INFO_TYPE::TXT, "Ошибка: сохранение и загрузка недоступны в анонимном режиме.");
         return "";
     }
     return userName;
 }
 void MathlangPlugin::saveSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "сохранить",
-                 "<сохранить> - запись для последующего использования."))
+    funcInfo("сохранить",
+                 "<сохранить> - запись для последующего использования.")
+
+    string userName = userCheck();
+    if (userName.empty())
         return;
 
-    string userName = userCheck(this);
-    if (userName.length() == 0)
-        return;
-
-    string fileName = "/home/anton/development/spikard/users/" + userName + "/data/mathlang/section/" + current->getTitle();
+    string fileName = "/home/anton/development/spikard/users/" + userName +
+            "/data/mathlang/section/" + current->getTitle();
     ofstream osf(fileName);
     if (!osf.is_open())
-        cout << "Ошибка: не удалось создать файл.";
+        write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
     osf << current->toJson().dump(2) << endl;
+    write(INFO_TYPE::TXT, "Сохранено.");
 }
 
 void MathlangPlugin::loadSection(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "загрузить",
-                 "<загрузить> - открыть ранее сохраненное."))
-        return;
+    funcInfo("загрузить", "<загрузить> - открыть ранее сохраненное.")
 
     if (cmdArgs.size() < 1)
         return;
 
-    string userName = userCheck(this);
+    string userName = userCheck();
     if (userName.length() == 0)
         return;
 
-    string fileName = "/home/anton/development/spikard/users/" + userName + "/data/mathlang/section/" + cmdArgs[0];
+    string fileName = "/home/anton/development/spikard/users/" + userName +
+            "/data/mathlang/section/" + cmdArgs[0];
     ifstream isf(fileName);
     if (!isf.is_open())
-        cout << "Ошибка: не удалось открыть файл.";
+        write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
 
     stringstream buf;
     buf << isf.rdbuf();
@@ -262,43 +250,40 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     HierarchyItem* read = Section::fromJsonE(j);
     if (Section* s = dynamic_cast<Section*>(read))
         resetStorage(s);
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "MP",
-             "<MP [PathPre] [PathImpl]> - применить правило вывода MP для Pre и Impl."))
-        return;
+    funcInfo("MP",
+             "<MP [PathPre] [PathImpl]> - применить правило вывода MP для Pre и Impl.")
 
     if (cmdArgs.size() < 2)
         return;
     current->doMP(cmdArgs[0], cmdArgs[1]);
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "spec",
-             "<spec [PathGen] [PathT]> - применить правило вывода Spec для Gen и T."))
-        return;
+    funcInfo("spec",
+             "<spec [PathGen] [PathT]> - применить правило вывода Spec для Gen и T.")
 
     if (cmdArgs.size() < 2)
         return;
     current->doSpec(cmdArgs[0], cmdArgs[1]);
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 void MathlangPlugin::deduceGen(vector<string> cmdArgs)
 {
-    if (funcInfo(cmdArgs, "gen",
-                 "<gen [PathToGen] [PathVar]> - применить правило вывода Gen для ToGen и Var."))
-        return;
+    funcInfo("gen",
+             "<gen [PathToGen] [PathVar]> - применить правило вывода Gen для ToGen и Var.")
 
     if (cmdArgs.size() < 2)
         return;
     current->doGen(cmdArgs[0], cmdArgs[1]);
-    current->printB(cout);
+    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
@@ -359,7 +344,7 @@ void MathlangPlugin::ifaceCfg()
     return;
 }
 
-stringstream& MathlangPlugin::write(const INFO_TYPE& type)
+void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess)
 {
     // todo Написать Core* BaseModule::getRoot()
     BaseModule* mod = this;
@@ -367,7 +352,7 @@ stringstream& MathlangPlugin::write(const INFO_TYPE& type)
         mod = mod->getParent();
     Core* root = static_cast<Core*>(mod);
 
-    return root->write(type);
+    return root->write(type, mess);
 }
 
 extern "C" BaseModule* create(BaseModule* _parent, SharedObject* _fabric)
