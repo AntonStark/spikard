@@ -19,52 +19,49 @@
 #include "fcgiapp.h"
 
 #include "core.hpp"
-#include "InnerRequest.hpp"
 
 using namespace std;
 
-mutex cores_mutex;
-
-class sock_ex : public exception
+class bad_req : public std::invalid_argument
 {
-private:
-    std::string mess;
 public:
-    sock_ex(const char *msg)
-        : exception(), mess(msg) {}
-    virtual const char* what() const noexcept
-    {
-        return mess.c_str();
-    }
-    virtual ~sock_ex() {}
+    bad_req(const std::string& what)
+            : std::invalid_argument("Неправильный запрос: " + what + ".") {}
 };
 
 void printHelloMsg();
 void parseComand(string, string&, vector<string>&);
+void reqHandler(FCGX_Request&);
+void FcgiToJson(FCGX_Stream*, json&);
 
-void reqHandler(map<int, Core*>&);
-
-void FcgiToInnerReq(FCGX_Stream*, InnerRequest&);
-
-int socketId;
+map<int, Core*> cores;
+mutex cores_mutex;
 
 int main() {
     printHelloMsg();
-    map<int, Core*> cores;
 
     int queueLen = 10;
+    int socketId;
     FCGX_Init();
     socketId = FCGX_OpenSocket("127.0.0.1:8000", queueLen);
     if (socketId < 0)
     {
         //ошибка при открытии сокета
+        cerr << "Не удаётся открыть сокет" << endl;
         return 1;
     }
 
-    thread workerTh(reqHandler, ref(cores));
+    FCGX_Request request;
+    if (FCGX_InitRequest(&request, socketId, 0) != 0)
+    {
+        //ошибка при инициализации структуры запроса
+        cerr << "Не удаётся инициализировать FCGX_Request" << endl;
+        return 1;
+    }
+
+    thread workerTh(reqHandler, ref(request));
 
     workerTh.join();
-
     return 0;
 }
 
@@ -137,19 +134,9 @@ void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
     return;
 }
 
-void reqHandler(map<int, Core*>& cores)
+void reqHandler(FCGX_Request& request)
 {
     int rc;
-    FCGX_Request request;
-
-    if (FCGX_InitRequest(&request, socketId, 0) != 0)
-    {
-        //ошибка при инициализации структуры запроса
-        cerr << "Не удаётся инициализировать FCGX_Request" << endl;
-        return;
-    }
-    cout << "FCGX_Request инициализирован" << endl;
-
     while (true)
     {
         rc = FCGX_Accept_r(&request);
@@ -161,32 +148,64 @@ void reqHandler(map<int, Core*>& cores)
         }
         cerr << "Принят запрос от id=";
 
-        InnerRequest cliRequest, cliRespond;
+        json req, reqMeta, reqData;
+        string userIdStr;
+        // пока неявно предполагается, что в массиве данных
+        // один элемент, а тип информации - text.
+        string reqStr;
         try
-        { FcgiToInnerReq(request.in, cliRequest); }
-        catch (bad_req_ex ex)
-        { cerr << "Неправильный запрос: " << ex.what() << "!;" << endl; continue; }
+        {
+            try
+            { FcgiToJson(request.in, req); }
+            catch (std::invalid_argument&)
+            { throw bad_req("запрос не является json-объектом"); }
 
-        Core *localCore;
-        string userIdStr = cliRequest.getH("user-id");
+            try
+            {
+                reqMeta = req.at("meta");
+                reqData = req.at("data");
+            }
+            catch (std::logic_error&)
+            { throw bad_req("запрос не соответствует формату "
+                                    "{\"meta\": ..., \"data\": ...}"); }
+
+            try { userIdStr = reqMeta.at("user-id"); }
+            catch (std::logic_error&)
+            { throw bad_req("нет заголовка \"user-id\""); }
+
+            try
+            {
+                json firstEntry = reqData.at(0);
+                reqStr = firstEntry.at("mess");
+            }
+            catch (std::logic_error&)
+            { throw bad_req("массив данных не соотвествует формату "
+                                    "[ {\"type\": ..., \"mess\": ...}, ... ]"); }
+        }
+        catch (bad_req& br)
+        {
+            cerr << br.what() << endl;
+            continue;
+        }
+
         int userId = atoi(userIdStr.c_str());
         cerr << userId << "; " << flush;
 
+        Core *localCore;
         if (userId == 0)
         {
             bad_id: ;
+            localCore = new Core();
             srand ((unsigned int)time(NULL));
             userId = rand() % 0xffffffff;
             {
                 unique_lock<mutex> lockerC(cores_mutex);
-                localCore = new Core();
                 //если такой userId уже занят, берём следующий
                 while (cores.find(userId) != cores.end())
                     ++userId;
                 cores[userId] = localCore;
             }
             stringstream t; t<<userId; userIdStr = t.str();
-            cliRespond.setH("user-id", userIdStr);
             cerr << "Присвоен id=" << userId << "; " << flush;
         }
         else    //уже есть user-id
@@ -201,15 +220,9 @@ void reqHandler(map<int, Core*>& cores)
                     goto bad_id;
                 }
                 localCore = cit->second;
-                cliRespond.setH("user-id",userIdStr);
             }
         }
-
-        string reqStr = cliRequest.getB();
-        stringstream hear;
-        streambuf *backup;
-        backup = cout.rdbuf();
-        cout.rdbuf(hear.rdbuf());
+        json respMeta = { {"user-id", userIdStr} };
 
         string cmdName;
         vector<string> cmdArgs;
@@ -221,29 +234,27 @@ void reqHandler(map<int, Core*>& cores)
 
         try
         { localCore->call(cmdName, cmdArgs); }
-        catch (no_fun_ex)
+        catch (no_fun_ex&)
         { cerr << "Обращение к несуществующей функции!;" << flush; }
-        catch (add_handler& hInfo)
-        { cliRespond.setH(hInfo.key, hInfo.value); }
         catch  (std::exception& e)
         { cerr << e.what() << endl; }
+        cerr << endl;
 
-        cout.rdbuf(backup);
-        cliRespond.setB(hear.str());
+        json respData = localCore->collectOut();
+        json resp = { {"meta", respMeta}, {"data", respData} };
 
         FCGX_PutS("Content-type: text/html\r\n", request.out);
         // Следующий заголовок для cross-domain request,
         // для тестирования клиента с localhost
         FCGX_PutS("Access-Control-Allow-Origin: *\r\n", request.out);
         FCGX_PutS("\r\n", request.out);
-        FCGX_PutS(cliRespond.toStr().c_str(), request.out);
+        FCGX_PutS(resp.dump().c_str(), request.out);
         FCGX_Finish_r(&request);
-        cout << endl << flush;
     }
     return;
 }
 
-void FcgiToInnerReq(FCGX_Stream* fin, InnerRequest& target)
+void FcgiToJson(FCGX_Stream* fin, json& j)
 {
     stringstream source;
     char line[1024];
@@ -251,6 +262,5 @@ void FcgiToInnerReq(FCGX_Stream* fin, InnerRequest& target)
         source << line;
     source << flush;
 
-    target.configure(source.str());
-    return;
+    j = json::parse(source);
 }

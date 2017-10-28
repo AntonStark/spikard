@@ -4,6 +4,21 @@ using namespace std;
 
 ModuleInfo coreInfo("Феникс", "Фи", "30.01.16");
 
+std::string toStr(const INFO_TYPE& infoType)
+{
+    switch (infoType)
+    {
+        case INFO_TYPE::ANCL :
+            return "ancillary";
+        case INFO_TYPE::TXT :
+            return "text";
+        case INFO_TYPE::TEX_EXP :
+            return "tex_expression";
+        case INFO_TYPE::ML_OBJ :
+            return "mathlang_object";
+    }
+}
+
 void BaseModule::ifaceRefresh()
 {
     if (getParent() == NULL) //запущена для ядра
@@ -186,19 +201,17 @@ void Core::call(string cmdName, vector<string> cmdArgs)
     return;
 }
 
-std::stringstream& Core::write(const INFO_TYPE& infoType)
+void Core::write(const INFO_TYPE& infoType, const std::string& mess)
 {
-    // fixme не уверен, что вызов ctor вотпрямтак зайдёт нормально
-    outputs.push_back({infoType, stringstream()});
-    return outputs.back().second;
+    outputs.push_back({infoType, mess});
 }
 
-const json& Core::collectOut()
+json Core::collectOut()
 {
     json temp;
     for (const auto& e : outputs)
     {
-        json::array_t entry = {toStr(e.first), e.second.str()};
+        json entry = { {"type", toStr(e.first)}, {"mess", e.second} };
         temp.push_back(entry);
     }
     outputs.clear();
@@ -206,132 +219,6 @@ const json& Core::collectOut()
 }
 
 /*****функционал_ядра*****************/
-/*void Core::logIn(vector<string> cmdArgs)
-{
-    if (cmdArgs.size() != 0)
-    {
-        if (cmdArgs[0] == "?") 
-        {
-            cout<<"<вход> - Представиться системе. \
-Также возможен ограниченный анонимный доступ."<<endl;
-            return;
-        }
-        else if (cmdArgs[0] == "*")
-        {
-            cout<<"вход"<<endl;
-            return;
-        }
-    }
-    
-    if (ifstream("users.list") == NULL)
-        ofstream("users.list");
-
-    cout<<"Введите имя пользователя.\n\tПустая строка для регистрации нового участника."<<endl;
-    string name, pass;
-    getline(cin, name);
-    unsigned long l;
-    while((l=name.find(' ')) != string::npos)
-        name.erase(l,1);
-
-    if (name.length() != 0) {
-        ifstream usersFile("users.list");
-        int found = 0;
-        string buf, login, password;
-        while (!usersFile.eof()) {
-            getline(usersFile, buf);
-            login = buf.substr(0, buf.find(' '));
-            if (login == name) {
-                found = 1;
-                password = buf.substr(buf.find(' ')+1);
-                break;
-            }
-        }
-        usersFile.close();
-        if (found == 0) {
-            cout<<"Пользователь с таким именем не найден."<<endl;
-            return;
-        }
-        cout<<"Введите пароль."<<endl;
-        
-        static struct termios stored_settings;
-        struct termios new_settings;
-        tcgetattr(0,&stored_settings);
-        new_settings = stored_settings;
-        new_settings.c_lflag &= (~ECHO);
-        tcsetattr(0,TCSANOW,&new_settings);
-        getline(cin, pass);
-        tcsetattr(0,TCSANOW,&stored_settings);
-        
-        string hash(32, (char)0);
-        for (int i = 0; i < 32; ++i) {
-            for (int j = 0; j < pass.length(); ++j)
-                hash[i] += (char)((int)pass[j]*3^(j+i));
-            hash[i] = (char)((unsigned int)hash[i]%95 + 32);
-        }
-        pass = "0";
-        
-        if (hash != password)
-            cout<<"Неверный пароль"<<endl;
-        else
-            userName = name;
-    }
-
-    else {
-        cout<<"Создание новой учётной записи."<<endl;
-        cout<<"Введите желаемое имя пользователя.\n\tПробелы игнорируются.\n\tПустая строка - отмена."<<endl;
-        while (true) {
-            getline(cin, name);
-            if (name.length() == 0)
-                return;
-            while((l=name.find(' ')) != string::npos)
-                name.erase(l,1);
-            int match = 0;
-            ifstream usersFile("users.list");
-            string buf, login;
-            while (!usersFile.eof()) {
-                getline(usersFile, buf);
-                login = buf.substr(0, buf.find(' '));
-                if (login == name) {
-                    match = 1;
-                    break;
-                }
-            }
-            usersFile.close();
-            if (match == 1) {
-                cout<<"Это имя занято. Попробуйте другое."<<endl;
-                continue;
-            }
-            else 
-                break;
-        }
-        cout<<"Задайте пароль."<<endl;
-
-        static struct termios stored_settings;
-        struct termios new_settings;
-        tcgetattr(0,&stored_settings);
-        new_settings = stored_settings;
-        new_settings.c_lflag &= (~ECHO);
-        tcsetattr(0,TCSANOW,&new_settings);
-        getline(cin, pass);
-        tcsetattr(0,TCSANOW,&stored_settings);
-        
-        string hash(32, (char)0);
-        for (int i = 0; i < 32; ++i) {
-            for (int j = 0; j < pass.length(); ++j)
-                hash[i] += (char)((int)pass[j]*3^(j+i));
-            hash[i] = (char)((unsigned int)hash[i]%95 + 32);
-        }
-        pass = "0";
-
-        string put = name + " " + hash;
-        cout<<"Добавление нового пользователя..."<<endl;
-        ofstream usersFile("users.list", ios_base::app);
-        usersFile<<put<<endl;
-        usersFile.close();
-    }
-    return;
-}*/
-
 int getUserHashByName(string& name, string& hash)
 {
     int match = 0;
@@ -368,8 +255,8 @@ void Core::logIn(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?")
         {
-            cout<<"<вход> - Представиться системе. \
-Также возможен ограниченный анонимный доступ."<<endl;
+            write(INFO_TYPE::TXT, "<вход> - Представиться системе. \
+Также возможен ограниченный анонимный доступ.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -384,21 +271,22 @@ void Core::logIn(vector<string> cmdArgs)
         //Запрос имени пользователя
         case 0:
         {
-            cout << user() << flush;
+            write(INFO_TYPE::ANCL, user());
             return;
         }
         //Проверка существования данного имени пользователя
         case 1:
         {
             int found = getUserHashByName(cmdArgs[0]);
+            stringstream ss; ss << found;
 
-            cout << found << flush;
+            write(INFO_TYPE::ANCL, ss.str());
             return;
         }
         //Что-то ни то ни сё
         case 2:
         {
-            cout << -1 << ':' << "Неверный формат данных для входа." << flush;
+            write(INFO_TYPE::ANCL, "-1:Неверный формат данных для входа.");
             return;
         }
         //Регистрация или вход (гарантированно >=3 аргументов)
@@ -406,7 +294,7 @@ void Core::logIn(vector<string> cmdArgs)
         {
             if (!(cmdArgs[0] == "0" || cmdArgs[0] == "1"))
             {
-                cout << -1 << ':' << "Неверный формат данных для входа." << flush;
+                write(INFO_TYPE::ANCL, "-1:Неверный формат данных для входа.");
                 return;
             }
             //Вход
@@ -416,20 +304,20 @@ void Core::logIn(vector<string> cmdArgs)
                 int found = getUserHashByName(cmdArgs[1], hashFormBase);
                 if (found == 0)
                 {
-                    cout << -1 << ':' << "Пользователь с таким именем не найден." << flush;
+                    write(INFO_TYPE::ANCL, "-1:Пользователь с таким именем не найден.");
                     return;
                 }
                 else
                 {
                     if (cmdArgs[2] != hashFormBase)
                     {
-                        cout << -1 << ':' << "Неверный пароль." << flush;
+                        write(INFO_TYPE::ANCL, "-1:Неверный пароль.");
                         return;
                     }
                     else
                     {
                         userName = cmdArgs[1];
-                        cout << 0 << ':' << "Вход выполнен." << flush;
+                        write(INFO_TYPE::ANCL, "0:Вход выполнен.");
                         return;
                     }
                 }
@@ -440,14 +328,14 @@ void Core::logIn(vector<string> cmdArgs)
                 int found = getUserHashByName(cmdArgs[1]);
                 if (found == 1)
                 {
-                    cout << -1 << ':' << "Пользователь с таким именем уже сществует." << flush;
+                    write(INFO_TYPE::ANCL, "-1:Пользователь с таким именем уже сществует.");
                     return;
                 }
                 else
                 {
                     addUserAcc(cmdArgs[1], cmdArgs[2]);
                     userName = cmdArgs[1];
-                    cout << 0 << ':' << "Регистрация успешна." << flush;
+                    write(INFO_TYPE::ANCL, "0:Регистрация успешна.");
                     return;
                 }
             }
@@ -461,7 +349,7 @@ void Core::logOut(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?") 
         {
-            cout<<"<выход> - Вернуться к анонимности."<<endl;
+            write(INFO_TYPE::TXT, "<выход> - Вернуться к анонимности.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -481,7 +369,7 @@ void Core::end(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?") 
         {
-            cout<<"<конец> - Завершение работы программы."<<endl;
+            write(INFO_TYPE::TXT, "<конец> - Завершение работы программы.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -502,8 +390,8 @@ void Core::plugIn(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?") 
         {
-            cout<<"<подключить [список имён]> - \
-Загрузить модули с именами из списка."<<endl;
+            write(INFO_TYPE::TXT, "<подключить [список имён]> - \
+Загрузить модули с именами из списка.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -515,7 +403,7 @@ void Core::plugIn(vector<string> cmdArgs)
     
     if (cmdArgs.size() == 0)
     {
-        cout<<"Пропущено имя плагина."<<endl;
+        write(INFO_TYPE::TXT, "Пропущено имя плагина.");
         return;
     }
     
@@ -531,15 +419,14 @@ void Core::plugIn(vector<string> cmdArgs)
     }
     catch (sh_obj_err ex)
     {
-        cout<<"Возникла ошибка при попытке подключения плагина "<<pluginFullName<<':'<<endl;
-        cout<<ex.what()<<endl;
+        write(INFO_TYPE::TXT, "Возникла ошибка при попытке подключения плагина " +
+                pluginFullName + ":\n" + ex.what() + "\n");
     }
     ifaceRefresh();
     // слипания заголовков не произойдет,
     // т.к. новый вызов write порождает новую пару вывода
-    write(INFO_TYPE::ANCL) << "interface-update-required";
-    throw add_handler("interface-update-required", "yes");
-//    return;
+    getInterface({});
+    return;
 }
 
 void Core::plugOut(vector<string> cmdArgs)
@@ -548,8 +435,8 @@ void Core::plugOut(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?") 
         {
-            cout<<"<отключить [список имён]> - \
-Выгрузить модули с именами из списка."<<endl;
+            write(INFO_TYPE::TXT, "<отключить [список имён]> - \
+Выгрузить модули с именами из списка.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -566,8 +453,8 @@ void Core::plugOut(vector<string> cmdArgs)
         SO_inWork.erase(it);
     }
     ifaceRefresh();
-    throw add_handler("interface-update-required", "yes");
-//    return;
+    getInterface({});
+    return;
 }
 
 void Core::getInterface(std::vector<std::string> cmdArgs)
@@ -576,8 +463,8 @@ void Core::getInterface(std::vector<std::string> cmdArgs)
     {
         if (cmdArgs[0] == "?")
         {
-            cout << "<getInterface> - \
-Служебная команда для запроса словаря доступных вызовов."<<endl;
+            write(INFO_TYPE::TXT, "<getInterface> - \
+Служебная команда для запроса словаря доступных вызовов.");
             return;
         }
         else if (cmdArgs[0] == "*")
@@ -588,26 +475,22 @@ void Core::getInterface(std::vector<std::string> cmdArgs)
     }
 
     map<string, string> iFace = coreIface.getIface();
-    auto ifit = iFace.begin();
-    while (ifit != iFace.end())
-    {
-        cout << ifit->first << ':' << ifit->second << endl;
-        ++ifit;
-    }
+    json j = {"interface", iFace};
+    write(INFO_TYPE::ANCL, j.dump());
 }
 
 void Core::printListOfComands()
 {
-    cout<<"Список доступных команд:"<<endl;
-    cout<<"<вход>\n\t- Представиться системе."<<endl;
-    cout<<"\tТакже возможен ограниченный анонимный доступ."<<endl;
-    cout<<"<выход>\n\t- Вернуться к анонимности."<<endl;
-    cout<<"<запись>\n\t- Сделать запись в личном дневнике."<<endl;
-    cout<<"<конец>\n\t- Завершение работы программы."<<endl;
-    cout<<"<отключить [список имён]>\n\t- Выгрузить модули из списка."<<endl;
-    cout<<"<подключить [список имён]>\n\t- Чтобы загрузить модули из списка,\n\tдоступно автодополнение."<<endl;
-    cout<<"<помощь [имя команды]>\n\t- Вывод справки о команде."<<endl;
-    cout<<"<править [имя модуля]>\n\t- Для изменения модуля (в том числе подключенного)."<<endl;
+    write(INFO_TYPE::TXT, "Список доступных команд:\n\
+<вход>\n\t- Представиться системе.\n\
+\tТакже возможен ограниченный анонимный доступ.\n\
+<выход>\n\t- Вернуться к анонимности.\n\
+<запись>\n\t- Сделать запись в личном дневнике.\n\
+<конец>\n\t- Завершение работы программы.\n\
+<отключить [список имён]>\n\t- Выгрузить модули из списка.\n\
+<подключить [список имён]>\n\t- Чтобы загрузить модули из списка,\n\tдоступно автодополнение.\n\
+<помощь [имя команды]>\n\t- Вывод справки о команде.\n\
+<править [имя модуля]>\n\t- Для изменения модуля (в том числе подключенного).\n");
     return;
 }
 
@@ -617,8 +500,8 @@ void Core::getMan(vector<string> cmdArgs)
     {
         if (cmdArgs[0] == "?") 
         {
-            cout<<"<помощь [команда/модуль]> - \
-Вывод справки о команде/модуле."<<endl;
+            write(INFO_TYPE::TXT, "<помощь [команда/модуль]> - \
+Вывод справки о команде/модуле.");
             return;
         }
         else if (cmdArgs[0] == "*")
