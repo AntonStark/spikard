@@ -16,6 +16,7 @@ private:
     Section* current;
     void resetStorage(Section* _storage);
     string userCheck();
+    void printIncr(Section* source);
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
@@ -76,6 +77,13 @@ void MathlangPlugin::resetStorage(Section* _storage)
     }\
 }
 //todo На стороне сервера: при подключении плагина <помощь> пополняется.
+void MathlangPlugin::printIncr(Section* source)
+{
+    std::list<std::string> buf;
+    source->printMlObjIncr(buf);
+    for (const auto& l : buf)
+        write(INFO_TYPE::ML_OBJ, l);
+}
 void MathlangPlugin::addType(vector<string> cmdArgs)
 {
     funcInfo("тип", "<тип [typeName]> - ввести тип typeName.")
@@ -84,8 +92,7 @@ void MathlangPlugin::addType(vector<string> cmdArgs)
         return;
     try {
         current->defType(cmdArgs[0]);
-        current->printB(cout);
-        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+        printIncr(current);
     }
     catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
@@ -100,7 +107,7 @@ void MathlangPlugin::addSym(vector<string> cmdArgs)
     list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
     try {
         current->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+        printIncr(current);
     }
     catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
@@ -114,7 +121,7 @@ void MathlangPlugin::addVar(vector<string> cmdArgs)
         return;
     try {
         current->defVar(cmdArgs[0], current->index().getT(cmdArgs[1]).getName());
-        write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+        printIncr(current);
     }
     catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
 }
@@ -126,7 +133,7 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs)
     if (cmdArgs.size() < 1)
         return;
     current->addAxiom(cmdArgs[0]);
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 
@@ -165,7 +172,7 @@ void MathlangPlugin::subSection(vector<string> cmdArgs)
     if (cmdArgs.size() > 0)
         current->startSection(cmdArgs[0]);
     else
-        current->startSection("");
+        current->startSection();
 }
 
 void MathlangPlugin::gotoSection(vector<string> cmdArgs)
@@ -179,14 +186,14 @@ void MathlangPlugin::gotoSection(vector<string> cmdArgs)
     Section* target = current->getSub(cmdArgs[0]);
     if (target)
         current = target;
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 void MathlangPlugin::viewSection(vector<string> cmdArgs)
 {
     funcInfo("показать_рассуждение",
              "<показать_рассуждение> - показать рассуждение целиком.")
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 string MathlangPlugin::userCheck()
@@ -250,7 +257,7 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     HierarchyItem* read = Section::fromJsonE(j);
     if (Section* s = dynamic_cast<Section*>(read))
         resetStorage(s);
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 void MathlangPlugin::deduceMP(vector<string> cmdArgs)
@@ -261,7 +268,7 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs)
     if (cmdArgs.size() < 2)
         return;
     current->doMP(cmdArgs[0], cmdArgs[1]);
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
@@ -272,7 +279,7 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
     if (cmdArgs.size() < 2)
         return;
     current->doSpec(cmdArgs[0], cmdArgs[1]);
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 void MathlangPlugin::deduceGen(vector<string> cmdArgs)
@@ -283,7 +290,7 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs)
     if (cmdArgs.size() < 2)
         return;
     current->doGen(cmdArgs[0], cmdArgs[1]);
-    write(INFO_TYPE::ML_OBJ, current->toJson().dump());
+    printIncr(current);
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)

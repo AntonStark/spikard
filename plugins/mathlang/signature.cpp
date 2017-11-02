@@ -63,9 +63,16 @@ Symbol NameSpaceIndex::getS(const std::string& name) const
 }
 
 
+void HierarchyItem::push(HierarchyItem* sub)
+{
+    subs.push_back(sub);
+    if (!newInfo.first)
+        newInfo = {true, std::prev(subs.end())};
+}
 HierarchyItem::HierarchyItem(Section* _parent)
         : parent(_parent)
 {
+    newInfo.first = false;
     if (parent)
         parent->push(this);
 }
@@ -74,7 +81,7 @@ HierarchyItem::~HierarchyItem()
     for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
         delete s;           // они должны создаваться в куче
 }
-HierarchyItem* HierarchyItem::get(Path path)
+HierarchyItem* HierarchyItem::getByPass(Path path)
 {
     /*HierarchyItem* root = this;
     while (root->getParent())
@@ -95,7 +102,7 @@ HierarchyItem* HierarchyItem::get(Path path)
 }
 const Terms* HierarchyItem::getTerms(Path pathToTerm)
 {
-    HierarchyItem* termItem = get(pathToTerm);
+    HierarchyItem* termItem = getByPass(pathToTerm);
     if (auto t = dynamic_cast<Statement*>(termItem))
         return t->get();
     else if (auto v = dynamic_cast<DefVar*>(termItem))
@@ -103,11 +110,33 @@ const Terms* HierarchyItem::getTerms(Path pathToTerm)
     else
         return nullptr;
 }
+size_t HierarchyItem::getNth() const
+{
+    if (!getParent())
+        return 0;
+    size_t n = 1;
+    for (const auto& s : getParent()->subs)
+        if (s == this)
+            return n;
+        else
+            ++n;
+    return 0;
+}
 void HierarchyItem::print(std::ostream& out) const
 {
     size_t n = 1;
     for (const auto& s : subs)
         out << '(' << n++ << "): " << *s << std::endl;
+}
+void HierarchyItem::printMlObjIncr(std::list<std::string>& toOut) const
+{
+    if (newInfo.first)
+    {
+        auto e = subs.end();
+        for (auto it = newInfo.second; it != e; ++it)
+                toOut.push_back((*it)->toMlObj().dump());
+    }
+    newInfo.first = false;
 }
 
 Section::Section(Section* _parent, const std::string& _title)
@@ -127,8 +156,11 @@ void Section::startSection(const std::string& title)
 { new Section(this, title); }
 Section* Section::getSub(const std::string& pToSub)
 {
-    if (auto s = dynamic_cast<Section*>( get(mkPath(pToSub)) ))
+    if (auto s = dynamic_cast<Section*>( getByPass(mkPath(pToSub)) ))
+    {
+        s->resetInfoFlag();
         return s;
+    }
     else
         return nullptr;
 }
@@ -243,6 +275,15 @@ public:
     bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
 };
 
+std::string AbstrInf::getTypeAsStr() const
+{
+    switch (type)
+    {
+        case InfTy::MP   : return "InfMP";
+        case InfTy::GEN  : return "InfGen";
+        case InfTy::SPEC : return "InfSpec";
+    }
+}
 void AbstrInf::print(std::ostream& out) const
 {
     out << "По ";
@@ -310,6 +351,69 @@ InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
+
+struct MlObj
+{
+    std::string mlType;
+    size_t label;
+    std::string body;
+    std::vector<Path> premises;
+
+    MlObj(std::string _mlType, size_t _label,
+          std::string _body, std::vector<Path> _premises = {}) :
+            mlType(_mlType), label(_label),
+            body(_body), premises(_premises) {}
+
+    json toJson()
+    {
+        return json({ {"mlType", mlType},
+                      {"label", {label}},
+                      {"body", body},
+                      {"premises", premises} });
+    }
+};
+json Section::toMlObj() const
+{ return MlObj("section", 0, getTitle()).toJson(); }
+json DefType::toMlObj() const
+{ return MlObj("def_type", getNth(), getName()).toJson(); }
+json DefVar::toMlObj() const
+{
+    std::stringstream body;
+    body << getName() << "\\in" << getType().getName();
+    return MlObj("def_var", getNth(), body.str()).toJson();
+}
+json DefSym::toMlObj() const
+{
+    std::stringstream out;
+    out << getName() << " : ";
+    auto argTypes = getSign().first;
+    if (argTypes.size() > 0)
+    {
+        out << argTypes.front().getName();
+        auto e = argTypes.end();
+        for (auto it = next(argTypes.begin()); it != e; ++it)
+            out << " x " << it->getName();
+    }
+    out << " -> " << getType().getName();
+    return MlObj("def_sym", getNth(), out.str()).toJson();
+}
+json Axiom::toMlObj() const
+{
+    std::stringstream ax; ax << *data;
+    return MlObj("axiom", getNth(), ax.str()).toJson();
+}
+json AbstrInf::toMlObj() const
+{
+    std::string infType;
+    switch (type)
+    {
+        case InfTy::MP   : { infType = "inf_mp";  break; }
+        case InfTy::GEN  : { infType = "inf_gen"; break; }
+        case InfTy::SPEC : { infType = "inf_spec";break; }
+    }
+    std::stringstream inf; inf << *get();
+    return MlObj(infType, getNth(), inf.str(), premises).toJson();
+}
 
 
 json HierarchyItem::toJson() const

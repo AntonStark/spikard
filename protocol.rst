@@ -7,7 +7,7 @@
         - обязательный заголовок "user-id" - идентификатор сессии.
 Второй ключ "data", значение - массив объектов с ключами "type" и "mess".
     Эти объекты содержат тип информации и собственно информацию.
-        - мыслимые типы на данный момент: ancillary, text, tex-expression, mathlang-object.
+        - мыслимые типы на данный момент: ancillary, text, tex_expression, mathlang_object.
 {
     "meta": {
         "key": "value",

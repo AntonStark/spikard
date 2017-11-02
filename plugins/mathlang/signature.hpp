@@ -42,6 +42,7 @@ using json = nlohmann::json;
 class Serializable
 {
 public:
+    virtual json toMlObj() const = 0;
     virtual json toJson() const = 0;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr)
     { return nullptr; }
@@ -53,19 +54,27 @@ class HierarchyItem : public virtual Printable, public virtual Serializable
 private:
     Section* parent;
     std::list<HierarchyItem*> subs;
-    void push(HierarchyItem* sub) { subs.push_back(sub); }
+    mutable std::pair<bool, std::list<HierarchyItem*>::iterator> newInfo;
+    void push(HierarchyItem* sub);
 protected:
     HierarchyItem(Section* _parent);
     Section* getParent() const { return parent; }
-    HierarchyItem* get(Path path);
+    HierarchyItem* getByPass(Path path);
+    void resetInfoFlag() { newInfo = {true, subs.begin()}; }
 public:
-    HierarchyItem() : parent(nullptr) {}
+    HierarchyItem() : parent(nullptr), newInfo({false, subs.end()}) {}
     virtual ~HierarchyItem();
     const Terms* getTerms(Path pathToTerm);
+    size_t getNth() const;
     HierarchyItem(const HierarchyItem&) = delete;
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 
     virtual void print(std::ostream& out) const override;
+    // У следующей функции такой странный дизайн, потому что хочется отдавать
+    // MlObj для каждой конструкции новым сообщением (вызов write(InfoType, string)
+    // А здесь до функционала плагина не добравться, в то же время нельзя пускать
+    // плагин до внутренного устройства класса.
+    void printMlObjIncr(std::list<std::string>& toOut) const;
     virtual json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -112,6 +121,7 @@ public:
     virtual void print(std::ostream& out) const override;
     void printB(std::ostream& out) const;
 
+    virtual json toMlObj() const override;
     virtual json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
     static HierarchyItem* fromJsonE(const json& j)
@@ -141,6 +151,7 @@ private:
 public:
     virtual ~DefType() {}
     virtual void print(std::ostream& out) const override;
+    virtual json toMlObj() const override;
     json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -156,6 +167,7 @@ private:
 public:
     virtual ~DefVar() {}
     virtual void print(std::ostream& out) const override;
+    virtual json toMlObj() const override;
     json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -172,6 +184,7 @@ private:
 public:
     virtual ~DefSym() {}
     virtual void print(std::ostream& out) const override;
+    virtual json toMlObj() const override;
     json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -202,6 +215,7 @@ public:
     virtual const Terms* get() const override { return data; }
     virtual void print(std::ostream& out) const override;
 
+    virtual json toMlObj() const override;
     json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -222,7 +236,9 @@ public:
     AbstrInf(Section* closure, InfTy _type, Path pArg1, Path pArg2)
             : HierarchyItem(closure), premises({pArg1, pArg2}), type(_type) {}
     virtual ~AbstrInf() {}
+    std::string getTypeAsStr() const;
     virtual void print(std::ostream& out) const override;
+    virtual json toMlObj() const override;
     virtual json toJson() const override;
 };
 
