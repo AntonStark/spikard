@@ -225,11 +225,14 @@ void MathlangPlugin::saveSection(vector<string> cmdArgs)
     if (userName.empty())
         return;
 
-    string fileName = "/home/anton/development/spikard/users/" + userName +
+    string fileName = "data/users/" + userName +
             "/data/mathlang/section/" + current->getTitle();
     ofstream osf(fileName);
     if (!osf.is_open())
+    {
         write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
+        return;
+    }
     osf << current->toJson().dump(2) << endl;
     write(INFO_TYPE::TXT, "Сохранено.");
 }
@@ -245,11 +248,14 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     if (userName.length() == 0)
         return;
 
-    string fileName = "/home/anton/development/spikard/users/" + userName +
+    string fileName = "data/users/" + userName +
             "/data/mathlang/section/" + cmdArgs[0];
     ifstream isf(fileName);
     if (!isf.is_open())
+    {
         write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
+        return;
+    }
 
     stringstream buf;
     buf << isf.rdbuf();

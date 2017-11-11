@@ -222,7 +222,7 @@ json Core::collectOut()
 int getUserHashByName(string& name, string& hash)
 {
     int match = 0;
-    ifstream usersFile("users.list");
+    ifstream usersFile("data/users.list");
     string buf, login;
     while (!usersFile.eof()) {
         getline(usersFile, buf);
@@ -244,8 +244,8 @@ int getUserHashByName(string& name)
 void addUserAcc(string name, string hash)
 {
     string put = name + " " + hash;
-    ofstream usersFile("users.list", ios_base::app);
-    usersFile << put << endl;
+    ofstream usersFile("data/users.list", ios_base::app);
+    usersFile << endl << put;
     usersFile.close();
     return;
 }
@@ -271,7 +271,8 @@ void Core::logIn(vector<string> cmdArgs)
         //Запрос имени пользователя
         case 0:
         {
-            write(INFO_TYPE::ANCL, user());
+            json u = { {"user-name", user()} };
+            write(INFO_TYPE::ANCL, u.dump());
             return;
         }
         //Проверка существования данного имени пользователя
@@ -286,7 +287,9 @@ void Core::logIn(vector<string> cmdArgs)
         //Что-то ни то ни сё
         case 2:
         {
-            write(INFO_TYPE::ANCL, "-1:Неверный формат данных для входа.");
+            json u = { {"login-error",
+                        "Неверный формат данных для входа."} };
+            write(INFO_TYPE::ANCL, u.dump());
             return;
         }
         //Регистрация или вход (гарантированно >=3 аргументов)
@@ -294,7 +297,9 @@ void Core::logIn(vector<string> cmdArgs)
         {
             if (!(cmdArgs[0] == "0" || cmdArgs[0] == "1"))
             {
-                write(INFO_TYPE::ANCL, "-1:Неверный формат данных для входа.");
+                json u = { {"login-error",
+                            "Неверный формат данных для входа."} };
+                write(INFO_TYPE::ANCL, u.dump());
                 return;
             }
             //Вход
@@ -304,20 +309,25 @@ void Core::logIn(vector<string> cmdArgs)
                 int found = getUserHashByName(cmdArgs[1], hashFormBase);
                 if (found == 0)
                 {
-                    write(INFO_TYPE::ANCL, "-1:Пользователь с таким именем не найден.");
+                    json u = { {"login-error",
+                                "Неверный логин или пароль."} };
+                    write(INFO_TYPE::ANCL, u.dump());
                     return;
                 }
                 else
                 {
                     if (cmdArgs[2] != hashFormBase)
                     {
-                        write(INFO_TYPE::ANCL, "-1:Неверный пароль.");
+                        json u = { {"login-error",
+                                    "Неверный логин или пароль."} };
+                        write(INFO_TYPE::ANCL, u.dump());
                         return;
                     }
                     else
                     {
                         userName = cmdArgs[1];
-                        write(INFO_TYPE::ANCL, "0:Вход выполнен.");
+                        json u = { {"user-name", user()} };
+                        write(INFO_TYPE::ANCL, u.dump());
                         return;
                     }
                 }
@@ -328,14 +338,17 @@ void Core::logIn(vector<string> cmdArgs)
                 int found = getUserHashByName(cmdArgs[1]);
                 if (found == 1)
                 {
-                    write(INFO_TYPE::ANCL, "-1:Пользователь с таким именем уже сществует.");
+                    json u = { {"login-error",
+                                "Пользователь с таким именем уже сществует."} };
+                    write(INFO_TYPE::ANCL, u.dump());
                     return;
                 }
                 else
                 {
                     addUserAcc(cmdArgs[1], cmdArgs[2]);
                     userName = cmdArgs[1];
-                    write(INFO_TYPE::ANCL, "0:Регистрация успешна.");
+                    json u = { {"user-name", user()} };
+                    write(INFO_TYPE::ANCL, u.dump());
                     return;
                 }
             }
@@ -360,6 +373,8 @@ void Core::logOut(vector<string> cmdArgs)
     }
     
     userName = "?";
+    json u = { {"user-name", user()} };
+    write(INFO_TYPE::ANCL, u.dump());
     return;
 }
 
