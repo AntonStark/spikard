@@ -379,7 +379,7 @@ json DefType::toMlObj() const
 json DefVar::toMlObj() const
 {
     std::stringstream body;
-    body << getName() << "\\in" << getType().getName();
+    body << getName() << "\\in " << getType().getName();
     return MlObj("def_var", getNth(), body.str()).toJson();
 }
 json DefSym::toMlObj() const
@@ -392,9 +392,9 @@ json DefSym::toMlObj() const
         out << argTypes.front().getName();
         auto e = argTypes.end();
         for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << " x " << it->getName();
+            out << "\\times " << it->getName();
     }
-    out << " -> " << getType().getName();
+    out << "\\rightarrow " << getType().getName();
     return MlObj("def_sym", getNth(), out.str()).toJson();
 }
 json Axiom::toMlObj() const

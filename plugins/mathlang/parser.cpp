@@ -57,16 +57,16 @@ MathType parseType(const NameSpaceIndex& names, const std::string& source, unsig
 void Lexer::registerVar(std::string& source, unsigned indent)
 {
     unsigned nameLen = 1;
-    while (!matchIndented(source, indent+nameLen, "\\typeof "))
+    while (!matchIndented(source, indent+nameLen, "\\in "))
         if (indent+nameLen == source.length())
-            throw std::invalid_argument("Отсутствует \"\\\\typeof \" - неверный формат.\n");
+            throw std::invalid_argument("Отсутствует \"\\\\in \" - неверный формат.\n");
         else
             ++nameLen;
     std::string name = source.substr(indent, nameLen);
     unsigned typeNameLen;
-    MathType type = parseType(where->index(), source.substr(indent + nameLen + 8), typeNameLen);
+    MathType type = parseType(where->index(), source.substr(indent + nameLen + 4), typeNameLen);
     where->defVar(name, type.getName());
-    source.erase(indent + nameLen, 8+typeNameLen);
+    source.erase(indent + nameLen, 4+typeNameLen);
 }
 void Lexer::registerVars(std::string& source)
 {
