@@ -181,8 +181,8 @@ void Section::doGen(const std::string& pToGen, const std::string& pToVar)
 
 void Section::printB(std::ostream& out) const
 {
-    print(out);
-    HierarchyItem::print(out);
+    toString();
+    HierarchyItem::toString();
 }
 
 
@@ -365,51 +365,60 @@ HierarchyItem* InfGen::fromJson(const json& j, Section* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
 
 
-void HierarchyItem::print(std::ostream& out) const
+std::string HierarchyItem::toString() const
 {
     size_t n = 1;
+    std::stringstream buf;
     for (const auto& s : subs)
-        out << '(' << n++ << "): " << *s << std::endl;
+        buf << '(' << n++ << "): " << s->toString() << std::endl;
+    return buf.str();
 }
-void Section::print(std::ostream& out) const
-{ out << "Раздел \"" << title << "\"." << std::endl; }
-void DefType::print(std::ostream& out) const
-{ out << "Объявлен тип " << getName() << "."; }
-void DefVar::print(std::ostream& out) const
-{ out << "Добавлена переменная " << getName() << " типа " << getType().getName() << "."; }
-void DefSym::print(std::ostream& out) const
+std::string Section::toString() const
+{ return ("Раздел \"" + getTitle() + "\".\n"); }
+std::string DefType::toString() const
+{ return ("Объявлен тип " + getName() + "."); }
+std::string DefVar::toString() const
+{ return ("Добавлена переменная " + getName() +
+            " типа " + getType().getName() + "."); }
+std::string DefSym::toString() const
 {
-    out << "Введен символ " << getName() << " : ";
+    std::stringstream buf;
+    buf << "Введен символ " << getName() << " : ";
     auto argTypes = getSign().first;
     if (!argTypes.empty())
     {
-        out << argTypes.front().getName();
+        buf << argTypes.front().getName();
         auto e = argTypes.end();
         for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << " x " << it->getName();
+            buf << " x " << it->getName();
     }
-    out << " -> " << getType().getName() << ".";
+    buf << " -> " << getType().getName() << ".";
+    return buf.str();
 }
-void Axiom::print(std::ostream& out) const
+std::string Axiom::toString() const
 {
-    out << "Пусть ";
-    Statement::print(out);
+    std::stringstream buf;
+    buf << "Пусть ";
+    get()->print(buf);
+    return buf.str();
 }
-void AbstrInf::print(std::ostream& out) const
+std::string AbstrInf::toString() const
 {
-    out << "По ";
+    std::stringstream buf;
+    buf << "По ";
     switch (type)
     {
         case InfTy::MP :
-            out << "MP ";   break;
+            buf << "MP ";   break;
         case InfTy::SPEC :
-            out << "Spec "; break;
+            buf << "Spec "; break;
         case InfTy::GEN :
-            out << "Gen ";  break;
+            buf << "Gen ";  break;
     }
-    out << "из " << pathToStr(*premises.begin()) << " и "
+    buf << "из " << pathToStr(*premises.begin()) << " и "
         << pathToStr(*std::next(premises.begin())) << " следует: ";
-    Statement::print(out);
+    get()->print(buf);
+    return buf.str();
 }
 
 

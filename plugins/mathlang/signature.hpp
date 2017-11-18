@@ -70,14 +70,14 @@ public:
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 
-    virtual void print(std::ostream& out) const;
+    virtual std::string toString() const;
     virtual json toJson() const;
     virtual json toMlObj() const = 0;
 };
 
 class AbstrDef;
 class Axiom;
-class Section : public HierarchyItem, public virtual Printable
+class Section : public HierarchyItem
 // Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
 {
 private:
@@ -121,7 +121,7 @@ public:
     static HierarchyItem* fromJsonE(const json& j)
     { return fromJson(j.at("ItemData")); }
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
@@ -151,7 +151,7 @@ public:
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
@@ -169,7 +169,7 @@ public:
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
@@ -188,17 +188,15 @@ public:
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
 
-class Statement : public virtual Printable
+class Statement
 {
 public:
     virtual const Terms* get() const = 0;
-    void print(std::ostream& out) const override
-    { out << *get(); }
 };
 
 extern Term* parse(Axiom* where, std::string source);
@@ -220,7 +218,7 @@ public:
     const Terms* get() const override { return data; }
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
@@ -244,7 +242,7 @@ public:
 
     std::string getTypeAsStr() const;
 
-    void print(std::ostream& out) const override;
+    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;
 };
