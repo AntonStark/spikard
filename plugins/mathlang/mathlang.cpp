@@ -43,16 +43,15 @@ private:
     SharedObject* fabric;
 public:
     MathlangPlugin(BaseModule*, SharedObject*);
-    virtual ~MathlangPlugin() { delete storage; }
-    virtual void destroy() override
-    { fabric->destroy(this); }
+    ~MathlangPlugin() override { delete storage; }
+    void destroy() override { fabric->destroy(this); }
 
     // из-за того, что methods имеет вторым параметром указатель на функцию-член, его
     // нельзя вынести в BaseModule, а следовательно и ask(...)
-    virtual void ask(string cmdName, vector<string> cmdArgs) override
+    void ask(string cmdName, vector<string> cmdArgs) override
     { (this->*methods[cmdName])(cmdArgs); }
     virtual void ifaceCfg() override;
-    virtual void write(const INFO_TYPE&, const std::string& mess) override;
+    void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
 void MathlangPlugin::resetStorage(Section* _storage)
@@ -62,9 +61,9 @@ void MathlangPlugin::resetStorage(Section* _storage)
     current = storage;
 }
 
-#define funcInfo(cmd, help) \
+#define FUNC_INFO(cmd, help) \
 {\
-    if (cmdArgs.size() > 0)\
+    if (!cmdArgs.empty())\
     {\
         if (cmdArgs[0] == "?")\
         {\
@@ -72,7 +71,7 @@ void MathlangPlugin::resetStorage(Section* _storage)
         }\
         else if (cmdArgs[0] == "*")\
         {\
-	    cout << cmd << endl; return;\
+	    cout << (cmd) << endl; return;\
         }\
     }\
 }
@@ -86,7 +85,7 @@ void MathlangPlugin::printIncr(Section* source)
 }
 void MathlangPlugin::addType(vector<string> cmdArgs)
 {
-    funcInfo("тип", "<тип [typeName]> - ввести тип typeName.")
+    FUNC_INFO("тип", "<тип [typeName]> - ввести тип typeName.")
 
     if (cmdArgs.size() < 1)
         return;
@@ -99,7 +98,7 @@ void MathlangPlugin::addType(vector<string> cmdArgs)
 
 void MathlangPlugin::addSym(vector<string> cmdArgs)
 {
-    funcInfo("символ",
+    FUNC_INFO("символ",
              "<символ [symName] [argT]* [retT]> - ввести символ symName.")
 
     if (cmdArgs.size() < 2)
@@ -114,7 +113,7 @@ void MathlangPlugin::addSym(vector<string> cmdArgs)
 
 void MathlangPlugin::addVar(vector<string> cmdArgs)
 {
-    funcInfo("переменная",
+    FUNC_INFO("переменная",
              "<переменная [varName] [varType]> - ввести переменную varName типа varType.")
 
     if (cmdArgs.size() < 2)
@@ -128,7 +127,7 @@ void MathlangPlugin::addVar(vector<string> cmdArgs)
 
 void MathlangPlugin::addAxiom(vector<string> cmdArgs)
 {
-    funcInfo("пусть", "<пусть [statement]> - ввести утверждение statement.")
+    FUNC_INFO("пусть", "<пусть [statement]> - ввести утверждение statement.")
 
     if (cmdArgs.size() < 1)
         return;
@@ -139,7 +138,7 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs)
 
 void MathlangPlugin::viewTypes(vector<string> cmdArgs)
 {
-    funcInfo("типы", "<типы> - перечислить уже определённые типы.")
+    FUNC_INFO("типы", "<типы> - перечислить уже определённые типы.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие типы:");
     for (const auto& n : current->index().getNames(NameTy::MT))
@@ -148,7 +147,7 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs)
 
 void MathlangPlugin::viewSyms(vector<string> cmdArgs)
 {
-    funcInfo("символы", "<символы> - перечислить уже определённые символы.")
+    FUNC_INFO("символы", "<символы> - перечислить уже определённые символы.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
     for (const auto& n : current->index().getNames(NameTy::SYM))
@@ -157,7 +156,7 @@ void MathlangPlugin::viewSyms(vector<string> cmdArgs)
 
 void MathlangPlugin::viewVars(vector<string> cmdArgs)
 {
-    funcInfo("переменные", "<переменные> - перечислить уже определённые переменные.")
+    FUNC_INFO("переменные", "<переменные> - перечислить уже определённые переменные.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
     for (const auto& n : current->index().getNames(NameTy::VAR))
@@ -166,7 +165,7 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs)
 
 void MathlangPlugin::subSection(vector<string> cmdArgs)
 {
-    funcInfo("подраздел",
+    FUNC_INFO("подраздел",
              "<подраздел [название(необязательно)]> - начать подраздел с данным названием.")
 
     if (cmdArgs.size() > 0)
@@ -177,7 +176,7 @@ void MathlangPlugin::subSection(vector<string> cmdArgs)
 
 void MathlangPlugin::gotoSection(vector<string> cmdArgs)
 {
-    funcInfo("перейти",
+    FUNC_INFO("перейти",
              "<перейти [PathToSection]> - перейти к Section с меткой PathToSection.")
 
     if (cmdArgs.size() < 1)
@@ -191,7 +190,7 @@ void MathlangPlugin::gotoSection(vector<string> cmdArgs)
 
 void MathlangPlugin::viewSection(vector<string> cmdArgs)
 {
-    funcInfo("показать_рассуждение",
+    FUNC_INFO("показать_рассуждение",
              "<показать_рассуждение> - показать рассуждение целиком.")
     printIncr(current);
 }
@@ -218,7 +217,7 @@ string MathlangPlugin::userCheck()
 }
 void MathlangPlugin::saveSection(vector<string> cmdArgs)
 {
-    funcInfo("сохранить",
+    FUNC_INFO("сохранить",
                  "<сохранить> - запись для последующего использования.")
 
     string userName = userCheck();
@@ -239,7 +238,7 @@ void MathlangPlugin::saveSection(vector<string> cmdArgs)
 
 void MathlangPlugin::loadSection(vector<string> cmdArgs)
 {
-    funcInfo("загрузить", "<загрузить> - открыть ранее сохраненное.")
+    FUNC_INFO("загрузить", "<загрузить> - открыть ранее сохраненное.")
 
     if (cmdArgs.size() < 1)
         return;
@@ -268,7 +267,7 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
 
 void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 {
-    funcInfo("MP",
+    FUNC_INFO("MP",
              "<MP [PathPre] [PathImpl]> - применить правило вывода MP для Pre и Impl.")
 
     if (cmdArgs.size() < 2)
@@ -279,7 +278,7 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs)
 
 void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
 {
-    funcInfo("spec",
+    FUNC_INFO("spec",
              "<spec [PathGen] [PathT]> - применить правило вывода Spec для Gen и T.")
 
     if (cmdArgs.size() < 2)
@@ -290,7 +289,7 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
 
 void MathlangPlugin::deduceGen(vector<string> cmdArgs)
 {
-    funcInfo("gen",
+    FUNC_INFO("gen",
              "<gen [PathToGen] [PathVar]> - применить правило вывода Gen для ToGen и Var.")
 
     if (cmdArgs.size() < 2)
@@ -354,7 +353,6 @@ void MathlangPlugin::ifaceCfg()
         mt++;
     }
     cout.rdbuf(backup);
-    return;
 }
 
 void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess)
@@ -372,7 +370,4 @@ extern "C" BaseModule* create(BaseModule* _parent, SharedObject* _fabric)
 { return new MathlangPlugin(_parent, _fabric); }
 
 extern "C" void destroy(BaseModule* one)
-{
-    delete one;
-    return;
-}
+{ delete one; }
