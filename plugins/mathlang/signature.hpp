@@ -39,22 +39,15 @@ typedef NameSpaceIndex::NameTy NameTy;
 
 class HierarchyItem;
 using json = nlohmann::json;
-class Serializable
-{
-public:
-    virtual json toMlObj() const = 0;
-    virtual json toJson() const = 0;
-    static HierarchyItem* fromJson(const json& j, Section* parent = nullptr)
-    { return nullptr; }
-};
+
 class Section;
-class HierarchyItem : public virtual Printable, public virtual Serializable
+class HierarchyItem
 // Этот класс обеспечивает древовидную структуру. Ни больше ни меньше.
 {
 private:
     Section* parent;
     std::list<HierarchyItem*> subs;
-    mutable std::pair<bool, std::list<HierarchyItem*>::iterator> newInfo;
+    mutable std::pair<bool, std::list<HierarchyItem*>::const_iterator> newInfo;
     void push(HierarchyItem* sub);
 protected:
     HierarchyItem(Section* _parent);
@@ -69,14 +62,17 @@ public:
     HierarchyItem(const HierarchyItem&) = delete;
     HierarchyItem& operator=(const HierarchyItem&) = delete;
 
-    virtual void print(std::ostream& out) const override;
     // У следующей функции такой странный дизайн, потому что хочется отдавать
     // MlObj для каждой конструкции новым сообщением (вызов write(InfoType, string)
     // А здесь до функционала плагина не добравться, в то же время нельзя пускать
     // плагин до внутренного устройства класса.
     void printMlObjIncr(std::list<std::string>& toOut) const;
-    virtual json toJson() const override;
+
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+
+    virtual void print(std::ostream& out) const;
+    virtual json toJson() const;
+    virtual json toMlObj() const = 0;
 };
 
 class AbstrDef;
@@ -91,14 +87,15 @@ private:
                                 // Вставки Def-ов влекут обновление.
     friend class Axiom;
     Section(Section*, const std::string& _title = "");
-    Section(const Section&) = delete;
-    Section& operator=(const Section&) = delete;
 
     friend class AbstrDef;
     void registerName(NameTy type, const std::string& name, AbstrDef* where);
 public:
+    ~Section() override = default;
+    Section(const Section&) = delete;
+    Section& operator=(const Section&) = delete;
+
     Section(const std::string& _title = "");
-    virtual ~Section() {}
     const NameSpaceIndex& index() const { return atTheEnd; }
     //  Таким образом есть два варианта организации размещения
     //  с соблюдением владения со стороны старшего в иерархии:
@@ -118,26 +115,27 @@ public:
     void doGen  (const std::string& pToGen,  const std::string& pToVar);
 
     std::string getTitle() const { return title; }
-    virtual void print(std::ostream& out) const override;
     void printB(std::ostream& out) const;
 
-    virtual json toMlObj() const override;
-    virtual json toJson() const override;
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
     static HierarchyItem* fromJsonE(const json& j)
     { return fromJson(j.at("ItemData")); }
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 class AbstrDef : public HierarchyItem
 // Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
 {
-private:
+public:
+    ~AbstrDef() override = default;
     AbstrDef(const AbstrDef&) = delete;
     AbstrDef& operator=(const AbstrDef&) = delete;
-public:
+
     AbstrDef(Section* closure, NameTy type, const std::string& name)
             : HierarchyItem(closure) { closure->registerName(type, name, this); }
-    virtual ~AbstrDef() {}
 };
 
 class DefType : public AbstrDef, public MathType
@@ -146,14 +144,16 @@ private:
     friend class Section;
     DefType(Section* closure, const std::string& typeName)
             : AbstrDef(closure, NameTy::MT, typeName), MathType(typeName) {}
+public:
+    ~DefType() override = default;
     DefType(const DefType&) = delete;
     DefType& operator=(const DefType&) = delete;
-public:
-    virtual ~DefType() {}
-    virtual void print(std::ostream& out) const override;
-    virtual json toMlObj() const override;
-    json toJson() const override;
+
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -162,14 +162,16 @@ private:
     friend class Section;
     DefVar(Section* closure, const std::string& varName, MathType mathType)
             : AbstrDef(closure, NameTy::VAR, varName), Variable(varName, mathType) {}
+public:
+    ~DefVar() override = default;
     DefVar(const DefVar&) = delete;
     DefVar& operator=(const DefVar&) = delete;
-public:
-    virtual ~DefVar() {}
-    virtual void print(std::ostream& out) const override;
-    virtual json toMlObj() const override;
-    json toJson() const override;
+
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -179,21 +181,23 @@ private:
     DefSym(Section* closure, const std::string& symName,
            const std::list<MathType>& argT, MathType retT)
             : AbstrDef(closure, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
+public:
+    ~DefSym() override = default;
     DefSym(const DefSym&) = delete;
     DefSym& operator=(const DefSym&) = delete;
-public:
-    virtual ~DefSym() {}
-    virtual void print(std::ostream& out) const override;
-    virtual json toMlObj() const override;
-    json toJson() const override;
+
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 class Statement : public virtual Printable
 {
 public:
     virtual const Terms* get() const = 0;
-    virtual void print(std::ostream& out) const override
+    void print(std::ostream& out) const override
     { out << *get(); }
 };
 
@@ -208,16 +212,17 @@ private:
     friend class Section;
     friend class Lexer;
     Axiom(Section* closure, std::string source);
+public:
+    ~Axiom() override = default;
     Axiom(const Axiom&) = delete;
     Axiom& operator=(const Axiom&) = delete;
-public:
-    virtual ~Axiom() {}
-    virtual const Terms* get() const override { return data; }
-    virtual void print(std::ostream& out) const override;
 
-    virtual json toMlObj() const override;
-    json toJson() const override;
+    const Terms* get() const override { return data; }
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 class AbstrInf : public HierarchyItem, public Statement
@@ -229,17 +234,19 @@ public:
 private:
     std::vector<Path> premises;
     InfTy type;
-    
+public:
+    ~AbstrInf() override = default;
     AbstrInf(const AbstrInf&) = delete;
     AbstrInf& operator=(const AbstrInf&) = delete;
-public:
+
     AbstrInf(Section* closure, InfTy _type, Path pArg1, Path pArg2)
             : HierarchyItem(closure), premises({pArg1, pArg2}), type(_type) {}
-    virtual ~AbstrInf() {}
+
     std::string getTypeAsStr() const;
-    virtual void print(std::ostream& out) const override;
-    virtual json toMlObj() const override;
-    virtual json toJson() const override;
+
+    void print(std::ostream& out) const override;
+    json toJson() const override;
+    json toMlObj() const override;
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
@@ -249,11 +256,12 @@ private:
     Terms* data;
     friend class Section;
     InfMP(Section* closure, Path pArg1, Path pArg2);
+public:
+    ~InfMP() override = default;
     InfMP(const InfMP&) = delete;
     InfMP& operator=(const InfMP&) = delete;
-public:
-    virtual ~InfMP() {}
-    virtual const Terms* get() const override { return data; }
+
+    const Terms* get() const override { return data; }
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -265,11 +273,12 @@ private:
     Terms* data;
     friend class Section;
     InfSpec(Section* closure, Path pArg1, Path pArg2);
+public:
+    ~InfSpec() override = default;
     InfSpec(const InfSpec&) = delete;
     InfSpec& operator=(const InfSpec&) = delete;
-public:
-    virtual ~InfSpec() {}
-    virtual const Terms* get() const override { return data; }
+
+    const Terms* get() const override { return data; }
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };
@@ -281,11 +290,12 @@ private:
     Terms* data;
     friend class Section;
     InfGen(Section* closure, Path pArg1, Path pArg2);
+public:
+    ~InfGen() override = default;
     InfGen(const InfGen&) = delete;
     InfGen& operator=(const InfGen&) = delete;
-public:
-    virtual ~InfGen() {}
-    virtual const Terms* get() const override { return data; }
+
+    const Terms* get() const override { return data; }
 
     static HierarchyItem* fromJson(const json& j, Section* parent = nullptr);
 };

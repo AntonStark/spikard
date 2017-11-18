@@ -88,7 +88,7 @@ HierarchyItem* HierarchyItem::getByPass(Path path)
         root = root->getParent();*/
     // теперь используются относительные пути
     HierarchyItem* target = this;
-    while (path.size() != 0)
+    while (!path.empty())
     {
         if (path.front() > target->subs.size())
             return nullptr;
@@ -121,12 +121,6 @@ size_t HierarchyItem::getNth() const
         else
             ++n;
     return 0;
-}
-void HierarchyItem::print(std::ostream& out) const
-{
-    size_t n = 1;
-    for (const auto& s : subs)
-        out << '(' << n++ << "): " << *s << std::endl;
 }
 void HierarchyItem::printMlObjIncr(std::list<std::string>& toOut) const
 {
@@ -184,42 +178,19 @@ void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
 { new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
 void Section::doGen(const std::string& pToGen, const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
-void Section::print(std::ostream& out) const
-{ out << "Раздел \"" << title << "\"." << std::endl; }
+
 void Section::printB(std::ostream& out) const
 {
     print(out);
     HierarchyItem::print(out);
 }
 
-void DefType::print(std::ostream& out) const
-{ out << "Объявлен тип " << getName() << "."; }
-void DefVar::print(std::ostream& out) const
-{ out << "Добавлена переменная " << getName() << " типа " << getType().getName() << "."; }
-void DefSym::print(std::ostream& out) const
-{
-    out << "Введен символ " << getName() << " : ";
-    auto argTypes = getSign().first;
-    if (argTypes.size() > 0)
-    {
-        out << argTypes.front().getName();
-        auto e = argTypes.end();
-        for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << " x " << it->getName();
-    }
-    out << " -> " << getType().getName() << ".";
-}
 
 Axiom::Axiom(Section* closure, std::string source)
         : Section(closure), data(parse(this, source))
 {
     if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
-}
-void Axiom::print(std::ostream& out) const
-{
-    out << "Пусть ";
-    Statement::print(out);
 }
 
 Path mkPath(std::string source)
@@ -235,7 +206,7 @@ Path mkPath(std::string source)
         source.pop_back();
         source.erase(source.begin());
     }
-    unsigned buf = 0;
+    size_t buf = 0;
     for (int i = 0; i < source.length(); ++i)
     {
         auto search = digits.find(source[i]);
@@ -284,26 +255,11 @@ std::string AbstrInf::getTypeAsStr() const
         case InfTy::SPEC : return "InfSpec";
     }
 }
-void AbstrInf::print(std::ostream& out) const
-{
-    out << "По ";
-    switch (type)
-    {
-        case InfTy::MP :
-            out << "MP ";   break;
-        case InfTy::SPEC :
-            out << "Spec "; break;
-        case InfTy::GEN :
-            out << "Gen ";  break;
-    }
-    out << "из " << pathToStr(*premises.begin()) << " и "
-    << pathToStr(*std::next(premises.begin())) << " следует: ";
-    Statement::print(out);
-}
+
 
 Terms* modusPonens(const Terms* premise, const Terms* impl)
 {
-    if (const Term* tI = dynamic_cast<const Term*>(impl))
+    if (const auto* tI = dynamic_cast<const Term*>(impl))
     {
         Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
         if (!(tI->Symbol::operator==)(standardImpl))
@@ -323,7 +279,7 @@ InfMP::InfMP(Section* closure, Path pArg1, Path pArg2)
 
 Terms* specialization(const Terms* general, const Terms* t)
 {
-    if (const ForallTerm* fT = dynamic_cast<const ForallTerm*>(general))
+    if (const auto* fT = dynamic_cast<const ForallTerm*>(general))
     {
         if (fT->arg(1)->getType() == t->getType())
             return fT->arg(2)->replace(fT->arg(1), t);
@@ -338,9 +294,9 @@ InfSpec::InfSpec(Section* closure, Path pArg1, Path pArg2)
 
 Term* generalization  (const Terms* toGen, const Terms* x)
 {
-    if (const Variable* v = dynamic_cast<const Variable*>(x))
+    if (const auto* v = dynamic_cast<const Variable*>(x))
     {
-        if (const Term* tG = dynamic_cast<const Term*>(toGen))
+        if (const auto* tG = dynamic_cast<const Term*>(toGen))
         if (tG->free.find(*v) != tG->free.end())
             return new ForallTerm(*v, tG->clone());
     }
@@ -352,67 +308,108 @@ InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
-struct MlObj
-{
-    std::string mlType;
-    size_t label;
-    std::string body;
-    std::vector<Path> premises;
 
-    MlObj(std::string _mlType, size_t _label,
-          std::string _body, std::vector<Path> _premises = {}) :
-            mlType(_mlType), label(_label),
-            body(_body), premises(_premises) {}
-
-    json toJson()
-    {
-        return json({ {"mlType", mlType},
-                      {"label", {label}},
-                      {"body", body},
-                      {"premises", premises} });
-    }
-};
-json Section::toMlObj() const
-{ return MlObj("section", 0, getTitle()).toJson(); }
-json DefType::toMlObj() const
-{ return MlObj("def_type", getNth(), getName()).toJson(); }
-json DefVar::toMlObj() const
+HierarchyItem* HierarchyItem::fromJson(const json& j, Section* parent)
 {
-    std::stringstream body;
-    body << getName() << "\\in " << getType().getName();
-    return MlObj("def_var", getNth(), body.str()).toJson();
+    const std::string itemType = j.at("ItemType");
+    if (itemType == "Section")
+        return Section::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefType")
+        return DefType::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefVar")
+        return DefVar::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "DefSym")
+        return DefSym::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "Axiom")
+        return Axiom::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfMP")
+        return InfMP::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfSpec")
+        return InfSpec::fromJson(j.at("ItemData"), parent);
+    else if (itemType == "InfGen")
+        return InfGen::fromJson(j.at("ItemData"), parent);
+    else
+        return nullptr;
 }
-json DefSym::toMlObj() const
+HierarchyItem* Section::fromJson(const json& j, Section* parent)
 {
-    std::stringstream out;
-    out << getName() << " : ";
+    auto section = new Section(parent, j.at("title"));
+    json subs = j.at("subs");
+    for (const auto& s : subs)
+        HierarchyItem::fromJson(s, section);
+    return section;
+}
+HierarchyItem* DefType::fromJson(const json& j, Section* parent)
+{ return new DefType(parent, j.at("name")); }
+HierarchyItem* DefVar::fromJson(const json& j, Section* parent)
+{
+    auto type = parent->index().getT(j.at("type"));
+    return new DefVar(parent, j.at("name"), type);
+}
+HierarchyItem* DefSym::fromJson(const json& j, Section* parent)
+{
+    std::list<MathType> argT;
+    auto index = parent->index();
+    for (const auto& t : j.at("argT"))
+        argT.push_back(index.getT(t));
+    MathType retT = parent->index().getT(j.at("retT"));
+    return new DefSym(parent, j.at("name"), argT, retT);
+}
+HierarchyItem* Axiom::fromJson(const json& j, Section* parent)
+{ return new Axiom(parent, j.at("axiom")); }
+HierarchyItem* InfMP::fromJson(const json& j, Section* parent)
+{ return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+HierarchyItem* InfSpec::fromJson(const json& j, Section* parent)
+{ return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+HierarchyItem* InfGen::fromJson(const json& j, Section* parent)
+{ return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+
+
+void HierarchyItem::print(std::ostream& out) const
+{
+    size_t n = 1;
+    for (const auto& s : subs)
+        out << '(' << n++ << "): " << *s << std::endl;
+}
+void Section::print(std::ostream& out) const
+{ out << "Раздел \"" << title << "\"." << std::endl; }
+void DefType::print(std::ostream& out) const
+{ out << "Объявлен тип " << getName() << "."; }
+void DefVar::print(std::ostream& out) const
+{ out << "Добавлена переменная " << getName() << " типа " << getType().getName() << "."; }
+void DefSym::print(std::ostream& out) const
+{
+    out << "Введен символ " << getName() << " : ";
     auto argTypes = getSign().first;
-    if (argTypes.size() > 0)
+    if (!argTypes.empty())
     {
         out << argTypes.front().getName();
         auto e = argTypes.end();
         for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << "\\times " << it->getName();
+            out << " x " << it->getName();
     }
-    out << "\\rightarrow " << getType().getName();
-    return MlObj("def_sym", getNth(), out.str()).toJson();
+    out << " -> " << getType().getName() << ".";
 }
-json Axiom::toMlObj() const
+void Axiom::print(std::ostream& out) const
 {
-    std::stringstream ax; ax << *data;
-    return MlObj("axiom", getNth(), ax.str()).toJson();
+    out << "Пусть ";
+    Statement::print(out);
 }
-json AbstrInf::toMlObj() const
+void AbstrInf::print(std::ostream& out) const
 {
-    std::string infType;
+    out << "По ";
     switch (type)
     {
-        case InfTy::MP   : { infType = "inf_mp";  break; }
-        case InfTy::GEN  : { infType = "inf_gen"; break; }
-        case InfTy::SPEC : { infType = "inf_spec";break; }
+        case InfTy::MP :
+            out << "MP ";   break;
+        case InfTy::SPEC :
+            out << "Spec "; break;
+        case InfTy::GEN :
+            out << "Gen ";  break;
     }
-    std::stringstream inf; inf << *get();
-    return MlObj(infType, getNth(), inf.str(), premises).toJson();
+    out << "из " << pathToStr(*premises.begin()) << " и "
+        << pathToStr(*std::next(premises.begin())) << " следует: ";
+    Statement::print(out);
 }
 
 
@@ -484,57 +481,66 @@ json AbstrInf::toJson() const
     return temp;
 }
 
-HierarchyItem* HierarchyItem::fromJson(const json& j, Section* parent)
+
+struct MlObj
 {
-    const std::string itemType = j.at("ItemType");
-    if (itemType == "Section")
-        return Section::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefType")
-        return DefType::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefVar")
-        return DefVar::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefSym")
-        return DefSym::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "Axiom")
-        return Axiom::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfMP")
-        return InfMP::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfSpec")
-        return InfSpec::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfGen")
-        return InfGen::fromJson(j.at("ItemData"), parent);
-    else
-        return nullptr;
-}
-HierarchyItem* Section::fromJson(const json& j, Section* parent)
+    std::string mlType;
+    size_t label;
+    std::string body;
+    std::vector<Path> premises;
+
+    MlObj(std::string _mlType, size_t _label,
+          std::string _body, std::vector<Path> _premises = {}) :
+            mlType(std::move(_mlType)), label(_label),
+            body(std::move(_body)), premises(std::move(_premises)) {}
+
+    json toJson()
+    {
+        return json({ {"mlType", mlType},
+                      {"label", {label}},
+                      {"body", body},
+                      {"premises", premises} });
+    }
+};
+json Section::toMlObj() const
+{ return MlObj("section", 0, getTitle()).toJson(); }
+json DefType::toMlObj() const
+{ return MlObj("def_type", getNth(), getName()).toJson(); }
+json DefVar::toMlObj() const
 {
-    auto section = new Section(parent, j.at("title"));
-    json subs = j.at("subs");
-    for (const auto& s : subs)
-        HierarchyItem::fromJson(s, section);
-    return section;
+    std::stringstream body;
+    body << getName() << "\\in " << getType().getName();
+    return MlObj("def_var", getNth(), body.str()).toJson();
 }
-HierarchyItem* DefType::fromJson(const json& j, Section* parent)
-{ return new DefType(parent, j.at("name")); }
-HierarchyItem* DefVar::fromJson(const json& j, Section* parent)
+json DefSym::toMlObj() const
 {
-    auto type = parent->index().getT(j.at("type"));
-    return new DefVar(parent, j.at("name"), type);
+    std::stringstream out;
+    out << getName() << " : ";
+    auto argTypes = getSign().first;
+    if (!argTypes.empty())
+    {
+        out << argTypes.front().getName();
+        auto e = argTypes.end();
+        for (auto it = next(argTypes.begin()); it != e; ++it)
+            out << "\\times " << it->getName();
+    }
+    out << "\\rightarrow " << getType().getName();
+    return MlObj("def_sym", getNth(), out.str()).toJson();
 }
-HierarchyItem* DefSym::fromJson(const json& j, Section* parent)
+json Axiom::toMlObj() const
 {
-    std::list<MathType> argT;
-    auto index = parent->index();
-    for (const auto& t : j.at("argT"))
-        argT.push_back(index.getT(t));
-    MathType retT = parent->index().getT(j.at("retT"));
-    return new DefSym(parent, j.at("name"), argT, retT);
+    std::stringstream ax; ax << *data;
+    return MlObj("axiom", getNth(), ax.str()).toJson();
 }
-HierarchyItem* Axiom::fromJson(const json& j, Section* parent)
-{ return new Axiom(parent, j.at("axiom")); }
-HierarchyItem* InfMP::fromJson(const json& j, Section* parent)
-{ return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-HierarchyItem* InfSpec::fromJson(const json& j, Section* parent)
-{ return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-HierarchyItem* InfGen::fromJson(const json& j, Section* parent)
-{ return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+json AbstrInf::toMlObj() const
+{
+    std::string infType;
+    switch (type)
+    {
+        case InfTy::MP   : { infType = "inf_mp";  break; }
+        case InfTy::GEN  : { infType = "inf_gen"; break; }
+        case InfTy::SPEC : { infType = "inf_spec";break; }
+    }
+    std::stringstream inf; inf << *get();
+    return MlObj(infType, getNth(), inf.str(), premises).toJson();
+}
