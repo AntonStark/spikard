@@ -63,94 +63,24 @@ Symbol NameSpaceIndex::getS(const std::string& name) const
 }
 
 
-void HierarchyItem::push(HierarchyItem* sub)
+Lecture::Lecture(PrimaryNode* parent, const std::string& _title)
+        : PrimaryNode(parent), title(_title)
 {
-    subs.push_back(sub);
-    if (!newInfo.first)
-        newInfo = {true, std::prev(subs.end())};
+    auto _parent = getParent();
+    if (_parent)
+        atTheEnd = _parent->atTheEnd;
 }
-HierarchyItem::HierarchyItem(Section* _parent)
-        : parent(_parent)
-{
-    newInfo.first = false;
-    if (parent)
-        parent->push(this);
-}
-HierarchyItem::~HierarchyItem()
-{
-    for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
-        delete s;           // они должны создаваться в куче
-}
-HierarchyItem* HierarchyItem::getByPass(Path path)
-{
-    /*HierarchyItem* root = this;
-    while (root->getParent())
-        root = root->getParent();*/
-    // теперь используются относительные пути
-    HierarchyItem* target = this;
-    while (!path.empty())
-    {
-        if (path.front() > target->subs.size())
-            return nullptr;
-        if (path.front() < 1)
-            target = getParent();
-        else
-            target = *std::next(target->subs.begin(), path.front()-1);
-        path.pop_front();
-    }
-    return target;
-}
-const Terms* HierarchyItem::getTerms(Path pathToTerm)
-{
-    HierarchyItem* termItem = getByPass(pathToTerm);
-    if (auto t = dynamic_cast<Statement*>(termItem))
-        return t->get();
-    else if (auto v = dynamic_cast<DefVar*>(termItem))
-        return v;
-    else
-        return nullptr;
-}
-size_t HierarchyItem::getNth() const
-{
-    if (!getParent())
-        return 0;
-    size_t n = 1;
-    for (const auto& s : getParent()->subs)
-        if (s == this)
-            return n;
-        else
-            ++n;
-    return 0;
-}
-void HierarchyItem::printMlObjIncr(std::list<std::string>& toOut) const
-{
-    if (newInfo.first)
-    {
-        auto e = subs.end();
-        for (auto it = newInfo.second; it != e; ++it)
-                toOut.push_back((*it)->toMlObj().dump());
-    }
-    newInfo.first = false;
-}
+Lecture::Lecture(const std::string& _title)
+        : PrimaryNode(), title(_title) {}
 
-Section::Section(Section* _parent, const std::string& _title)
-        : HierarchyItem(_parent), title(_title)
-{
-    auto parent = getParent();
-    if (parent)
-        atTheEnd = parent->atTheEnd;
-}
-Section::Section(const std::string& _title)
-        : HierarchyItem(), title(_title) {}
-
-void Section::registerName(NameTy type, const std::string& name, AbstrDef* where)
+void Lecture::registerName(NameTy type, const std::string& name, AbstrDef* where)
 { atTheEnd.add(type, name, where); }
 
-void Section::startSection(const std::string& title)
-{ new Section(this, title); }
-Section* Section::getSub(const std::string& pToSub)
+void Lecture::startSection(const std::string& title)
+{ new Lecture(this, title); }
+Lecture* Lecture::getSub(const std::string& pToSub)
 {
-    if (auto s = dynamic_cast<Section*>( getByPass(mkPath(pToSub)) ))
+    if (auto s = dynamic_cast<Lecture*>( getByPass(mkPath(pToSub)) ))
     {
         s->resetInfoFlag();
         return s;
@@ -158,11 +88,11 @@ Section* Section::getSub(const std::string& pToSub)
     else
         return nullptr;
 }
-void Section::defType(const std::string& typeName)
+void Lecture::defType(const std::string& typeName)
 { new DefType(this, typeName); }
-void Section::defVar(const std::string& varName, const std::string& typeName)
+void Lecture::defVar(const std::string& varName, const std::string& typeName)
 { new DefVar(this, varName, index().getT(typeName)); }
-void Section::defSym(const std::string& symName,
+void Lecture::defSym(const std::string& symName,
                      const std::list<std::string>& argT, const std::string& retT)
 {
     std::list<MathType> argMT;
@@ -170,24 +100,24 @@ void Section::defSym(const std::string& symName,
         argMT.push_back(index().getT(a));
     new DefSym(this, symName, argMT, index().getT(retT));
 }
-void Section::addAxiom(const std::string& axiom)
+void Lecture::addAxiom(const std::string& axiom)
 { new Axiom(this, axiom); }
-void Section::doMP(const std::string& pPremise, const std::string& pImpl)
+void Lecture::doMP(const std::string& pPremise, const std::string& pImpl)
 { new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
-void Section::doSpec(const std::string& pToSpec, const std::string& pToVar)
+void Lecture::doSpec(const std::string& pToSpec, const std::string& pToVar)
 { new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
-void Section::doGen(const std::string& pToGen, const std::string& pToVar)
+void Lecture::doGen(const std::string& pToGen, const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 
-void Section::printB(std::ostream& out) const
+void Lecture::printB(std::ostream& out) const
 {
     toString();
-    HierarchyItem::toString();
+    Hierarchy::toString();
 }
 
 
-Axiom::Axiom(Section* closure, std::string source)
-        : Section(closure), data(parse(this, source))
+Axiom::Axiom(Lecture* closure, std::string source)
+        : Lecture(closure), data(parse(this, source))
 {
     if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
@@ -272,7 +202,7 @@ Terms* modusPonens(const Terms* premise, const Terms* impl)
     else
         return nullptr; //impl не является термом
 }
-InfMP::InfMP(Section* closure, Path pArg1, Path pArg2)
+InfMP::InfMP(Lecture* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::MP, pArg1, pArg2),
           data(modusPonens(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
@@ -287,7 +217,7 @@ Terms* specialization(const Terms* general, const Terms* t)
     else
         return nullptr;
 }
-InfSpec::InfSpec(Section* closure, Path pArg1, Path pArg2)
+InfSpec::InfSpec(Lecture* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::SPEC, pArg1, pArg2),
           data(specialization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
@@ -303,17 +233,17 @@ Term* generalization  (const Terms* toGen, const Terms* x)
     else
         return nullptr;
 }
-InfGen::InfGen(Section* closure, Path pArg1, Path pArg2)
+InfGen::InfGen(Lecture* closure, Path pArg1, Path pArg2)
         : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
 
-HierarchyItem* HierarchyItem::fromJson(const json& j, Section* parent)
+Hierarchy* Hierarchy::fromJson(const json& j, Lecture* parent)
 {
     const std::string itemType = j.at("ItemType");
-    if (itemType == "Section")
-        return Section::fromJson(j.at("ItemData"), parent);
+    if (itemType == "Lecture")
+        return Lecture::fromJson(j.at("ItemData"), parent);
     else if (itemType == "DefType")
         return DefType::fromJson(j.at("ItemData"), parent);
     else if (itemType == "DefVar")
@@ -331,22 +261,22 @@ HierarchyItem* HierarchyItem::fromJson(const json& j, Section* parent)
     else
         return nullptr;
 }
-HierarchyItem* Section::fromJson(const json& j, Section* parent)
+Hierarchy* Lecture::fromJson(const json& j, Lecture* parent)
 {
-    auto section = new Section(parent, j.at("title"));
+    auto section = new Lecture(parent, j.at("title"));
     json subs = j.at("subs");
     for (const auto& s : subs)
-        HierarchyItem::fromJson(s, section);
+        Hierarchy::fromJson(s, section);
     return section;
 }
-HierarchyItem* DefType::fromJson(const json& j, Section* parent)
+Hierarchy* DefType::fromJson(const json& j, Lecture* parent)
 { return new DefType(parent, j.at("name")); }
-HierarchyItem* DefVar::fromJson(const json& j, Section* parent)
+Hierarchy* DefVar::fromJson(const json& j, Lecture* parent)
 {
     auto type = parent->index().getT(j.at("type"));
     return new DefVar(parent, j.at("name"), type);
 }
-HierarchyItem* DefSym::fromJson(const json& j, Section* parent)
+Hierarchy* DefSym::fromJson(const json& j, Lecture* parent)
 {
     std::list<MathType> argT;
     auto index = parent->index();
@@ -355,17 +285,17 @@ HierarchyItem* DefSym::fromJson(const json& j, Section* parent)
     MathType retT = parent->index().getT(j.at("retT"));
     return new DefSym(parent, j.at("name"), argT, retT);
 }
-HierarchyItem* Axiom::fromJson(const json& j, Section* parent)
+Hierarchy* Axiom::fromJson(const json& j, Lecture* parent)
 { return new Axiom(parent, j.at("axiom")); }
-HierarchyItem* InfMP::fromJson(const json& j, Section* parent)
+Hierarchy* InfMP::fromJson(const json& j, Lecture* parent)
 { return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-HierarchyItem* InfSpec::fromJson(const json& j, Section* parent)
+Hierarchy* InfSpec::fromJson(const json& j, Lecture* parent)
 { return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-HierarchyItem* InfGen::fromJson(const json& j, Section* parent)
+Hierarchy* InfGen::fromJson(const json& j, Lecture* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
 
 
-std::string HierarchyItem::toString() const
+std::string Hierarchy::toString() const
 {
     size_t n = 1;
     std::stringstream buf;
@@ -373,7 +303,7 @@ std::string HierarchyItem::toString() const
         buf << '(' << n++ << "): " << s->toString() << std::endl;
     return buf.str();
 }
-std::string Section::toString() const
+std::string Lecture::toString() const
 { return ("Раздел \"" + getTitle() + "\".\n"); }
 std::string DefType::toString() const
 { return ("Объявлен тип " + getName() + "."); }
@@ -422,19 +352,19 @@ std::string AbstrInf::toString() const
 }
 
 
-json HierarchyItem::toJson() const
+json Hierarchy::toJson() const
 {
     json temp;
     for (const auto& s : subs)
         temp.push_back(s->toJson());
     return temp;
 }
-json Section::toJson() const
+json Lecture::toJson() const
 {
     json temp;
-    temp["ItemType"] = "Section";
+    temp["ItemType"] = "Lecture";
     temp["ItemData"] = { {"title", title},
-                         {"subs", HierarchyItem::toJson()} };
+                         {"subs", Hierarchy::toJson()} };
     return temp;
 }
 json DefType::toJson() const
@@ -473,7 +403,7 @@ json Axiom::toJson() const
     data->print(ss);
     temp["ItemType"] = "Axiom";
     temp["ItemData"] = { {"axiom", ss.str()}/*,
-                         {"subs", HierarchyItem::toJson()}*/ };
+                         {"subs", Hierarchy::toJson()}*/ };
     return temp;
 }
 json AbstrInf::toJson() const
@@ -511,15 +441,15 @@ struct MlObj
                       {"premises", premises} });
     }
 };
-json Section::toMlObj() const
+json Lecture::toMlObj() const
 { return MlObj("section", 0, getTitle()).toJson(); }
 json DefType::toMlObj() const
-{ return MlObj("def_type", getNth(), getName()).toJson(); }
+{ return MlObj("def_type", getNumber(), getName()).toJson(); }
 json DefVar::toMlObj() const
 {
     std::stringstream body;
     body << getName() << "\\in " << getType().getName();
-    return MlObj("def_var", getNth(), body.str()).toJson();
+    return MlObj("def_var", getNumber(), body.str()).toJson();
 }
 json DefSym::toMlObj() const
 {
@@ -534,12 +464,12 @@ json DefSym::toMlObj() const
             out << "\\times " << it->getName();
     }
     out << "\\rightarrow " << getType().getName();
-    return MlObj("def_sym", getNth(), out.str()).toJson();
+    return MlObj("def_sym", getNumber(), out.str()).toJson();
 }
 json Axiom::toMlObj() const
 {
     std::stringstream ax; ax << *data;
-    return MlObj("axiom", getNth(), ax.str()).toJson();
+    return MlObj("axiom", getNumber(), ax.str()).toJson();
 }
 json AbstrInf::toMlObj() const
 {
@@ -551,5 +481,5 @@ json AbstrInf::toMlObj() const
         case InfTy::SPEC : { infType = "inf_spec";break; }
     }
     std::stringstream inf; inf << *get();
-    return MlObj(infType, getNth(), inf.str(), premises).toJson();
+    return MlObj(infType, getNumber(), inf.str(), premises).toJson();
 }

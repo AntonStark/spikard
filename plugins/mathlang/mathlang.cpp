@@ -12,11 +12,11 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Section* storage;
-    Section* current;
-    void resetStorage(Section* _storage);
+    Lecture* storage;
+    Lecture* current;
+    void resetStorage(Lecture* _storage);
     string userCheck();
-    void printIncr(Section* source);
+    void printIncr(Lecture* source);
 
     // Далее следуют функции, реализующие функционал плагина
     void addType(vector<string> cmdArgs);
@@ -54,7 +54,7 @@ public:
     void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
-void MathlangPlugin::resetStorage(Section* _storage)
+void MathlangPlugin::resetStorage(Lecture* _storage)
 {
     delete storage;
     storage = _storage;
@@ -76,7 +76,7 @@ void MathlangPlugin::resetStorage(Section* _storage)
     }\
 }
 //todo На стороне сервера: при подключении плагина <помощь> пополняется.
-void MathlangPlugin::printIncr(Section* source)
+void MathlangPlugin::printIncr(Lecture* source)
 {
     std::list<std::string> buf;
     source->printMlObjIncr(buf);
@@ -177,12 +177,12 @@ void MathlangPlugin::subSection(vector<string> cmdArgs)
 void MathlangPlugin::gotoSection(vector<string> cmdArgs)
 {
     FUNC_INFO("перейти",
-             "<перейти [PathToSection]> - перейти к Section с меткой PathToSection.")
+             "<перейти [PathToSection]> - перейти к Lecture с меткой PathToSection.")
 
     if (cmdArgs.size() < 1)
         return;
 
-    Section* target = current->getSub(cmdArgs[0]);
+    Lecture* target = current->getSub(cmdArgs[0]);
     if (target)
         current = target;
     printIncr(current);
@@ -259,8 +259,8 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     stringstream buf;
     buf << isf.rdbuf();
     json j = json::parse(buf.str());
-    HierarchyItem* read = Section::fromJsonE(j);
-    if (Section* s = dynamic_cast<Section*>(read))
+    Hierarchy* read = Lecture::fromJsonE(j);
+    if (Lecture* s = dynamic_cast<Lecture*>(read))
         resetStorage(s);
     printIncr(current);
 }
@@ -302,7 +302,7 @@ MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
 : BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent)
 {
     // Инициализация переменных здесь
-    storage = new Section("Главный");
+    storage = new Lecture("Главный");
     current = storage;
 
     methodsCfg();

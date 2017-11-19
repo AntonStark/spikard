@@ -46,7 +46,7 @@ int main(void)
     Symbol ne({"!=", {2, real}, logical_mt});
     //todo меньше new/delete в термах, потом
 
-    Section theorem("Название раздела");
+    Lecture theorem("Название раздела");
     theorem.defType("Logical");
     theorem.defVar("A", "Logical");
     theorem.defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
@@ -59,8 +59,8 @@ int main(void)
     json j = theorem.toJson();
     cout << j.dump(2);
     cout << endl << endl << flush;
-    HierarchyItem* rec = Section::fromJsonE(j);
-//    dynamic_cast<Section*>(rec)->printB(cout);
+    Hierarchy* rec = Lecture::fromJsonE(j);
+//    dynamic_cast<Lecture*>(rec)->printB(cout);
 
     cout << endl;
    /* testFN("../tmp/test.txt");
