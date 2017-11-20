@@ -51,7 +51,7 @@ MathType parseType(const NameSpaceIndex& names, const std::string& source, unsig
             ++typeNameLen;
     std::string typeName = source.substr(0, typeNameLen);
     len = typeNameLen;
-    return names.getT(typeName);
+    return getType(names, typeName);
 }
 // Из выражения вида "*\typeof <typeName>"
 void Lexer::registerVar(std::string& source, unsigned indent)
@@ -194,7 +194,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 
     if (list.front().tok != Token::V)
         return nullptr;
-    Variable var = where->index().getV(list.front().val);
+    Variable var = getVar(where->index(), list.front().val);
     list.pop_front();
 
     Terms* term = parseTerms(list);
@@ -212,7 +212,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
-    Symbol s = where->index().getS(list.front().val);
+    Symbol s = getSym(where->index(), list.front().val);
     list.pop_front();
 
     if (list.front().tok != Token::lb)
@@ -259,7 +259,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
             return parseTerm(list);
         case Token::V:
         {
-            Variable* var = where->index().getV(list.front().val).clone();
+            Variable* var = getVar(where->index(), list.front().val).clone();
             list.pop_front();
             return var;
         }

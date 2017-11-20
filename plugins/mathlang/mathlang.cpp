@@ -169,9 +169,9 @@ void MathlangPlugin::subSection(vector<string> cmdArgs)
              "<подраздел [название(необязательно)]> - начать подраздел с данным названием.")
 
     if (cmdArgs.size() > 0)
-        current->startSection(cmdArgs[0]);
+        current->startLecture(cmdArgs[0]);
     else
-        current->startSection();
+        current->startLecture();
 }
 
 void MathlangPlugin::gotoSection(vector<string> cmdArgs)

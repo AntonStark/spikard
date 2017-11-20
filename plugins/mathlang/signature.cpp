@@ -4,170 +4,27 @@
 
 #include "signature.hpp"
 
-class NameSpaceIndex::name_doubling : public std::invalid_argument
-{
-public:
-    name_doubling(const std::string& symName)
-            : std::invalid_argument("Попытка дублирования имени \"" + symName +"\".\n") {}
-};
-class NameSpaceIndex::no_name : public std::invalid_argument
-{
-public:
-    no_name(const std::string& symName)
-            : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
-};
+MathType getType(const NameSpaceIndex& index, const std::string& name)
+{ return *dynamic_cast<DefType*>(index.get(NameTy::MT, name)); }
+Variable getVar(const NameSpaceIndex& index, const std::string& name)
+{ return *dynamic_cast<DefVar*>(index.get(NameTy::VAR, name)); }
+Symbol getSym(const NameSpaceIndex& index, const std::string& name)
+{ return *dynamic_cast<DefSym*>(index.get(NameTy::SYM, name)); }
 
-void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
-                         const std::string& name, AbstrDef* where)
-{
-    if (!isSomeType(name))
-        data.insert({name, {type, where}});
-    else
-        throw name_doubling(name);
-}
-
-bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const
-{
-    auto search = data.find(name);
-    return (search != data.end() && search->second.first == type);
-}
-bool NameSpaceIndex::isSomeType(const std::string& name) const
-{ return (data.find(name) != data.end()); }
-
-std::set<std::string> NameSpaceIndex::getNames(NameTy type) const
-{
-    std::set<std::string> buf;
-    for (auto& n : data)
-        if (n.second.first == type)
-            buf.insert(n.first);
-    return buf;
-}
-
-MathType NameSpaceIndex::getT(const std::string& name) const
-{
-    if (isThatType(name, NameTy::MT))
-        return *dynamic_cast<DefType*>(data.at(name).second);
-    throw no_name(name);
-}
-Variable NameSpaceIndex::getV(const std::string& name) const
-{
-    if (isThatType(name, NameTy::VAR))
-        return *dynamic_cast<DefVar*>(data.at(name).second);
-    throw no_name(name);
-}
-Symbol NameSpaceIndex::getS(const std::string& name) const
-{
-    if (isThatType(name, NameTy::SYM))
-        return *dynamic_cast<DefSym*>(data.at(name).second);
-    throw no_name(name);
-}
-
-
-Lecture::Lecture(PrimaryNode* parent, const std::string& _title)
-        : PrimaryNode(parent), title(_title)
-{
-    auto _parent = getParent();
-    if (_parent)
-        atTheEnd = _parent->atTheEnd;
-}
-Lecture::Lecture(const std::string& _title)
-        : PrimaryNode(), title(_title) {}
-
-void Lecture::registerName(NameTy type, const std::string& name, AbstrDef* where)
-{ atTheEnd.add(type, name, where); }
-
-void Lecture::startSection(const std::string& title)
-{ new Lecture(this, title); }
-Lecture* Lecture::getSub(const std::string& pToSub)
-{
-    if (auto s = dynamic_cast<Lecture*>( getByPass(mkPath(pToSub)) ))
-    {
-        s->resetInfoFlag();
-        return s;
-    }
-    else
-        return nullptr;
-}
-void Lecture::defType(const std::string& typeName)
-{ new DefType(this, typeName); }
-void Lecture::defVar(const std::string& varName, const std::string& typeName)
-{ new DefVar(this, varName, index().getT(typeName)); }
-void Lecture::defSym(const std::string& symName,
-                     const std::list<std::string>& argT, const std::string& retT)
-{
+void PrimaryNode::defSym(
+        const std::string& symName, const std::list<std::string>& argT,
+        const std::string& retT) {
     std::list<MathType> argMT;
     for (auto& a : argT)
-        argMT.push_back(index().getT(a));
-    new DefSym(this, symName, argMT, index().getT(retT));
-}
-void Lecture::addAxiom(const std::string& axiom)
-{ new Axiom(this, axiom); }
-void Lecture::doMP(const std::string& pPremise, const std::string& pImpl)
-{ new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
-void Lecture::doSpec(const std::string& pToSpec, const std::string& pToVar)
-{ new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
-void Lecture::doGen(const std::string& pToGen, const std::string& pToVar)
-{ new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
-
-void Lecture::printB(std::ostream& out) const
-{
-    toString();
-    Hierarchy::toString();
+        argMT.push_back(getType(index(), a));
+    new DefSym(this, symName, argMT, getType(index(), retT));
 }
 
-
-Axiom::Axiom(Lecture* closure, std::string source)
-        : Lecture(closure), data(parse(this, source))
+Axiom::Axiom(PrimaryNode* parent, std::string source)
+        : Closure(parent), data(parse(this, source))
 {
     if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
-}
-
-Path mkPath(std::string source)
-{
-    // string  ->  list<size_t>
-    // (1.2.2) }-> {1,2,2}
-    Path target;
-    std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
-                                  {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
-                                  {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
-    if (source.front() == '(')
-    {
-        source.pop_back();
-        source.erase(source.begin());
-    }
-    size_t buf = 0;
-    for (int i = 0; i < source.length(); ++i)
-    {
-        auto search = digits.find(source[i]);
-        if (search != digits.end())
-        {
-            buf *= 10;
-            buf += search->second;
-        }
-        else if (source[i] == '.')
-        {
-            target.push_back(buf);
-            buf = 0;
-        }
-        else
-            throw std::invalid_argument("Путь \"" + source + "\" некорректен.");
-    }
-    target.push_back(buf);
-    return target;
-}
-std::string pathToStr(Path path)
-{
-    std::stringstream ss; ss << "(";
-    if (!path.empty())
-    {
-        ss << path.front();
-        auto e = path.end();
-        for (auto it = std::next(path.begin()); it != e; ++it)
-            ss << "." << *it;
-    }
-    ss << ")";
-    return ss.str();
 }
 
 class AbstrInf::bad_inf : public std::invalid_argument
@@ -202,8 +59,8 @@ Terms* modusPonens(const Terms* premise, const Terms* impl)
     else
         return nullptr; //impl не является термом
 }
-InfMP::InfMP(Lecture* closure, Path pArg1, Path pArg2)
-        : AbstrInf(closure, AbstrInf::InfTy::MP, pArg1, pArg2),
+InfMP::InfMP(PrimaryNode* naming, Path pArg1, Path pArg2)
+        : AbstrInf(naming, AbstrInf::InfTy::MP, pArg1, pArg2),
           data(modusPonens(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
@@ -217,8 +74,8 @@ Terms* specialization(const Terms* general, const Terms* t)
     else
         return nullptr;
 }
-InfSpec::InfSpec(Lecture* closure, Path pArg1, Path pArg2)
-        : AbstrInf(closure, AbstrInf::InfTy::SPEC, pArg1, pArg2),
+InfSpec::InfSpec(PrimaryNode* naming, Path pArg1, Path pArg2)
+        : AbstrInf(naming, AbstrInf::InfTy::SPEC, pArg1, pArg2),
           data(specialization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
@@ -233,13 +90,13 @@ Term* generalization  (const Terms* toGen, const Terms* x)
     else
         return nullptr;
 }
-InfGen::InfGen(Lecture* closure, Path pArg1, Path pArg2)
-        : AbstrInf(closure, AbstrInf::InfTy::GEN, pArg1, pArg2),
+InfGen::InfGen(PrimaryNode* naming, Path pArg1, Path pArg2)
+        : AbstrInf(naming, AbstrInf::InfTy::GEN, pArg1, pArg2),
           data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
 
-Hierarchy* Hierarchy::fromJson(const json& j, Lecture* parent)
+/*Hierarchy* Hierarchy::fromJson(const json& j, Lecture* parent)
 {
     const std::string itemType = j.at("ItemType");
     if (itemType == "Lecture")
@@ -402,8 +259,8 @@ json Axiom::toJson() const
     std::stringstream ss;
     data->print(ss);
     temp["ItemType"] = "Axiom";
-    temp["ItemData"] = { {"axiom", ss.str()}/*,
-                         {"subs", Hierarchy::toJson()}*/ };
+    temp["ItemData"] = { {"axiom", ss.str()}*//*,
+                         {"subs", Hierarchy::toJson()}*//* };
     return temp;
 }
 json AbstrInf::toJson() const
@@ -482,4 +339,4 @@ json AbstrInf::toMlObj() const
     }
     std::stringstream inf; inf << *get();
     return MlObj(infType, getNumber(), inf.str(), premises).toJson();
-}
+}*/
