@@ -41,7 +41,7 @@ private:
     Node* _parent;
 protected:
     Node* getParent() const { return _parent; }
-//    virtual Hierarchy* getByPass(Path path) = 0;
+    virtual Hierarchy* getByPass(Path path) = 0;
     explicit Hierarchy(Node* parent) : _parent(parent) {}
 public:
     Hierarchy() : Hierarchy(nullptr) {};
@@ -145,19 +145,18 @@ protected:
             getParent()->push(this);
     }
 
-    Hierarchy* getByPass(Path path)
-    {
+    Hierarchy* getByPass(Path path) override {
         // теперь используются относительные пути
-        Hierarchy* target = this;
-        while (!path.empty())
+        if (!path.empty())
         {
-            if (path.front() < 1)
-                target = getParent();
-            else
-                target = getByNumber(path.front());
+            auto n = path.front();
             path.pop_front();
+            if (n < 1)
+                return getParent()->getByPass(path);
+            else
+                return getByNumber(n)->getByPass(path);
         }
-        return target;
+        return this;
     }
 public:
     Node(): Hierarchy(nullptr) {}

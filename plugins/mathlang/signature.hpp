@@ -29,12 +29,9 @@ public:
     BranchNode() : Node() {}
     ~BranchNode() override = default;
 
-    void startCourse(const std::string& title = "")
-    { new Course(this, title); }
-    void startSection(const std::string& title = "")
-    { new Section(this, title); }
-    void startLecture(const std::string& title = "")
-    { new Lecture(this, title); }
+    void startCourse (const std::string& title = "");
+    void startSection(const std::string& title = "");
+    void startLecture(const std::string& title = "");
 
     Hierarchy* getSub(size_t number)
     { return getByNumber(number); }
@@ -53,21 +50,14 @@ public:
     //  2) closure->defType("Logical");
     //  Первый способ выглядит более громоздко, а второй
     //  перегружает интерфейс , но пусть так
-    void defType(const std::string& typeName)
-    { new DefType(this, typeName); }
-    void defVar (const std::string& varName, const std::string& typeName)
-    { new DefVar(this, varName, getType(index(), typeName)); }
+    void defType(const std::string& typeName);
+    void defVar (const std::string& varName, const std::string& typeName);
     void defSym (const std::string& symName,
                  const std::list<std::string>& argT, const std::string& retT);
-
-    void addAxiom(const std::string& axiom)
-    { new Axiom(this, axiom); }
-    void doMP   (const std::string& pPremise, const std::string& pImpl)
-    { new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
-    void doSpec (const std::string& pToSpec, const std::string& pToVar)
-    { new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
-    void doGen  (const std::string& pToGen,  const std::string& pToVar)
-    { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
+    void addAxiom(const std::string& axiom);
+    void doMP   (const std::string& pPremise, const std::string& pImpl);
+    void doSpec (const std::string& pToSpec, const std::string& pToVar);
+    void doGen  (const std::string& pToGen,  const std::string& pToVar);
 };
 
 
@@ -125,6 +115,9 @@ class Item : public Hierarchy
 {
 protected:
     explicit Item(Node* parent) : Hierarchy(parent) {}
+
+    Hierarchy* getByPass(Path path) override
+    { return (path.empty() ? this : nullptr); }
 };
 
 class AbstrDef : public Item
@@ -194,7 +187,7 @@ public:
     json toMlObj() const override;*/
 };
 
-class Closure : public PrimaryNode, public Inner
+class Closure : public PrimaryNode, public Inner, public Named
 {
 private:
     friend class PrimaryNode;
@@ -221,6 +214,7 @@ public:
     virtual const Terms* get() const = 0;
 };
 
+class Axiom;
 extern Term* parse(Axiom* where, std::string source);
 class Axiom : public Closure, public Statement
 // Этот класс представляет аксиомы. Наследование от Closure из-за

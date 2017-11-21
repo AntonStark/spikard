@@ -11,6 +11,19 @@ Variable getVar(const NameSpaceIndex& index, const std::string& name)
 Symbol getSym(const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefSym*>(index.get(NameTy::SYM, name)); }
 
+
+void BranchNode::startCourse (const std::string& title)
+{ new Course (this, title); }
+void BranchNode::startSection(const std::string& title)
+{ new Section(this, title); }
+void BranchNode::startLecture(const std::string& title)
+{ new Lecture(this, title); }
+
+
+void PrimaryNode::defType(const std::string& typeName)
+{ new DefType(this, typeName); }
+void PrimaryNode::defVar(const std::string& varName, const std::string& typeName)
+{ new DefVar(this, varName, getType(index(), typeName)); }
 void PrimaryNode::defSym(
         const std::string& symName, const std::list<std::string>& argT,
         const std::string& retT) {
@@ -19,6 +32,16 @@ void PrimaryNode::defSym(
         argMT.push_back(getType(index(), a));
     new DefSym(this, symName, argMT, getType(index(), retT));
 }
+
+void PrimaryNode::addAxiom(const std::string& axiom)
+{ new Axiom(this, axiom); }
+void PrimaryNode::doMP  (const std::string& pPremise, const std::string& pImpl)
+{ new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
+void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& pToVar)
+{ new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
+void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
+{ new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
+
 
 Axiom::Axiom(PrimaryNode* parent, std::string source)
         : Closure(parent), data(parse(this, source))
