@@ -1,24 +1,15 @@
 #include <sstream>
 #include <fstream>
-#include "logic.hpp"
-#include "rationale.hpp"
-#include "parser.hpp"
+#include "../../lib/mathlang/logic.hpp"
+#include "../../lib/mathlang/rationale.hpp"
+#include "../../lib/mathlang/parser.hpp"
+#include "../../lib/mathlang/view.hpp"
 
 #include "../../json.hpp"
-#include "view.hpp"
 
 using json = nlohmann::json;
 
 using namespace std;
-
-void testFN(string fileName)
-{
-    ofstream of(fileName);
-    if (!of.is_open())
-        cout << "Ошибка: не удалось создать файл \"" << fileName <<"\"." << endl;
-    else
-        cout << "Успех: \"" << fileName << "\"." << endl;
-}
 
 int main(void)
 {

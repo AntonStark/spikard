@@ -11,4 +11,5 @@ set(SOURCE_FILES
 
 add_executable(test_build ${SOURCE_FILES} json)
 
+add_subdirectory(lib)
 add_subdirectory(plugins)

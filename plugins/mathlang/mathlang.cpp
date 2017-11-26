@@ -3,8 +3,8 @@
 //
 
 #include "../../core.hpp"
-#include "rationale.hpp"
-#include "parser.hpp"
+#include "../../lib/mathlang/rationale.hpp"
+#include "../../lib/mathlang/parser.hpp"
 
 using namespace std;
 
