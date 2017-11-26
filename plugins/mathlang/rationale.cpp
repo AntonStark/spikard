@@ -2,22 +2,24 @@
 // Created by anton on 10.01.17.
 //
 
-#include "signature.hpp"
+#include "rationale.hpp"
 
 MathType getType(const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefType*>(index.get(NameTy::MT, name)); }
-Variable getVar(const NameSpaceIndex& index, const std::string& name)
+Variable getVar (const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefVar*>(index.get(NameTy::VAR, name)); }
-Symbol getSym(const NameSpaceIndex& index, const std::string& name)
+Symbol   getSym (const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefSym*>(index.get(NameTy::SYM, name)); }
 
 
-void BranchNode::startCourse (const std::string& title)
-{ new Course (this, title); }
-void BranchNode::startSection(const std::string& title)
-{ new Section(this, title); }
-void BranchNode::startLecture(const std::string& title)
-{ new Lecture(this, title); }
+std::string toStr(NamedNodeType nnt) {
+    switch (nnt) {
+        case NamedNodeType::COURSE  : return "Course" ;
+        case NamedNodeType::SECTION : return "Section";
+        case NamedNodeType::LECTURE : return "Lecture";
+        case NamedNodeType::CLOSURE : return "Closure";
+    }
+}
 
 
 void PrimaryNode::defType(const std::string& typeName)
@@ -44,8 +46,8 @@ void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
 
 
 Axiom::Axiom(PrimaryNode* parent, std::string source)
-        : Closure(parent), data(parse(this, source))
-{
+        : PrimaryNode(parent, new Hidden(parent), NamedNodeType::CLOSURE, ""),
+          data(parse(this, source)) {
     if (data->getType() != logical_mt)
         throw std::invalid_argument("Аксиома должна быть логического типа.\n");
 }
@@ -56,8 +58,16 @@ public:
     bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
 };
 
-std::string AbstrInf::getTypeAsStr() const
-{
+const Terms* AbstrInf::getTerms(Path pathToTerm) {
+    Hierarchy* termItem = getParent()->getByPass(pathToTerm);
+    if (auto t = dynamic_cast<Statement*>(termItem))
+        return t->get();
+    else if (auto v = dynamic_cast<DefVar*>(termItem))
+        return v;
+    else
+        return nullptr;
+}
+std::string AbstrInf::getTypeAsStr() const {
     switch (type)
     {
         case InfTy::MP   : return "InfMP";
@@ -67,10 +77,8 @@ std::string AbstrInf::getTypeAsStr() const
 }
 
 
-Terms* modusPonens(const Terms* premise, const Terms* impl)
-{
-    if (const auto* tI = dynamic_cast<const Term*>(impl))
-    {
+Terms* modusPonens(const Terms* premise, const Terms* impl) {
+    if (const auto* tI = dynamic_cast<const Term*>(impl)) {
         Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
         if (!(tI->Symbol::operator==)(standardImpl))
             return nullptr; //терм impl не является импликацией
@@ -84,13 +92,11 @@ Terms* modusPonens(const Terms* premise, const Terms* impl)
 }
 InfMP::InfMP(PrimaryNode* naming, Path pArg1, Path pArg2)
         : AbstrInf(naming, AbstrInf::InfTy::MP, pArg1, pArg2),
-          data(modusPonens(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+          data(modusPonens(getTerms(pArg1), getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
-Terms* specialization(const Terms* general, const Terms* t)
-{
-    if (const auto* fT = dynamic_cast<const ForallTerm*>(general))
-    {
+Terms* specialization(const Terms* general, const Terms* t) {
+    if (const auto* fT = dynamic_cast<const ForallTerm*>(general)) {
         if (fT->arg(1)->getType() == t->getType())
             return fT->arg(2)->replace(fT->arg(1), t);
     }
@@ -99,23 +105,22 @@ Terms* specialization(const Terms* general, const Terms* t)
 }
 InfSpec::InfSpec(PrimaryNode* naming, Path pArg1, Path pArg2)
         : AbstrInf(naming, AbstrInf::InfTy::SPEC, pArg1, pArg2),
-          data(specialization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+          data(specialization(getTerms(pArg1), getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
-Term* generalization  (const Terms* toGen, const Terms* x)
-{
-    if (const auto* v = dynamic_cast<const Variable*>(x))
-    {
-        if (const auto* tG = dynamic_cast<const Term*>(toGen))
-        if (tG->free.find(*v) != tG->free.end())
-            return new ForallTerm(*v, tG->clone());
+Term* generalization  (const Terms* toGen, const Terms* x) {
+    if (const auto* v = dynamic_cast<const Variable*>(x)) {
+        if (const auto* tG = dynamic_cast<const Term*>(toGen)) {
+            if (tG->free.find(*v) != tG->free.end())
+                return new ForallTerm(*v, tG->clone());
+        }
     }
     else
         return nullptr;
 }
 InfGen::InfGen(PrimaryNode* naming, Path pArg1, Path pArg2)
         : AbstrInf(naming, AbstrInf::InfTy::GEN, pArg1, pArg2),
-          data(generalization(getParent()->getTerms(pArg1), getParent()->getTerms(pArg2)))
+          data(generalization(getTerms(pArg1), getTerms(pArg2)))
 { if (!data) throw bad_inf(); }
 
 
@@ -173,63 +178,6 @@ Hierarchy* InfSpec::fromJson(const json& j, Lecture* parent)
 { return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
 Hierarchy* InfGen::fromJson(const json& j, Lecture* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-
-
-std::string Hierarchy::toString() const
-{
-    size_t n = 1;
-    std::stringstream buf;
-    for (const auto& s : subs)
-        buf << '(' << n++ << "): " << s->toString() << std::endl;
-    return buf.str();
-}
-std::string Lecture::toString() const
-{ return ("Раздел \"" + getTitle() + "\".\n"); }
-std::string DefType::toString() const
-{ return ("Объявлен тип " + getName() + "."); }
-std::string DefVar::toString() const
-{ return ("Добавлена переменная " + getName() +
-            " типа " + getType().getName() + "."); }
-std::string DefSym::toString() const
-{
-    std::stringstream buf;
-    buf << "Введен символ " << getName() << " : ";
-    auto argTypes = getSign().first;
-    if (!argTypes.empty())
-    {
-        buf << argTypes.front().getName();
-        auto e = argTypes.end();
-        for (auto it = next(argTypes.begin()); it != e; ++it)
-            buf << " x " << it->getName();
-    }
-    buf << " -> " << getType().getName() << ".";
-    return buf.str();
-}
-std::string Axiom::toString() const
-{
-    std::stringstream buf;
-    buf << "Пусть ";
-    get()->print(buf);
-    return buf.str();
-}
-std::string AbstrInf::toString() const
-{
-    std::stringstream buf;
-    buf << "По ";
-    switch (type)
-    {
-        case InfTy::MP :
-            buf << "MP ";   break;
-        case InfTy::SPEC :
-            buf << "Spec "; break;
-        case InfTy::GEN :
-            buf << "Gen ";  break;
-    }
-    buf << "из " << pathToStr(*premises.begin()) << " и "
-        << pathToStr(*std::next(premises.begin())) << " следует: ";
-    get()->print(buf);
-    return buf.str();
-}
 
 
 json Hierarchy::toJson() const

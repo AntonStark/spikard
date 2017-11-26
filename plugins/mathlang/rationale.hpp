@@ -20,27 +20,30 @@ MathType getType(const NameSpaceIndex& index, const std::string& name);
 Variable getVar (const NameSpaceIndex& index, const std::string& name);
 Symbol   getSym (const NameSpaceIndex& index, const std::string& name);
 
-class BranchNode : public virtual Node
-/// Это класс для группировки групп
+enum class NamedNodeType {COURSE, SECTION, LECTURE, CLOSURE};
+std::string toStr(NamedNodeType nnt);
+class NamedNode : public Node, public Named
 {
-protected:
-    explicit BranchNode(BranchNode* parent): Node(parent) {}
 public:
-    BranchNode() : Node() {}
-    ~BranchNode() override = default;
+    const NamedNodeType _type;
+    ~NamedNode() override = default;
+    NamedNode(Node* parent, NameStoringStrategy* nss,
+              NamedNodeType type, const std::string& title)
+            : Node(parent, nss), Named(title), _type(type) {}
 
-    void startCourse (const std::string& title = "");
-    void startSection(const std::string& title = "");
-    void startLecture(const std::string& title = "");
-
-    Hierarchy* getSub(size_t number)
-    { return getByNumber(number); }
+    std::string print(Representation* r, bool incremental = true) const override
+    { return r->process(this); }
 };
-class PrimaryNode : public virtual Node
+
+class PrimaryNode : public NamedNode
 /// Этот класс служит для группировки первичных понятий
 {
 protected:
-    explicit PrimaryNode(Node* parent): Node(parent) {}
+    friend class BranchNode;
+    friend class Axiom;
+    PrimaryNode(Node* parent, NameStoringStrategy* nss,
+                NamedNodeType type, const std::string& title)
+            : NamedNode(parent, nss, type, title) {}
 public:
     ~PrimaryNode() override = default;
 
@@ -60,54 +63,26 @@ public:
     void doGen  (const std::string& pToGen,  const std::string& pToVar);
 };
 
-
-class Course : public BranchNode, public Inner, public Named
+class BranchNode : public NamedNode
+/// Это класс для группировки групп
 {
-private:
-    friend class BranchNode;
-    explicit Course(BranchNode* parent, const std::string& title = "")
-            : BranchNode(parent), Inner(), Named(title) {}
+protected:
+    BranchNode(BranchNode* parent, NameStoringStrategy* nss,
+               NamedNodeType type, const std::string& title)
+            : NamedNode(parent, nss, type, title) {}
 public:
-    explicit Course(const std::string& title = "") : Course(nullptr, title) {}
-    ~Course() override = default;
-    Course(const Course&) = delete;
-    Course& operator=(const Course&) = delete;
+    BranchNode(const std::string& title)
+            : BranchNode(nullptr, new Hidden(), NamedNodeType::COURSE, title) {}
+    ~BranchNode() override = default;
 
-};
+    void startCourse (const std::string& title = "")
+    { new BranchNode(this, new Hidden(this), NamedNodeType::COURSE, title); }
+    void startSection(const std::string& title = "")
+    { new BranchNode(this, new Appending(this), NamedNodeType::SECTION, title); }
+    void startLecture(const std::string& title = "")
+    { new PrimaryNode(this, new Appending(this), NamedNodeType::LECTURE, title); }
 
-class Section : public BranchNode, public Appending, public Named
-{
-private:
-    size_t _n;
-    friend class BranchNode;
-    explicit Section(BranchNode* parent, const std::string& title = "")
-            : BranchNode(parent), Appending(parent), Named(title),
-              _n(getParent()->getNumber()) {}
-public:
-    ~Section() override = default;
-    Section(const Section&) = delete;
-    Section& operator=(const Section&) = delete;
-};
-
-class Lecture : public PrimaryNode, public Appending, public Named
-/// Этот класс симулирует блок рассуждения и инкапсулирует работу с Namespace.
-{
-private:
-    friend class BranchNode;
-    explicit Lecture(BranchNode* parent, const std::string& title = "")
-            : PrimaryNode(parent), Appending(parent), Named(title) {}
-public:
-    ~Lecture() override = default;
-    Lecture(const Lecture&) = delete;
-    Lecture& operator=(const Lecture&) = delete;
-
-    /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
-    static Hierarchy* fromJsonE(const json& j)
-    { return fromJson(j.at("ItemData")); }
-
-    std::string toString() const override;
-    json toJson() const override;
-    json toMlObj() const override;*/
+    Hierarchy* getSub(size_t number) { return getByNumber(number); }
 };
 
 class Item : public Hierarchy
@@ -116,19 +91,20 @@ class Item : public Hierarchy
 protected:
     explicit Item(Node* parent) : Hierarchy(parent) {}
 
+public:
     Hierarchy* getByPass(Path path) override
     { return (path.empty() ? this : nullptr); }
 };
 
 class AbstrDef : public Item
-// Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
+/// Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
 {
 public:
     ~AbstrDef() override = default;
     AbstrDef(const AbstrDef&) = delete;
     AbstrDef& operator=(const AbstrDef&) = delete;
 
-    AbstrDef(PrimaryNode* parent, NameTy type, const std::string& name)
+    AbstrDef(Node* parent, NameTy type, const std::string& name)
             : Item(parent) { parent->registerName(type, name, this); }
 };
 
@@ -145,9 +121,10 @@ public:
 
     /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
 
-    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;*/
+    std::string print(Representation* r, bool incremental) const override
+    { return r->process(this); }
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -163,9 +140,10 @@ public:
 
     /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
 
-    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;*/
+    std::string print(Representation* r, bool incremental) const override
+    { return r->process(this); }
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -182,30 +160,10 @@ public:
 
     /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
 
-    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;*/
-};
-
-class Closure : public PrimaryNode, public Inner, public Named
-{
-private:
-    friend class PrimaryNode;
-    friend class Axiom;
-    explicit Closure(PrimaryNode* parent, const std::string& title = "")
-    : PrimaryNode(parent), Inner(parent), Named(title) {}
-public:
-    ~Closure() override = default;
-    Closure(const Closure&) = delete;
-    Closure& operator=(const Closure&) = delete;
-
-    /*static Hierarchy* fromJson(const json& j, Closure* parent = nullptr);
-    static Hierarchy* fromJsonE(const json& j)
-    { return fromJson(j.at("ItemData")); }
-
-    std::string toString() const override;
-    json toJson() const override;
-    json toMlObj() const override;*/
+    std::string print(Representation* r, bool incremental) const override
+    { return r->process(this); }
 };
 
 class Statement
@@ -214,11 +172,9 @@ public:
     virtual const Terms* get() const = 0;
 };
 
-class Axiom;
-extern Term* parse(Axiom* where, std::string source);
-class Axiom : public Closure, public Statement
-// Этот класс представляет аксиомы. Наследование от Closure из-за
-// необходиомости хранить переменные при кванторах
+class Axiom : public PrimaryNode, public Statement
+/// Этот класс представляет аксиомы. Наследование от PrimaryNode из-за
+/// необходиомости хранить имена при кванторах
 {
 private:
     const Terms* data;
@@ -234,20 +190,23 @@ public:
     const Terms* get() const override { return data; }
     /*static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 
-    std::string toString() const override;
     json toJson() const override;
     json toMlObj() const override;*/
+    std::string print(Representation* r, bool incremental) const override
+    { return r->process(this); }
 };
+extern Term* parse(Axiom* where, std::string source);
 
 class AbstrInf : public Item, public Statement
 // Этот класс представлет абстрактное следствие.
 {
 public:
-    enum class InfTy {MP, GEN, SPEC};
     class bad_inf;
-private:
-    std::vector<Path> premises;
-    InfTy type;
+    enum class InfTy {MP, GEN, SPEC};
+    const InfTy type;
+    const std::vector<Path> premises;
+protected:
+    const Terms* getTerms(Path pathToTerm);
 public:
     ~AbstrInf() override = default;
     AbstrInf(const AbstrInf&) = delete;
@@ -258,9 +217,11 @@ public:
 
     std::string getTypeAsStr() const;
 
-    /*std::string toString() const override;
+    /*
     json toJson() const override;
     json toMlObj() const override;*/
+    std::string print(Representation* r, bool incremental) const override
+    { return r->process(this); }
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);

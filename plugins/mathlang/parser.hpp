@@ -8,7 +8,7 @@
 #include <stack>
 #include <unordered_map>
 
-#include "signature.hpp"
+#include "rationale.hpp"
 
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
 Term* parse(Axiom* where, std::string source);

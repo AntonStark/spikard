@@ -3,7 +3,7 @@
 //
 
 #include "../../core.hpp"
-#include "signature.hpp"
+#include "rationale.hpp"
 #include "parser.hpp"
 
 using namespace std;
@@ -12,13 +12,23 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Lecture* storage;
-    Lecture* current;
-    void resetStorage(Lecture* _storage);
+    Node* storage;
+    Node* current;
+    void resetStorage(Node* _storage);
     string userCheck();
-    void printIncr(Lecture* source);
+//    void printIncr(Lecture* source);
 
     // Далее следуют функции, реализующие функционал плагина
+    void startCourse (vector<string> cmdArgs);
+    void startSection(vector<string> cmdArgs);
+    void startLecture(vector<string> cmdArgs);
+
+    void toSuper  (vector<string> cmdArgs);
+    void toSubNode(vector<string> cmdArgs);
+    void viewNode (vector<string> cmdArgs);
+    void saveAll(vector<string> cmdArgs);
+    void loadAll(vector<string> cmdArgs);
+
     void addType(vector<string> cmdArgs);
     void addSym(vector<string> cmdArgs);
     void addVar(vector<string> cmdArgs);
@@ -28,15 +38,9 @@ private:
     void viewSyms(vector<string> cmdArgs);
     void viewVars(vector<string> cmdArgs);
 
-    void subSection (vector<string> cmdArgs);
-    void gotoSection(vector<string> cmdArgs);
-    void viewSection(vector<string> cmdArgs);
-    void saveSection(vector<string> cmdArgs);
-    void loadSection(vector<string> cmdArgs);
-
-    void deduceMP(vector<string> cmdArgs);
+    void deduceMP  (vector<string> cmdArgs);
     void deduceSpec(vector<string> cmdArgs);
-    void deduceGen(vector<string> cmdArgs);
+    void deduceGen (vector<string> cmdArgs);
 
     map<string, void (MathlangPlugin::*)(vector<string>)> methods;
     void methodsCfg();
@@ -54,14 +58,14 @@ public:
     void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
-void MathlangPlugin::resetStorage(Lecture* _storage)
+void MathlangPlugin::resetStorage(Node* _storage)
 {
     delete storage;
     storage = _storage;
     current = storage;
 }
 
-#define FUNC_INFO(cmd, help) \
+#define CALL_INFO(cmd, help) \
 {\
     if (!cmdArgs.empty())\
     {\
@@ -76,159 +80,118 @@ void MathlangPlugin::resetStorage(Lecture* _storage)
     }\
 }
 //todo На стороне сервера: при подключении плагина <помощь> пополняется.
-void MathlangPlugin::printIncr(Lecture* source)
+/*void MathlangPlugin::printIncr(Lecture* source)
 {
     std::list<std::string> buf;
     source->printMlObjIncr(buf);
     for (const auto& l : buf)
         write(INFO_TYPE::ML_OBJ, l);
-}
-void MathlangPlugin::addType(vector<string> cmdArgs)
-{
-    FUNC_INFO("тип", "<тип [typeName]> - ввести тип typeName.")
+}*/
 
-    if (cmdArgs.size() < 1)
-        return;
-    try {
-        current->defType(cmdArgs[0]);
-        printIncr(current);
+void MathlangPlugin::startCourse(vector<string> cmdArgs) {
+    CALL_INFO("курс", "<курс [title]> - начать курс с названием title.")
+
+    if (auto* bn = static_cast<BranchNode*>(current)) {
+        if (cmdArgs.size() < 1)
+            bn->startCourse();
+        else
+            bn->startCourse(cmdArgs[0]);
+        write(INFO_TYPE::TXT, "Курс создан.");
     }
-    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
-}
-
-void MathlangPlugin::addSym(vector<string> cmdArgs)
-{
-    FUNC_INFO("символ",
-             "<символ [symName] [argT]* [retT]> - ввести символ symName.")
-
-    if (cmdArgs.size() < 2)
-        return;
-    list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
-    try {
-        current->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-        printIncr(current);
-    }
-    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
-}
-
-void MathlangPlugin::addVar(vector<string> cmdArgs)
-{
-    FUNC_INFO("переменная",
-             "<переменная [varName] [varType]> - ввести переменную varName типа varType.")
-
-    if (cmdArgs.size() < 2)
-        return;
-    try {
-        current->defVar(cmdArgs[0], current->index().getT(cmdArgs[1]).getName());
-        printIncr(current);
-    }
-    catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
-}
-
-void MathlangPlugin::addAxiom(vector<string> cmdArgs)
-{
-    FUNC_INFO("пусть", "<пусть [statement]> - ввести утверждение statement.")
-
-    if (cmdArgs.size() < 1)
-        return;
-    current->addAxiom(cmdArgs[0]);
-    printIncr(current);
-}
-
-
-void MathlangPlugin::viewTypes(vector<string> cmdArgs)
-{
-    FUNC_INFO("типы", "<типы> - перечислить уже определённые типы.")
-
-    write(INFO_TYPE::TXT, "Опеределены следующие типы:");
-    for (const auto& n : current->index().getNames(NameTy::MT))
-        write(INFO_TYPE::TXT, n);
-}
-
-void MathlangPlugin::viewSyms(vector<string> cmdArgs)
-{
-    FUNC_INFO("символы", "<символы> - перечислить уже определённые символы.")
-
-    write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
-    for (const auto& n : current->index().getNames(NameTy::SYM))
-        write(INFO_TYPE::TXT, n);
-}
-
-void MathlangPlugin::viewVars(vector<string> cmdArgs)
-{
-    FUNC_INFO("переменные", "<переменные> - перечислить уже определённые переменные.")
-
-    write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
-    for (const auto& n : current->index().getNames(NameTy::VAR))
-        write(INFO_TYPE::TXT, n);
-}
-
-void MathlangPlugin::subSection(vector<string> cmdArgs)
-{
-    FUNC_INFO("подраздел",
-             "<подраздел [название(необязательно)]> - начать подраздел с данным названием.")
-
-    if (cmdArgs.size() > 0)
-        current->startLecture(cmdArgs[0]);
     else
-        current->startLecture();
+        write(INFO_TYPE::TXT,
+              "Нельзя начать курс в первичном узле, перейдите выше.");
 }
 
-void MathlangPlugin::gotoSection(vector<string> cmdArgs)
-{
-    FUNC_INFO("перейти",
-             "<перейти [PathToSection]> - перейти к Lecture с меткой PathToSection.")
+void MathlangPlugin::startSection(vector<string> cmdArgs) {
+    CALL_INFO("раздел", "<раздел [title]> - начать раздел с названием title.")
 
-    if (cmdArgs.size() < 1)
-        return;
+    if (auto* bn = static_cast<BranchNode*>(current)) {
+        if (cmdArgs.size() < 1)
+            bn->startSection();
+        else
+            bn->startSection(cmdArgs[0]);
+        write(INFO_TYPE::TXT, "Раздел создан.");
+    }
+    else
+        write(INFO_TYPE::TXT,
+              "Нельзя начать раздел в первичном узле, перейдите выше.");
+}
 
-    Lecture* target = current->getSub(cmdArgs[0]);
+void MathlangPlugin::startLecture(vector<string> cmdArgs) {
+    CALL_INFO("лекция", "<лекция [title]> - начать лекцию с названием title.")
+
+    if (auto* bn = static_cast<BranchNode*>(current)) {
+        if (cmdArgs.size() < 1)
+            bn->startLecture();
+        else
+            bn->startLecture(cmdArgs[0]);
+        write(INFO_TYPE::TXT, "Лекция создана.");
+    }
+    else
+        write(INFO_TYPE::TXT,
+              "Нельзя начать лекцию в первичном узле, перейдите выше.");
+}
+
+void MathlangPlugin::toSuper(vector<string> cmdArgs) {
+    CALL_INFO("наверх", "<наверх> - перейти к узлу уровнем выше.")
+
+    Node* target = current->getParent();
     if (target)
         current = target;
+}
+
+void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
+    CALL_INFO("перейти",
+              "<перейти [номер]> - перейти в подраздел с данным порядковым номером.")
+
+    if (cmdArgs.size() < 1)
+        return;
+
+    if (auto* bn = static_cast<BranchNode*>(current)) {
+        Node* target = static_cast<Node*>(      // subs BranchNode гарантированно типа Node
+                bn->getSub( atoi(cmdArgs[0].c_str()) ));
+        if (target)
+            current = target;
+        printIncr(current);
+    }
+}
+
+void MathlangPlugin::viewNode(vector<string> cmdArgs) {
+    CALL_INFO("показать", "<показать> - показать работу целиком.")
     printIncr(current);
 }
 
-void MathlangPlugin::viewSection(vector<string> cmdArgs)
-{
-    FUNC_INFO("показать_рассуждение",
-             "<показать_рассуждение> - показать рассуждение целиком.")
-    printIncr(current);
-}
-
-string MathlangPlugin::userCheck()
-{
+string MathlangPlugin::userCheck() {
     BaseModule* parent = this->getParent();
     while (BaseModule* p = parent->getParent())
         parent = p;
     Core* core;
-    if (!(core = dynamic_cast<Core*>(parent)))
-    {
+    if (!(core = dynamic_cast<Core*>(parent))) {
         write(INFO_TYPE::TXT, "Ошибка: сохранение не удалось по внутрненним причинам.");
         return "";
     }
 
     string userName = core->user();
-    if (userName == "?")
-    {
+    if (userName == "?") {
         write(INFO_TYPE::TXT, "Ошибка: сохранение и загрузка недоступны в анонимном режиме.");
         return "";
     }
     return userName;
 }
-void MathlangPlugin::saveSection(vector<string> cmdArgs)
-{
-    FUNC_INFO("сохранить",
-                 "<сохранить> - запись для последующего использования.")
+
+void MathlangPlugin::saveAll(vector<string> cmdArgs) {
+    CALL_INFO("сохранить",
+              "<сохранить> - запись для последующего использования.")
 
     string userName = userCheck();
     if (userName.empty())
         return;
 
     string fileName = "data/users/" + userName +
-            "/data/mathlang/section/" + current->getTitle();
+                      "/data/mathlang/section/" + current->getName();
     ofstream osf(fileName);
-    if (!osf.is_open())
-    {
+    if (!osf.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
         return;
     }
@@ -236,9 +199,8 @@ void MathlangPlugin::saveSection(vector<string> cmdArgs)
     write(INFO_TYPE::TXT, "Сохранено.");
 }
 
-void MathlangPlugin::loadSection(vector<string> cmdArgs)
-{
-    FUNC_INFO("загрузить", "<загрузить> - открыть ранее сохраненное.")
+void MathlangPlugin::loadAll(vector<string> cmdArgs) {
+    CALL_INFO("загрузить", "<загрузить> - открыть ранее сохраненное.")
 
     if (cmdArgs.size() < 1)
         return;
@@ -248,10 +210,9 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
         return;
 
     string fileName = "data/users/" + userName +
-            "/data/mathlang/section/" + cmdArgs[0];
+                      "/data/mathlang/section/" + cmdArgs[0];
     ifstream isf(fileName);
-    if (!isf.is_open())
-    {
+    if (!isf.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
         return;
     }
@@ -259,50 +220,134 @@ void MathlangPlugin::loadSection(vector<string> cmdArgs)
     stringstream buf;
     buf << isf.rdbuf();
     json j = json::parse(buf.str());
-    Hierarchy* read = Lecture::fromJsonE(j);
-    if (Lecture* s = dynamic_cast<Lecture*>(read))
-        resetStorage(s);
+    Node* read = Node::fromJsonE(j);
+    if (auto* n = dynamic_cast<Node*>(read))
+        resetStorage(n);
     printIncr(current);
 }
 
-void MathlangPlugin::deduceMP(vector<string> cmdArgs)
-{
-    FUNC_INFO("MP",
+void MathlangPlugin::addType(vector<string> cmdArgs) {
+    CALL_INFO("тип", "<тип [typeName]> - ввести тип typeName.")
+
+    if (cmdArgs.size() < 1)
+        return;
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        try {
+            pn->defType(cmdArgs[0]);
+            printIncr(pn);
+        }
+        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+    }
+}
+
+void MathlangPlugin::addSym(vector<string> cmdArgs) {
+    CALL_INFO("символ",
+             "<символ [symName] [argT]* [retT]> - ввести символ symName.")
+
+    if (cmdArgs.size() < 2)
+        return;
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
+        try {
+            pn->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
+            printIncr(pn);
+        }
+        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+    }
+}
+
+void MathlangPlugin::addVar(vector<string> cmdArgs) {
+    CALL_INFO("переменная",
+             "<переменная [varName] [varType]> - ввести переменную varName типа varType.")
+
+    if (cmdArgs.size() < 2)
+        return;
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        try {
+            pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1]).getName());
+            printIncr(pn);
+        }
+        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+    }
+}
+
+void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
+    CALL_INFO("пусть", "<пусть [statement]> - ввести утверждение statement.")
+
+    if (cmdArgs.size() < 1)
+        return;
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        pn->addAxiom(cmdArgs[0]);
+        printIncr(pn);
+    }
+}
+
+
+void MathlangPlugin::viewTypes(vector<string> cmdArgs) {
+    CALL_INFO("типы", "<типы> - перечислить уже определённые типы.")
+
+    write(INFO_TYPE::TXT, "Опеределены следующие типы:");
+    for (const auto& n : current->index().getNames(NameTy::MT))
+        write(INFO_TYPE::TXT, n);
+}
+
+void MathlangPlugin::viewSyms(vector<string> cmdArgs) {
+    CALL_INFO("символы", "<символы> - перечислить уже определённые символы.")
+
+    write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
+    for (const auto& n : current->index().getNames(NameTy::SYM))
+        write(INFO_TYPE::TXT, n);
+}
+
+void MathlangPlugin::viewVars(vector<string> cmdArgs) {
+    CALL_INFO("переменные", "<переменные> - перечислить уже определённые переменные.")
+
+    write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
+    for (const auto& n : current->index().getNames(NameTy::VAR))
+        write(INFO_TYPE::TXT, n);
+}
+
+void MathlangPlugin::deduceMP(vector<string> cmdArgs) {
+    CALL_INFO("MP",
              "<MP [PathPre] [PathImpl]> - применить правило вывода MP для Pre и Impl.")
 
     if (cmdArgs.size() < 2)
         return;
-    current->doMP(cmdArgs[0], cmdArgs[1]);
-    printIncr(current);
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        pn->doMP(cmdArgs[0], cmdArgs[1]);
+        printIncr(pn);
+    }
 }
 
-void MathlangPlugin::deduceSpec(vector<string> cmdArgs)
-{
-    FUNC_INFO("spec",
+void MathlangPlugin::deduceSpec(vector<string> cmdArgs) {
+    CALL_INFO("spec",
              "<spec [PathGen] [PathT]> - применить правило вывода Spec для Gen и T.")
 
     if (cmdArgs.size() < 2)
         return;
-    current->doSpec(cmdArgs[0], cmdArgs[1]);
-    printIncr(current);
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        pn->doSpec(cmdArgs[0], cmdArgs[1]);
+        printIncr(pn);
+    }
 }
 
-void MathlangPlugin::deduceGen(vector<string> cmdArgs)
-{
-    FUNC_INFO("gen",
+void MathlangPlugin::deduceGen(vector<string> cmdArgs) {
+    CALL_INFO("gen",
              "<gen [PathToGen] [PathVar]> - применить правило вывода Gen для ToGen и Var.")
 
     if (cmdArgs.size() < 2)
         return;
-    current->doGen(cmdArgs[0], cmdArgs[1]);
-    printIncr(current);
+    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+        pn->doGen(cmdArgs[0], cmdArgs[1]);
+        printIncr(pn);
+    }
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
 : BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent)
 {
     // Инициализация переменных здесь
-    storage = new Lecture("Главный");
+    storage = new BranchNode("Главный");
     current = storage;
 
     methodsCfg();
@@ -311,20 +356,26 @@ MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
 
 void MathlangPlugin::methodsCfg()
 {
+    methods.insert(make_pair("start_course" , &MathlangPlugin::startCourse ));
+    methods.insert(make_pair("start_section", &MathlangPlugin::startSection));
+    methods.insert(make_pair("start_lecture", &MathlangPlugin::startLecture));
+
+    methods.insert(make_pair("to_super",&MathlangPlugin::toSuper));
+    methods.insert(make_pair("to_sub",  &MathlangPlugin::toSubNode));
+    methods.insert(make_pair("view", &MathlangPlugin::viewNode));
+    methods.insert(make_pair("save", &MathlangPlugin::saveAll));
+    methods.insert(make_pair("load", &MathlangPlugin::loadAll));
+
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
     methods.insert(make_pair("add_sym"  , &MathlangPlugin::addSym));
     methods.insert(make_pair("add_var"  , &MathlangPlugin::addVar));
     methods.insert(make_pair("add_axiom", &MathlangPlugin::addAxiom));
 
-    methods.insert(make_pair("view_types", &MathlangPlugin::viewTypes));
+    methods.insert(make_pair("view_types",&MathlangPlugin::viewTypes));
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));
     methods.insert(make_pair("view_vars", &MathlangPlugin::viewVars));
 
-    methods.insert(make_pair("sub_section",  &MathlangPlugin::subSection));
-    methods.insert(make_pair("goto_section", &MathlangPlugin::gotoSection));
-    methods.insert(make_pair("view_section", &MathlangPlugin::viewSection));
-    methods.insert(make_pair("save_section", &MathlangPlugin::saveSection));
-    methods.insert(make_pair("load_section", &MathlangPlugin::loadSection));
+
 
     methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
     methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));

@@ -32,7 +32,7 @@ public:
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
-
+class Representation;
 class Node;
 class Hierarchy
 /// Обеспечивает древовидную структуру.
@@ -41,24 +41,14 @@ private:
     Node* _parent;
 protected:
     Node* getParent() const { return _parent; }
-    virtual Hierarchy* getByPass(Path path) = 0;
-    explicit Hierarchy(Node* parent) : _parent(parent) {}
+    explicit Hierarchy(Node* parent);
 public:
     Hierarchy() : Hierarchy(nullptr) {};
     virtual ~Hierarchy() = default;
     Hierarchy(const Hierarchy&) = delete;
     Hierarchy& operator=(const Hierarchy&) = delete;
 
-    /*const Terms* getTerms(Path pathToTerm)
-    {
-        Hierarchy* termItem = getByPass(pathToTerm);
-        if (auto t = dynamic_cast<Statement*>(termItem))
-            return t->get();
-        else if (auto v = dynamic_cast<DefVar*>(termItem))
-            return v;
-        else
-            return nullptr;
-    }*/
+    virtual Hierarchy* getByPass(Path path) = 0;
     size_t getNumber() const;
     /*
     // У следующей функции такой странный дизайн, потому что хочется отдавать
@@ -78,13 +68,13 @@ public:
 
     /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
 
-    virtual std::string toString() const;
     virtual json toJson() const;
     virtual json toMlObj() const = 0;*/
+    virtual std::string print(Representation* r, bool incremental = true) const = 0;
 };
 
 
-class Naming
+class NameStoringStrategy
 /// Интерфейс работы с именами со стороны узлов
 {
 public:
@@ -92,112 +82,115 @@ public:
     friend class AbstrDef;
     virtual void registerName(
             NameTy type, const std::string& name, AbstrDef* where) = 0;
+
+    virtual std::string printType() const = 0;
 };
+
+
 class ListStorage
 /// Реализация хранения потомков узла
 {
 public:
     typedef std::list<Hierarchy*> HiList;
+    typedef HiList::const_iterator HiList_cIter;
 private:
     HiList subs;
-    mutable std::pair<bool, HiList::const_iterator> newInfo;
+    mutable std::pair<bool, HiList_cIter> newInfo;
 protected:
     ListStorage() : subs(), newInfo(false, subs.begin()) {}
-    void push(Hierarchy* item)
-    {
-        subs.push_back(item);
-        if (!newInfo.first)
-            newInfo = {true, std::prev(subs.end())};
-    }
-    void resetInfoFlag() { newInfo = {true, subs.begin()}; }
-    Hierarchy* getByNumber(size_t number) const
-    {
-        if (number > subs.size())
-            return nullptr;
-        else
-            return *std::next(subs.begin(), number-1);
-    }
+    void push(Hierarchy* item);
+    Hierarchy* getByNumber(size_t number) const;
 public:
-    virtual ~ListStorage()
-    {
-        for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
-            delete s;           // они должны создаваться в куче
-    }
+    virtual ~ListStorage();
 
-    size_t checkChildsNumber(const Hierarchy* child) const
-    {
-        size_t n = 1;
-        for (const auto& s : subs)
-            if (s == child)
-                return n;
-            else
-                ++n;
-        return 0;
-    }
-};
-class Node : public Hierarchy, public Naming, public ListStorage
-/// Этот класс представляет группирующие объекты
-{
-protected:
-    explicit Node(Node* parent) : Hierarchy(parent)
-    {
-        if (parent)
-            getParent()->push(this);
-    }
-
-    Hierarchy* getByPass(Path path) override {
-        // теперь используются относительные пути
-        if (!path.empty())
-        {
-            auto n = path.front();
-            path.pop_front();
-            if (n < 1)
-                return getParent()->getByPass(path);
-            else
-                return getByNumber(n)->getByPass(path);
-        }
-        return this;
-    }
-public:
-    Node(): Hierarchy(nullptr) {}
-    ~Node() override = default;
+    size_t getChNumber(const Hierarchy* child) const;
+    std::string print(Representation* r, bool incremental) const;
+    HiList_cIter start() const { return newInfo.second; }
+    HiList_cIter end() const { return  subs.end(); }
 };
 
-
-class Inner : public virtual Node
-/// Этот класс описывает узлы с внутренним хранением имён как в Теоремах и Курсах
+class Node : public Hierarchy, public ListStorage
+/// Этот класс представляет группирующие структуры
 {
 private:
-    NameSpaceIndex atTheEnd;    // Здесь хранится NSI, соответствующее концу Inner,
-                                // потому что запись ведётся именно в конец.
-                                // Вставки Def-ов влекут обновление.
+    NameStoringStrategy* _naming;
 protected:
-    explicit Inner(Node* parent) : Node(parent)
-    {
-        auto _parent = getParent();
-        if (_parent)
-            atTheEnd = _parent->index();
-    }
+    explicit Node(Node* parent, NameStoringStrategy* naming)
+            : Hierarchy(parent), _naming(naming) { }
+
 public:
-    Inner() : Inner(nullptr) {}
+    ~Node() override { delete _naming; }
+    using ListStorage::push;
+    Hierarchy* getByPass(Path path) override;
+
+    virtual const NameSpaceIndex& index() const
+    { return _naming->index(); }
+    virtual void registerName(NameTy type, const std::string& name, AbstrDef* where)
+    { _naming->registerName(type, name, where); }
+
+    virtual std::string print(Representation* r, bool incremental = true) const override
+    { return ListStorage::print(r, incremental); }
+    std::string nssType() const { return _naming->printType(); }
+};
+
+
+class Hidden : public NameStoringStrategy
+/// Стратегия внутреннего хранения имён как в Теоремах и Курсах
+{
+private:
+    /*  Здесь хранится NSI, соответствующее концу Node,
+        потому что запись ведётся именно в конец.
+        Вставки Def-ов влекут обновление. */
+    NameSpaceIndex atTheEnd;
+public:
+    Hidden() : Hidden(nullptr) {}
+    explicit Hidden(Node* parent) {
+        if (parent)
+            atTheEnd = parent->index();
+    }
+
     const NameSpaceIndex& index() const override { return atTheEnd; }
     void registerName(
             NameTy type, const std::string &name, AbstrDef* where) override
     { atTheEnd.add(type, name, where); }
+    std::string printType() const override { return "Hidden"; }
 };
-class Appending : public virtual Node
-/// Этот класс описывает узлы с внешним хранением имён как в Лекциях и Разделах
-{
-protected:
-    explicit Appending(Node* parent)
-            : Node(parent) {}
-public:
-    const NameSpaceIndex& index() const override
-    { return getParent()->index(); }
 
+class Appending : public NameStoringStrategy
+/// Стратегия внешнего хранения имён как в Лекциях и Разделах
+{
+private:
+    Node* _parent;
+public:
+    explicit Appending(Node* parent) : _parent(parent) {}
+
+    const NameSpaceIndex& index() const override { return _parent->index(); }
     void registerName(
             NameTy type, const std::string& name, AbstrDef* where) override
-    { getParent()->registerName(type, name, where); }
+    { _parent->registerName(type, name, where); }
+    std::string printType() const override { return "Appending"; }
+};
+
+
+class NamedNode;
+class DefType;
+class DefVar;
+class DefSym;
+class Axiom;
+class AbstrInf;
+class Representation
+{
+public:
+    // далее следуют методы построения некоторого
+    // представления для всех тех классов, для которых это
+    // имеет смысл (т.е. для конкретных классов иерархии)
+    virtual std::string process(const ListStorage*) = 0;
+    virtual std::string process(const NamedNode*) = 0;
+    virtual std::string process(const DefType*) = 0;
+    virtual std::string process(const DefVar*) = 0;
+    virtual std::string process(const DefSym*) = 0;
+    virtual std::string process(const Axiom*) = 0;
+    virtual std::string process(const AbstrInf*) = 0;
 };
 
 Path mkPath(std::string source);

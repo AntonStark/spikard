@@ -1,10 +1,12 @@
 #include <sstream>
 #include <fstream>
 #include "logic.hpp"
-#include "signature.hpp"
+#include "rationale.hpp"
 #include "parser.hpp"
 
 #include "../../json.hpp"
+#include "view.hpp"
+
 using json = nlohmann::json;
 
 using namespace std;
@@ -33,48 +35,39 @@ int main(void)
     Variable x("x", real);
     Variable one("1", real);
 
-    //todo  1) показать_рассуждение -> показать
     //todo  2) при обрыве работы происходит сохранение с именем autosave?
 
 
-    /*Symbol gr({">", {real, real}, logical_mt});
+    Symbol gr({">", {real, real}, logical_mt});
     Term t(gr, {&x, &one});
     const Terms* sdf = new ForallTerm(x, &t);
-    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;*/
+//    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;
 
     Symbol ze({"0", {}, real});
     Symbol ne({"!=", {2, real}, logical_mt});
     //todo меньше new/delete в термах, потом
 
-    Lecture theorem("Название раздела");
-    theorem.defType("Logical");
-    theorem.defVar("A", "Logical");
-    theorem.defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
-    theorem.defVar("B", "Logical");
-    theorem.addAxiom("\\forall C\\typeof Logical \\Rightarrow (A, B)");
-    theorem.doSpec("5", "5.1");
-    theorem.doMP("(2)", "(6)");
-    theorem.printB(cout);
+    BranchNode entry("global");
+    entry.startLecture("Название раздела");
+    Hierarchy* h = entry.getSub(1);
+    if (auto* pn = static_cast<PrimaryNode*>(h)) {
+        pn->defType("Logical");
+        pn->defVar("A", "Logical");
+        pn->defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
+        pn->defVar("B", "Logical");
+        pn->addAxiom("\\forall C\\in Logical \\Rightarrow (A, B)");
+        pn->doSpec("5", "5.1");
+        pn->doMP("(2)", "(6)");
 
-    json j = theorem.toJson();
+        cout << pn->print(new PlainText()) << endl;
+        cout << pn->Node::print(new PlainText());
+    }
+
+
+    /*json j = theorem.toJson();
     cout << j.dump(2);
     cout << endl << endl << flush;
-    Hierarchy* rec = Lecture::fromJsonE(j);
-//    dynamic_cast<Lecture*>(rec)->printB(cout);
-
-    cout << endl;
-   /* testFN("../tmp/test.txt");
-    testFN("test.txt");
-    testFN("./text.txt");*/
-    testFN("./tmp/text.txt");
-    testFN("tmp/text.txt");/*
-    testFN("/tmp/spikard/text.txt");
-    testFN("/tmp/text.txt");
-    testFN("~/development/spikard/text.txt");
-    testFN("/home/anton/development/spikard/text.txt");
-    testFN("/home/anton/development/text.txt");*/
-    testFN("/home/anton/development/spikard/ЭонТал/data/mathlang/section/test");
-
+    Hierarchy* rec = Lecture::fromJsonE(j);*/
 
     return 0;
 }
