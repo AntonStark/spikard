@@ -5,6 +5,7 @@
 #include "../../core.hpp"
 #include "../../lib/mathlang/rationale.hpp"
 #include "../../lib/mathlang/parser.hpp"
+#include "../../lib/mathlang/view.hpp"
 
 using namespace std;
 
@@ -12,11 +13,11 @@ class MathlangPlugin : public BaseModule
 {
 private:
     // Здесь описываются необходимые переменные
-    Node* storage;
-    Node* current;
-    void resetStorage(Node* _storage);
+    NamedNode* storage;
+    NamedNode* current;
+    void resetStorage(NamedNode* _storage);
     string userCheck();
-//    void printIncr(Lecture* source);
+    void printIncr();
 
     // Далее следуют функции, реализующие функционал плагина
     void startCourse (vector<string> cmdArgs);
@@ -58,7 +59,7 @@ public:
     void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
-void MathlangPlugin::resetStorage(Node* _storage)
+void MathlangPlugin::resetStorage(NamedNode* _storage)
 {
     delete storage;
     storage = _storage;
@@ -79,14 +80,14 @@ void MathlangPlugin::resetStorage(Node* _storage)
         }\
     }\
 }
-//todo На стороне сервера: при подключении плагина <помощь> пополняется.
-/*void MathlangPlugin::printIncr(Lecture* source)
+
+void MathlangPlugin::printIncr()
 {
-    std::list<std::string> buf;
-    source->printMlObjIncr(buf);
-    for (const auto& l : buf)
+    AsMlObj asMlObj;
+    current->Node::print(&asMlObj, true);
+    for (const auto& l : asMlObj.buffer)
         write(INFO_TYPE::ML_OBJ, l);
-}*/
+}
 
 void MathlangPlugin::startCourse(vector<string> cmdArgs) {
     CALL_INFO("курс", "<курс [title]> - начать курс с названием title.")
@@ -136,7 +137,7 @@ void MathlangPlugin::startLecture(vector<string> cmdArgs) {
 void MathlangPlugin::toSuper(vector<string> cmdArgs) {
     CALL_INFO("наверх", "<наверх> - перейти к узлу уровнем выше.")
 
-    Node* target = current->getParent();
+    auto* target = static_cast<NamedNode*>(current->getParent());
     if (target)
         current = target;
 }
@@ -149,17 +150,17 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
         return;
 
     if (auto* bn = static_cast<BranchNode*>(current)) {
-        Node* target = static_cast<Node*>(      // subs BranchNode гарантированно типа Node
-                bn->getSub( atoi(cmdArgs[0].c_str()) ));
+        NamedNode* target = static_cast<NamedNode*>(    // у BranchNode subs гарантированно
+                bn->getSub( atoi(cmdArgs[0].c_str()) ));// имеют тип NamedNode
         if (target)
             current = target;
-        printIncr(current);
+        printIncr();
     }
 }
 
 void MathlangPlugin::viewNode(vector<string> cmdArgs) {
     CALL_INFO("показать", "<показать> - показать работу целиком.")
-    printIncr(current);
+    printIncr();
 }
 
 string MathlangPlugin::userCheck() {
@@ -195,8 +196,10 @@ void MathlangPlugin::saveAll(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
         return;
     }
-    osf << current->toJson().dump(2) << endl;
+    auto aj = new AsJson();
+    osf << current->print(aj, false) << endl;
     write(INFO_TYPE::TXT, "Сохранено.");
+    delete aj;
 }
 
 void MathlangPlugin::loadAll(vector<string> cmdArgs) {
@@ -220,10 +223,12 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
     stringstream buf;
     buf << isf.rdbuf();
     json j = json::parse(buf.str());
-    Node* read = Node::fromJsonE(j);
-    if (auto* n = dynamic_cast<Node*>(read))
-        resetStorage(n);
-    printIncr(current);
+    // так как объекты всегда хранятся в массиве, а на верхнем
+    // уровне есть только один, берём j.at(0) а его данные - .at(1)
+    BranchNode* read = BranchNode::fromJson(j.at(0).at(1));
+    if (read)
+        resetStorage(read);
+    printIncr();
 }
 
 void MathlangPlugin::addType(vector<string> cmdArgs) {
@@ -234,7 +239,7 @@ void MathlangPlugin::addType(vector<string> cmdArgs) {
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         try {
             pn->defType(cmdArgs[0]);
-            printIncr(pn);
+            printIncr();
         }
         catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
     }
@@ -250,7 +255,7 @@ void MathlangPlugin::addSym(vector<string> cmdArgs) {
         list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
         try {
             pn->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-            printIncr(pn);
+            printIncr();
         }
         catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
     }
@@ -265,7 +270,7 @@ void MathlangPlugin::addVar(vector<string> cmdArgs) {
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         try {
             pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1]).getName());
-            printIncr(pn);
+            printIncr();
         }
         catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
     }
@@ -278,7 +283,7 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
         return;
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         pn->addAxiom(cmdArgs[0]);
-        printIncr(pn);
+        printIncr();
     }
 }
 
@@ -315,7 +320,7 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs) {
         return;
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         pn->doMP(cmdArgs[0], cmdArgs[1]);
-        printIncr(pn);
+        printIncr();
     }
 }
 
@@ -327,7 +332,7 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs) {
         return;
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         pn->doSpec(cmdArgs[0], cmdArgs[1]);
-        printIncr(pn);
+        printIncr();
     }
 }
 
@@ -339,7 +344,7 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs) {
         return;
     if (auto* pn = static_cast<PrimaryNode*>(current)) {
         pn->doGen(cmdArgs[0], cmdArgs[1]);
-        printIncr(pn);
+        printIncr();
     }
 }
 

@@ -32,9 +32,10 @@ public:
             : Node(parent, nss), Named(title), _type(type) {}
 
     std::string print(Representation* r, bool incremental = true) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 
+class BranchNode;
 class PrimaryNode : public NamedNode
 /// Этот класс служит для группировки первичных понятий
 {
@@ -44,6 +45,7 @@ protected:
     PrimaryNode(Node* parent, NameStoringStrategy* nss,
                 NamedNodeType type, const std::string& title)
             : NamedNode(parent, nss, type, title) {}
+    static PrimaryNode* fromJson(const json& j, BranchNode* parent = nullptr);
 public:
     ~PrimaryNode() override = default;
 
@@ -70,9 +72,11 @@ protected:
     BranchNode(BranchNode* parent, NameStoringStrategy* nss,
                NamedNodeType type, const std::string& title)
             : NamedNode(parent, nss, type, title) {}
+    static BranchNode* fromJson(const json& j, BranchNode* parent);
 public:
     BranchNode(const std::string& title)
             : BranchNode(nullptr, new Hidden(), NamedNodeType::COURSE, title) {}
+    static BranchNode* fromJson(const json& j) { return fromJson(j, nullptr); }
     ~BranchNode() override = default;
 
     void startCourse (const std::string& title = "")
@@ -82,7 +86,8 @@ public:
     void startLecture(const std::string& title = "")
     { new PrimaryNode(this, new Appending(this), NamedNodeType::LECTURE, title); }
 
-    Hierarchy* getSub(size_t number) { return getByNumber(number); }
+    PrimaryNode* getSub(size_t number)
+    { return static_cast<PrimaryNode*>(getByNumber(number)); }
 };
 
 class Item : public Hierarchy
@@ -114,17 +119,14 @@ private:
     friend class PrimaryNode;
     DefType(PrimaryNode* naming, const std::string& typeName)
             : AbstrDef(naming, NameTy::MT, typeName), MathType(typeName) {}
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefType() override = default;
     DefType(const DefType&) = delete;
     DefType& operator=(const DefType&) = delete;
 
-    /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
-
-    json toJson() const override;
-    json toMlObj() const override;*/
     std::string print(Representation* r, bool incremental) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 
 class DefVar : public AbstrDef, public Variable
@@ -133,17 +135,14 @@ private:
     friend class PrimaryNode;
     DefVar(PrimaryNode* naming, const std::string& varName, MathType mathType)
             : AbstrDef(naming, NameTy::VAR, varName), Variable(varName, mathType) {}
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefVar() override = default;
     DefVar(const DefVar&) = delete;
     DefVar& operator=(const DefVar&) = delete;
 
-    /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
-
-    json toJson() const override;
-    json toMlObj() const override;*/
     std::string print(Representation* r, bool incremental) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 
 class DefSym : public AbstrDef, public Symbol
@@ -153,17 +152,14 @@ private:
     DefSym(PrimaryNode* naming, const std::string& symName,
            const std::list<MathType>& argT, MathType retT)
             : AbstrDef(naming, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefSym() override = default;
     DefSym(const DefSym&) = delete;
     DefSym& operator=(const DefSym&) = delete;
 
-    /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
-
-    json toJson() const override;
-    json toMlObj() const override;*/
     std::string print(Representation* r, bool incremental) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 
 class Statement
@@ -182,18 +178,16 @@ private:
     friend class PrimaryNode;
     friend class Lexer;
     Axiom(PrimaryNode* parent, std::string source);
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~Axiom() override = default;
     Axiom(const Axiom&) = delete;
     Axiom& operator=(const Axiom&) = delete;
 
     const Terms* get() const override { return data; }
-    /*static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 
-    json toJson() const override;
-    json toMlObj() const override;*/
     std::string print(Representation* r, bool incremental) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 extern Term* parse(Axiom* where, std::string source);
 
@@ -217,11 +211,8 @@ public:
 
     std::string getTypeAsStr() const;
 
-    /*
-    json toJson() const override;
-    json toMlObj() const override;*/
     std::string print(Representation* r, bool incremental) const override
-    { return r->process(this); }
+    { r->process(this); return r->str(); }
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
@@ -231,14 +222,13 @@ private:
     Terms* data;
     friend class PrimaryNode;
     InfMP(PrimaryNode* naming, Path pArg1, Path pArg2);
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfMP() override = default;
     InfMP(const InfMP&) = delete;
     InfMP& operator=(const InfMP&) = delete;
 
     const Terms* get() const override { return data; }
-
-//    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 };
 
 Terms* specialization(const Terms* general, const Terms* t);
@@ -248,14 +238,13 @@ private:
     Terms* data;
     friend class PrimaryNode;
     InfSpec(PrimaryNode* naming, Path pArg1, Path pArg2);
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfSpec() override = default;
     InfSpec(const InfSpec&) = delete;
     InfSpec& operator=(const InfSpec&) = delete;
 
     const Terms* get() const override { return data; }
-
-//    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 };
 
 Term*   generalization  (const Terms* toGen, const Terms* x);
@@ -265,14 +254,13 @@ private:
     Terms* data;
     friend class PrimaryNode;
     InfGen(PrimaryNode* naming, Path pArg1, Path pArg2);
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfGen() override = default;
     InfGen(const InfGen&) = delete;
     InfGen& operator=(const InfGen&) = delete;
 
     const Terms* get() const override { return data; }
-
-//    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

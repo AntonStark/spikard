@@ -20,6 +20,16 @@ std::string toStr(NamedNodeType nnt) {
         case NamedNodeType::CLOSURE : return "Closure";
     }
 }
+NamedNodeType nntFromStr(std::string str) {
+    if (str == "Course")
+        return NamedNodeType::COURSE;
+    else if (str == "Section")
+        return NamedNodeType::SECTION;
+    else if (str == "Lecture")
+        return NamedNodeType::LECTURE;
+    else
+        return NamedNodeType::CLOSURE;
+}
 
 
 void PrimaryNode::defType(const std::string& typeName)
@@ -124,190 +134,67 @@ InfGen::InfGen(PrimaryNode* naming, Path pArg1, Path pArg2)
 { if (!data) throw bad_inf(); }
 
 
-/*Hierarchy* Hierarchy::fromJson(const json& j, Lecture* parent)
-{
-    const std::string itemType = j.at("ItemType");
-    if (itemType == "Lecture")
-        return Lecture::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefType")
-        return DefType::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefVar")
-        return DefVar::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "DefSym")
-        return DefSym::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "Axiom")
-        return Axiom::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfMP")
-        return InfMP::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfSpec")
-        return InfSpec::fromJson(j.at("ItemData"), parent);
-    else if (itemType == "InfGen")
-        return InfGen::fromJson(j.at("ItemData"), parent);
-    else
-        return nullptr;
+PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
+    auto* pn = new PrimaryNode(parent, nssFromStr(j.at("storing_strategy"), parent),
+                              nntFromStr(j.at("type")), j.at("title"));
+    json jsubs = j.at("subs");
+    for (const auto& s : jsubs) {
+        auto type = s.at(0);
+        auto data = s.at(1);
+        if (type == "DefType")
+            DefType::fromJson(data, pn);
+        else if (type == "DefVar")
+            DefVar:: fromJson(data, pn);
+        else if (type == "DefSym")
+            DefSym:: fromJson(data, pn);
+        else if (type == "Axiom")
+            Axiom::  fromJson(data, pn);
+        else if (type == "InfMP")
+            InfMP::  fromJson(data, pn);
+        else if (type == "InfSpec")
+            InfSpec::fromJson(data, pn);
+        else if (type == "InfGen")
+            InfGen:: fromJson(data, pn);
+    }
+    return pn;
 }
-Hierarchy* Lecture::fromJson(const json& j, Lecture* parent)
-{
-    auto section = new Lecture(parent, j.at("title"));
-    json subs = j.at("subs");
-    for (const auto& s : subs)
-        Hierarchy::fromJson(s, section);
-    return section;
+
+BranchNode* BranchNode::fromJson(const json& j, BranchNode* parent) {
+    auto* bn = new BranchNode(parent, nssFromStr(j.at("storing_strategy"), parent),
+                              nntFromStr(j.at("type")), j.at("title"));
+    json jsubs = j.at("subs");
+    for (const auto& s : jsubs) {
+        auto o = s.at(1);
+        if (o.at("type") == "Course" || o.at("type") == "Section")
+            BranchNode ::fromJson(o, bn);
+        else if (o.at("type") == "Lecture" || o.at("type") == "Closure")
+            PrimaryNode::fromJson(o, bn);
+    }
+    return bn;
 }
-Hierarchy* DefType::fromJson(const json& j, Lecture* parent)
+
+Hierarchy* DefType::fromJson(const json& j, PrimaryNode* parent)
 { return new DefType(parent, j.at("name")); }
-Hierarchy* DefVar::fromJson(const json& j, Lecture* parent)
-{
-    auto type = parent->index().getT(j.at("type"));
+
+Hierarchy* DefVar::fromJson(const json& j, PrimaryNode* parent) {
+    auto type = ::getType(parent->index(), j.at("type"));
     return new DefVar(parent, j.at("name"), type);
 }
-Hierarchy* DefSym::fromJson(const json& j, Lecture* parent)
-{
+
+Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
     std::list<MathType> argT;
     auto index = parent->index();
     for (const auto& t : j.at("argT"))
-        argT.push_back(index.getT(t));
-    MathType retT = parent->index().getT(j.at("retT"));
+        argT.push_back(::getType(index, t));
+    MathType retT = ::getType(parent->index(), j.at("retT"));
     return new DefSym(parent, j.at("name"), argT, retT);
 }
-Hierarchy* Axiom::fromJson(const json& j, Lecture* parent)
+
+Hierarchy* Axiom::fromJson(const json& j, PrimaryNode* parent)
 { return new Axiom(parent, j.at("axiom")); }
-Hierarchy* InfMP::fromJson(const json& j, Lecture* parent)
+Hierarchy* InfMP::fromJson(const json& j, PrimaryNode* parent)
 { return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-Hierarchy* InfSpec::fromJson(const json& j, Lecture* parent)
+Hierarchy* InfSpec::fromJson(const json& j, PrimaryNode* parent)
 { return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-Hierarchy* InfGen::fromJson(const json& j, Lecture* parent)
+Hierarchy* InfGen::fromJson(const json& j, PrimaryNode* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
-
-
-json Hierarchy::toJson() const
-{
-    json temp;
-    for (const auto& s : subs)
-        temp.push_back(s->toJson());
-    return temp;
-}
-json Lecture::toJson() const
-{
-    json temp;
-    temp["ItemType"] = "Lecture";
-    temp["ItemData"] = { {"title", title},
-                         {"subs", Hierarchy::toJson()} };
-    return temp;
-}
-json DefType::toJson() const
-{
-    json temp;
-    temp["ItemType"] = "DefType";
-    temp["ItemData"] = { {"name", getName()} };
-    return temp;
-}
-json DefVar::toJson() const
-{
-    json temp;
-    temp["ItemType"] = "DefVar";
-    temp["ItemData"] = { {"name", getName()},
-                         {"type", getType().getName()} };
-    return temp;
-}
-json DefSym::toJson() const
-{
-    json temp;
-    auto symInfo = getSign();
-    std::vector<std::string> argT;
-    for (const auto& a : symInfo.first)
-        argT.push_back(a.getName());
-
-    temp["ItemType"] = "DefSym";
-    temp["ItemData"] = { {"name", getName()},
-                         {"argT", argT},
-                         {"retT", symInfo.second.getName()}};
-    return temp;
-}
-json Axiom::toJson() const
-{
-    json temp;
-    std::stringstream ss;
-    data->print(ss);
-    temp["ItemType"] = "Axiom";
-    temp["ItemData"] = { {"axiom", ss.str()}*//*,
-                         {"subs", Hierarchy::toJson()}*//* };
-    return temp;
-}
-json AbstrInf::toJson() const
-{
-    json temp;
-    switch (type)
-    {
-        case InfTy::MP : { temp["ItemType"] = "InfMP"; break; }
-        case InfTy::GEN : { temp["ItemType"] = "InfGen"; break; }
-        case InfTy::SPEC : { temp["ItemType"] = "InfSpec"; break; }
-    }
-    temp["ItemData"] = { {"arg1", pathToStr(premises.at(0))},
-                         {"arg2", pathToStr(premises.at(1))} };
-    return temp;
-}
-
-
-struct MlObj
-{
-    std::string mlType;
-    size_t label;
-    std::string body;
-    std::vector<Path> premises;
-
-    MlObj(std::string _mlType, size_t _label,
-          std::string _body, std::vector<Path> _premises = {}) :
-            mlType(std::move(_mlType)), label(_label),
-            body(std::move(_body)), premises(std::move(_premises)) {}
-
-    json toJson()
-    {
-        return json({ {"mlType", mlType},
-                      {"label", {label}},
-                      {"body", body},
-                      {"premises", premises} });
-    }
-};
-json Lecture::toMlObj() const
-{ return MlObj("section", 0, getTitle()).toJson(); }
-json DefType::toMlObj() const
-{ return MlObj("def_type", getNumber(), getName()).toJson(); }
-json DefVar::toMlObj() const
-{
-    std::stringstream body;
-    body << getName() << "\\in " << getType().getName();
-    return MlObj("def_var", getNumber(), body.str()).toJson();
-}
-json DefSym::toMlObj() const
-{
-    std::stringstream out;
-    out << getName() << " : ";
-    auto argTypes = getSign().first;
-    if (!argTypes.empty())
-    {
-        out << argTypes.front().getName();
-        auto e = argTypes.end();
-        for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << "\\times " << it->getName();
-    }
-    out << "\\rightarrow " << getType().getName();
-    return MlObj("def_sym", getNumber(), out.str()).toJson();
-}
-json Axiom::toMlObj() const
-{
-    std::stringstream ax; ax << *data;
-    return MlObj("axiom", getNumber(), ax.str()).toJson();
-}
-json AbstrInf::toMlObj() const
-{
-    std::string infType;
-    switch (type)
-    {
-        case InfTy::MP   : { infType = "inf_mp";  break; }
-        case InfTy::GEN  : { infType = "inf_gen"; break; }
-        case InfTy::SPEC : { infType = "inf_spec";break; }
-    }
-    std::stringstream inf; inf << *get();
-    return MlObj(infType, getNumber(), inf.str(), premises).toJson();
-}*/

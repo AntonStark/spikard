@@ -50,9 +50,24 @@ int main(void)
         pn->doSpec("5", "5.1");
         pn->doMP("(2)", "(6)");
 
-        cout << pn->print(new PlainText()) << endl;
+        /*cout << pn->print(new PlainText()) << endl;
         cout << pn->Node::print(new PlainText());
+
+        cerr << pn->print(new AsJson()) << endl << flush;*/
     }
+    stringstream ss;
+    ss << entry.print(new AsJson()) << endl;
+
+    json j = json::parse(ss.str());
+//    cerr << j.dump(2) << endl;
+
+    auto bn = BranchNode::fromJson(j.at(0).at(1));
+
+    auto pr = new PlainText;
+    cout << bn->print(pr) << endl;
+    cout << bn->Node::print(pr);
+    cout << bn->getSub(1)->Node::print(pr);
+
 
 
     /*json j = theorem.toJson();

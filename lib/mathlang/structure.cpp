@@ -84,9 +84,9 @@ size_t ListStorage::getChNumber(const Hierarchy* child) const {
 std::string ListStorage::print(Representation* r, bool incremental) const {
     if (!incremental)
         newInfo = {true, subs.begin()};
-    std::string buf = r->process(this);
+    r->process(this);
     newInfo.first = false;
-    return buf;
+    return r->str();
 }
 
 Hierarchy* Node::getByPass(Path path) {
@@ -102,6 +102,13 @@ Hierarchy* Node::getByPass(Path path) {
     return this;
 }
 
+
+NameStoringStrategy* nssFromStr(std::string str, Node* parent) {
+    if (str == "Hidden")
+        return new Hidden(parent);
+    else
+        return new Appending(parent);
+}
 
 Path mkPath(std::string source)
 {

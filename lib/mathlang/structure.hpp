@@ -40,7 +40,6 @@ class Hierarchy
 private:
     Node* _parent;
 protected:
-    Node* getParent() const { return _parent; }
     explicit Hierarchy(Node* parent);
 public:
     Hierarchy() : Hierarchy(nullptr) {};
@@ -48,28 +47,10 @@ public:
     Hierarchy(const Hierarchy&) = delete;
     Hierarchy& operator=(const Hierarchy&) = delete;
 
+    Node* getParent() const { return _parent; }
     virtual Hierarchy* getByPass(Path path) = 0;
     size_t getNumber() const;
-    /*
-    // У следующей функции такой странный дизайн, потому что хочется отдавать
-    // MlObj для каждой конструкции новым сообщением (вызов write(InfoType, string)
-    // А здесь до функционала плагина не добравться, в то же время нельзя пускать
-    // плагин до внутренного устройства класса.
-    void printMlObjIncr(std::list<std::string>& toOut) const
-    {
-        if (newInfo.first)
-        {
-            auto e = subs.end();
-            for (auto it = newInfo.second; it != e; ++it)
-                toOut.push_back((*it)->toMlObj().dump());
-        }
-        newInfo.first = false;
-    }*/
 
-    /*static Hierarchy* fromJson(const json& j, Lecture* parent = nullptr);
-
-    virtual json toJson() const;
-    virtual json toMlObj() const = 0;*/
     virtual std::string print(Representation* r, bool incremental = true) const = 0;
 };
 
@@ -117,7 +98,6 @@ private:
 protected:
     explicit Node(Node* parent, NameStoringStrategy* naming)
             : Hierarchy(parent), _naming(naming) { }
-
 public:
     ~Node() override { delete _naming; }
     using ListStorage::push;
@@ -171,6 +151,8 @@ public:
     std::string printType() const override { return "Appending"; }
 };
 
+NameStoringStrategy* nssFromStr(std::string str, Node* parent);
+
 
 class NamedNode;
 class DefType;
@@ -178,19 +160,22 @@ class DefVar;
 class DefSym;
 class Axiom;
 class AbstrInf;
+
 class Representation
 {
 public:
+    virtual ~Representation() = default;
+    virtual std::string str() = 0;
     // далее следуют методы построения некоторого
     // представления для всех тех классов, для которых это
     // имеет смысл (т.е. для конкретных классов иерархии)
-    virtual std::string process(const ListStorage*) = 0;
-    virtual std::string process(const NamedNode*) = 0;
-    virtual std::string process(const DefType*) = 0;
-    virtual std::string process(const DefVar*) = 0;
-    virtual std::string process(const DefSym*) = 0;
-    virtual std::string process(const Axiom*) = 0;
-    virtual std::string process(const AbstrInf*) = 0;
+    virtual void process(const ListStorage*) = 0;
+    virtual void process(const NamedNode*) = 0;
+    virtual void process(const DefType*) = 0;
+    virtual void process(const DefVar*) = 0;
+    virtual void process(const DefSym*) = 0;
+    virtual void process(const Axiom*) = 0;
+    virtual void process(const AbstrInf*) = 0;
 };
 
 Path mkPath(std::string source);
