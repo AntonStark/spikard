@@ -494,6 +494,7 @@ void Core::getInterface(std::vector<std::string> cmdArgs)
     write(INFO_TYPE::ANCL, j.dump());
 }
 
+//todo На стороне сервера: при подключении плагина <помощь> пополняется.
 void Core::printListOfComands()
 {
     write(INFO_TYPE::TXT, "Список доступных команд:\n\
