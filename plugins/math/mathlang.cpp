@@ -11,15 +11,13 @@ using namespace std;
 
 class MathlangPlugin : public BaseModule
 {
-public:
-    typedef map<string, string> MlFileIndex;
 private:
     // Здесь описываются необходимые переменные
     NamedNode* storage;
     NamedNode* current;
     void resetStorage(NamedNode* _storage);
     string userCheck() const;
-    void printIncr();
+    void print(bool incr);
     json getIndexFromFile(const string& indexFilePath);
 
     // Далее следуют функции, реализующие функционал плагина
@@ -27,7 +25,7 @@ private:
     void startSection(vector<string> cmdArgs);
     void startLecture(vector<string> cmdArgs);
 
-    void toSuper  (vector<string> cmdArgs);
+    void toPar(vector<string> cmdArgs);
     void toSubNode(vector<string> cmdArgs);
     void viewNode (vector<string> cmdArgs);
 
@@ -70,24 +68,9 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
     current = storage;
 }
 
-#define CALL_INFO(cmd, help) \
-{\
-    if (!cmdArgs.empty())\
-    {\
-        if (cmdArgs[0] == "?")\
-        {\
-	    write(INFO_TYPE::TXT, help); return;\
-        }\
-        else if (cmdArgs[0] == "*")\
-        {\
-	    cout << (cmd) << endl; return;\
-        }\
-    }\
-}
-
-void MathlangPlugin::printIncr() {
+void MathlangPlugin::print(bool incr = true) {
     AsMlObj asMlObj;
-    current->Node::print(&asMlObj, true);
+    current->Node::print(&asMlObj, incr);
     for (const auto& l : asMlObj.buffer)
         write(INFO_TYPE::ML_OBJ, l);
 }
@@ -103,8 +86,8 @@ void MathlangPlugin::startCourse(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, "Курс создан.");
     }
     else
-        write(INFO_TYPE::TXT,
-              "Нельзя начать курс в первичном узле, перейдите выше.");
+        write(INFO_TYPE::ERR,
+              "нельзя начать курс в первичном узле, перейдите выше.");
 }
 
 void MathlangPlugin::startSection(vector<string> cmdArgs) {
@@ -118,8 +101,8 @@ void MathlangPlugin::startSection(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, "Раздел создан.");
     }
     else
-        write(INFO_TYPE::TXT,
-              "Нельзя начать раздел в первичном узле, перейдите выше.");
+        write(INFO_TYPE::ERR,
+              "нельзя начать раздел в первичном узле, перейдите выше.");
 }
 
 void MathlangPlugin::startLecture(vector<string> cmdArgs) {
@@ -133,16 +116,21 @@ void MathlangPlugin::startLecture(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, "Лекция создана.");
     }
     else
-        write(INFO_TYPE::TXT,
-              "Нельзя начать лекцию в первичном узле, перейдите выше.");
+        write(INFO_TYPE::ERR,
+              "нельзя начать лекцию в первичном узле, перейдите выше.");
 }
 
-void MathlangPlugin::toSuper(vector<string> cmdArgs) {
+void MathlangPlugin::toPar(vector<string> cmdArgs) {
     CALL_INFO("наверх", "<наверх> - перейти к узлу уровнем выше.")
 
     auto* target = static_cast<NamedNode*>(current->getParent());
-    if (target)
+    if (target) {
         current = target;
+        write(INFO_TYPE::TXT, "Переход вверх выполнен.");
+        print(false);
+    }
+    else
+        write(INFO_TYPE::ERR, "это самый верхний узел.");
 }
 
 void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
@@ -155,19 +143,20 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
     if (auto* bn = dynamic_cast<BranchNode*>(current)) {
         NamedNode* target = static_cast<NamedNode*>(    // у BranchNode subs гарантированно
                 bn->getSub( atoi(cmdArgs[0].c_str()) ));// имеют тип NamedNode
-        if (target)
+        if (target) {
             current = target;
-        printIncr();
+            write(INFO_TYPE::TXT, "Переход выполнен.");
+            print(false);
+        }
+        else
+            write(INFO_TYPE::ERR, "переход не удался.");
     }
 }
 
 void MathlangPlugin::viewNode(vector<string> cmdArgs) {
     CALL_INFO("показать", "<показать> - показать работу целиком.")
 
-    AsMlObj asMlObj;
-    current->Node::print(&asMlObj, false);
-    for (const auto& l : asMlObj.buffer)
-        write(INFO_TYPE::ML_OBJ, l);
+    print(false);
 }
 
 
@@ -199,7 +188,7 @@ string MathlangPlugin::userCheck() const {
 json MathlangPlugin::getIndexFromFile(const string& indexFilePath) {
     ifstream userIndexFile(indexFilePath);
     if (!userIndexFile.is_open()) {
-        write(INFO_TYPE::TXT, "Ошибка: не удалось получить список доступных файлов.");
+        write(INFO_TYPE::ERR, "не удалось получить список доступных файлов.");
         throw std::invalid_argument("Файл \"" + indexFilePath + " недоступен.");
     }
     return json::parse(userIndexFile);
@@ -218,7 +207,7 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
 
     string userName = userCheck();
     if (userName.empty()) {
-        write(INFO_TYPE::TXT, "Ошибка: сохранение недоступно в анонимном режиме.");
+        write(INFO_TYPE::ERR, "сохранение недоступно в анонимном режиме.");
         return;
     }
 
@@ -229,7 +218,7 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
 
     auto search = ind.find(cmdArgs[0]);
     if (search != ind.end()) {
-        write(INFO_TYPE::TXT, "Ошибка: такое имя уже используется.");
+        write(INFO_TYPE::ERR, "такое имя уже используется.");
         return;
     }
     storage->setName(cmdArgs[0]);
@@ -247,7 +236,7 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
 
     ofstream osf(filePath);
     if (!osf.is_open()) {
-        write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
+        write(INFO_TYPE::ERR, "не удалось создать файл.");
         return;
     }
     auto aj = new AsJson();
@@ -262,7 +251,7 @@ void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
 
     string userName = userCheck();
     if (userName.empty()) {
-        write(INFO_TYPE::TXT, "Ошибка: сохранение недоступно в анонимном режиме.");
+        write(INFO_TYPE::ERR, "сохранение недоступно в анонимном режиме.");
         return;
     }
 
@@ -276,14 +265,14 @@ void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
     if (stTitle != "Новый курс" && ind.find(stTitle) != ind.end())
             fileName = ind[storage->getName()];
     else {
-        write(INFO_TYPE::TXT, "Ошибка: эта команда не для первичного сохранения.");
+        write(INFO_TYPE::ERR, "эта команда не для первичного сохранения.");
         return;
     }
     filePath = "data/users/" + userName + "/math/" + fileName;
 
     ofstream osf(filePath);
     if (!osf.is_open()) {
-        write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
+        write(INFO_TYPE::ERR, "не удалось создать файл.");
         return;
     }
     auto aj = new AsJson();
@@ -321,7 +310,7 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
 
     ifstream isf(fileName);
     if (!isf.is_open()) {
-        write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
+        write(INFO_TYPE::ERR, "не удалось открыть файл.");
         return;
     }
     json j = json::parse(isf);
@@ -330,7 +319,7 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
     BranchNode* read = BranchNode::fromJson(j.at(0).at(1));
     if (read)
         resetStorage(read);
-    printIncr();
+    print(false);
 }
 
 void MathlangPlugin::addType(vector<string> cmdArgs) {
@@ -341,10 +330,12 @@ void MathlangPlugin::addType(vector<string> cmdArgs) {
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         try {
             pn->defType(cmdArgs[0]);
-            printIncr();
+            print();
         }
-        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+        catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); }
     }
+    else
+        write(INFO_TYPE::ERR, "возможно только в первичном узле.");
 }
 
 void MathlangPlugin::addSym(vector<string> cmdArgs) {
@@ -357,10 +348,12 @@ void MathlangPlugin::addSym(vector<string> cmdArgs) {
         list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
         try {
             pn->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
-            printIncr();
+            print();
         }
-        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+        catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); }
     }
+    else
+        write(INFO_TYPE::ERR, "возможно только в первичном узле.");
 }
 
 void MathlangPlugin::addVar(vector<string> cmdArgs) {
@@ -372,10 +365,12 @@ void MathlangPlugin::addVar(vector<string> cmdArgs) {
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         try {
             pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1]).getName());
-            printIncr();
+            print();
         }
-        catch (std::exception& e) { write(INFO_TYPE::TXT, string("Ошибка: ") + e.what()); }
+        catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); }
     }
+    else
+        write(INFO_TYPE::ERR, "возможно только в первичном узле.");
 }
 
 void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
@@ -385,8 +380,10 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->addAxiom(cmdArgs[0]);
-        printIncr();
+        print();
     }
+    else
+        write(INFO_TYPE::ERR, "возможно только в первичном узле.");
 }
 
 
@@ -423,7 +420,7 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs) {
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doMP(cmdArgs[0], cmdArgs[1]);
-        printIncr();
+        print();
     }
 }
 
@@ -435,7 +432,7 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs) {
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doSpec(cmdArgs[0], cmdArgs[1]);
-        printIncr();
+        print();
     }
 }
 
@@ -447,7 +444,7 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs) {
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doGen(cmdArgs[0], cmdArgs[1]);
-        printIncr();
+        print();
     }
 }
 
@@ -466,9 +463,9 @@ void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("start_section", &MathlangPlugin::startSection));
     methods.insert(make_pair("start_lecture", &MathlangPlugin::startLecture));
 
-    methods.insert(make_pair("to_super",&MathlangPlugin::toSuper));
-    methods.insert(make_pair("to_sub",  &MathlangPlugin::toSubNode));
-    methods.insert(make_pair("view", &MathlangPlugin::viewNode));
+    methods.insert(make_pair("to_par", &MathlangPlugin::toPar));
+    methods.insert(make_pair("to_sub", &MathlangPlugin::toSubNode));
+    methods.insert(make_pair("view",   &MathlangPlugin::viewNode));
 
     methods.insert(make_pair("save_as", &MathlangPlugin::saveAs));
     methods.insert(make_pair("save_changes", &MathlangPlugin::saveChanges));
@@ -490,10 +487,7 @@ void MathlangPlugin::methodsCfg() {
 }
 
 void MathlangPlugin::ifaceCfg() {
-    BaseModule* mod = this;
-    while (mod->getParent())
-        mod = mod->getParent();
-    Core* root = static_cast<Core*>(mod);
+    Core* root = static_cast<Core*>(getRoot());
 
     string pseudo;
     stringstream hear;
@@ -512,12 +506,7 @@ void MathlangPlugin::ifaceCfg() {
 }
 
 void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess) {
-    // todo Написать Core* BaseModule::getRoot()
-    BaseModule* mod = this;
-    while (mod->getParent())
-        mod = mod->getParent();
-    Core* root = static_cast<Core*>(mod);
-
+    Core* root = static_cast<Core*>(getRoot());
     return root->write(type, mess);
 }
 

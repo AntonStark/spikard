@@ -44,7 +44,7 @@ struct ModuleInfo {
 };
 
 // описывает типы информации в потоках вывода
-enum class INFO_TYPE {ANCL, TXT, TEX_EXP, ML_OBJ};
+enum class INFO_TYPE {ANCL, TXT, TEX_EXP, ML_OBJ, ERR};
 std::string toStr(const INFO_TYPE& infoType);
 
 class BaseModule {
@@ -70,7 +70,13 @@ public:
 
     ModuleInfo getModuleInfo() const { return info; }
 
-    BaseModule *const getParent() const { return parent; }
+    BaseModule* const getParent() const { return parent; }
+    BaseModule* getRoot() {
+        BaseModule* mod = this;
+        while (mod->getParent())
+            mod = mod->getParent();
+        return mod;
+    }
 
     void registerModule(BaseModule *some) {
         modules.push_back(some);
@@ -197,5 +203,19 @@ public:
     IFace coreIface;
 };
 
+#define CALL_INFO(cmd, help) \
+{\
+    if (!cmdArgs.empty())\
+    {\
+        if (cmdArgs[0] == "?")\
+        {\
+	    write(INFO_TYPE::TXT, help); return;\
+        }\
+        else if (cmdArgs[0] == "*")\
+        {\
+	    cout << (cmd) << endl; return;\
+        }\
+    }\
+}
 
 #endif

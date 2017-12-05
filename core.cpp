@@ -16,6 +16,8 @@ std::string toStr(const INFO_TYPE& infoType)
             return "tex_expression";
         case INFO_TYPE::ML_OBJ :
             return "mathlang_object";
+        case INFO_TYPE::ERR :
+            return "error";
     }
 }
 
