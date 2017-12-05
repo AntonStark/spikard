@@ -20,7 +20,7 @@ private:
     void resetStorage(NamedNode* _storage);
     string userCheck() const;
     void printIncr();
-    json getUserIndex(const string& userName = "");
+    json getIndexFromFile(const string& indexFilePath);
 
     // Далее следуют функции, реализующие функционал плагина
     void startCourse (vector<string> cmdArgs);
@@ -196,21 +196,13 @@ string MathlangPlugin::userCheck() const {
     return userName;
 }
 
-json MathlangPlugin::getUserIndex(const string& userName) {
-    string indexFileName;
-    if (!userName.empty())
-        indexFileName = "data/users/" + userName + "/math/index.json";
-    else
-        indexFileName = "data/math/index.json";
-
-    ifstream userIndexFile(indexFileName);
+json MathlangPlugin::getIndexFromFile(const string& indexFilePath) {
+    ifstream userIndexFile(indexFilePath);
     if (!userIndexFile.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось получить список доступных файлов.");
-        throw std::invalid_argument("Файл \"" + indexFileName + " недоступен.");
+        throw std::invalid_argument("Файл \"" + indexFilePath + " недоступен.");
     }
-    stringstream buf;
-    buf << userIndexFile.rdbuf();
-    return json::parse(buf.str());
+    return json::parse(userIndexFile);
 }
 
 bool isFNameCollision(const json& ind, string value) {
@@ -231,7 +223,8 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
     }
 
     json ind;
-    try { ind = getUserIndex(userName); }
+    string indexFileName = "data/users/" + userName + "/math/index.json";
+    try { ind = getIndexFromFile(indexFileName); }
     catch (std::invalid_argument&) { return; }
 
     auto search = ind.find(cmdArgs[0]);
@@ -240,13 +233,12 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
         return;
     }
     storage->setName(cmdArgs[0]);
-    string fileName = random_string(16);
+    string fileName = random_string(16) + ".json";
     while (isFNameCollision(ind, fileName))
-        fileName = random_string(16);
+        fileName = random_string(16) + ".json";
 
     ind[cmdArgs[0]] = fileName;
     {
-        string indexFileName = "data/users/" + userName + "/math/index.json";
         ofstream userIndexFile(indexFileName, ios::trunc);
         userIndexFile << ind.dump(2) << endl;
     }
@@ -275,7 +267,8 @@ void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
     }
 
     json ind;
-    try { ind = getUserIndex(userName); }
+    string indexFileName = "data/users/" + userName + "/math/index.json";
+    try { ind = getIndexFromFile(indexFileName); }
     catch (std::invalid_argument&) { return; }
 
     string fileName, filePath;
@@ -306,30 +299,32 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
         return;
 
     json commonInd, userInd;
-    try { commonInd = getUserIndex(); }
+    string commondIndPath = "data/math/index.json";
+    try { commonInd = getIndexFromFile(commondIndPath); }
     catch (std::invalid_argument&) { return; }
 
     string userName = userCheck();
-    if (userName.empty()) {
-        try { userInd = getUserIndex(userName); }
-        catch (std::invalid_argument&) { return; }
+    if (!userName.empty()) {
+        string userIndPath = "data/users/" + userName + "/math/index.json";
+        try { userInd = getIndexFromFile(userIndPath); }
+        catch (std::invalid_argument&) { userInd = {}; }
     }
 
-    string fileName = "";
-    if (userInd.find(cmdArgs[0]) != userInd.end())
-        fileName = "data/users/" + userName + "/math/" + userInd[cmdArgs[0]];
-    else if (commonInd.find(cmdArgs[0]) != commonInd.end())
-        fileName = "data/users/" + userName + "/math/" + commonInd[cmdArgs[0]];
+    string fileName = "data/users/";
+    if (userInd.find(cmdArgs[0]) != userInd.end()) {
+        fileName += userName + "/math/" + userInd.at(cmdArgs[0]).get<string>();
+    }
+    else if (commonInd.find(cmdArgs[0]) != commonInd.end()) {
+        auto fileInfo = commonInd.at(cmdArgs[0]);
+        fileName += fileInfo.at(0).get<string>() + "/math/" + fileInfo.at(1).get<string>();
+    }
 
     ifstream isf(fileName);
     if (!isf.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
         return;
     }
-
-    stringstream buf;
-    buf << isf.rdbuf();
-    json j = json::parse(buf.str());
+    json j = json::parse(isf);
     // так как объекты всегда хранятся в массиве, а на верхнем
     // уровне есть только один, берём j.at(0) а его данные - .at(1)
     BranchNode* read = BranchNode::fromJson(j.at(0).at(1));
