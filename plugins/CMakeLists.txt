@@ -1,1 +1,1 @@
-add_subdirectory(mathlang)
+add_subdirectory(math)

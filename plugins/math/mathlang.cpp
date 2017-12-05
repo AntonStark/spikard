@@ -199,9 +199,9 @@ string MathlangPlugin::userCheck() const {
 json MathlangPlugin::getUserIndex(const string& userName) {
     string indexFileName;
     if (!userName.empty())
-        indexFileName = "data/users/" + userName + "/mathlang/index.json";
+        indexFileName = "data/users/" + userName + "/math/index.json";
     else
-        indexFileName = "data/mathlang/index.json";
+        indexFileName = "data/math/index.json";
 
     ifstream userIndexFile(indexFileName);
     if (!userIndexFile.is_open()) {
@@ -246,12 +246,12 @@ void MathlangPlugin::saveAs(vector<string> cmdArgs) {
 
     ind[cmdArgs[0]] = fileName;
     {
-        string indexFileName = "data/users/" + userName + "/mathlang/index.json";
+        string indexFileName = "data/users/" + userName + "/math/index.json";
         ofstream userIndexFile(indexFileName, ios::trunc);
         userIndexFile << ind.dump(2) << endl;
     }
 
-    string filePath = "data/users/" + userName + "/mathlang/" + fileName;
+    string filePath = "data/users/" + userName + "/math/" + fileName;
 
     ofstream osf(filePath);
     if (!osf.is_open()) {
@@ -286,7 +286,7 @@ void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, "Ошибка: эта команда не для первичного сохранения.");
         return;
     }
-    filePath = "data/users/" + userName + "/mathlang/" + fileName;
+    filePath = "data/users/" + userName + "/math/" + fileName;
 
     ofstream osf(filePath);
     if (!osf.is_open()) {
@@ -317,9 +317,9 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
 
     string fileName = "";
     if (userInd.find(cmdArgs[0]) != userInd.end())
-        fileName = "data/users/" + userName + "/mathlang/" + userInd[cmdArgs[0]];
+        fileName = "data/users/" + userName + "/math/" + userInd[cmdArgs[0]];
     else if (commonInd.find(cmdArgs[0]) != commonInd.end())
-        fileName = "data/users/" + userName + "/mathlang/" + commonInd[cmdArgs[0]];
+        fileName = "data/users/" + userName + "/math/" + commonInd[cmdArgs[0]];
 
     ifstream isf(fileName);
     if (!isf.is_open()) {
