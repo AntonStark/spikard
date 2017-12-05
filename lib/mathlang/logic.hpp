@@ -26,13 +26,14 @@ public:
 class Named
 {
 private:
-    const std::string name;
+    std::string _name;
 public:
-    Named(const std::string& _name) : name(_name) {}
+    Named(const std::string& _name) : _name(_name) {}
     virtual ~Named() {}
-    Named(const Named& one) : name(one.name) {}
+    Named(const Named& one) : _name(one._name) {}
 
-    std::string getName() const { return name; }
+    std::string getName() const { return _name; }
+    void setName(std::string name) {_name = name; }
     bool operator== (const Named& one) const;
     bool operator< (const Named& other) const;
 };

@@ -5,7 +5,7 @@
 #include "logic.hpp"
 
 bool Named::operator==(const Named& one) const
-{ return (name == one.name); }
+{ return (_name == one._name); }
 bool Label::operator==(const Label& one) const
 { return (this->Named::operator==)(one); }
 bool Map::operator==(const Map& one) const
@@ -19,7 +19,7 @@ bool MathType::operator==(const MathType& one) const
 }
 
 bool Named::operator<(const Named& other) const
-{ return (name < other.name); }
+{ return (_name < other._name); }
 bool Label::operator<(const Label& other) const
 { return (this->Named::operator<)(other); }
 bool MathType::operator<(const MathType& other) const

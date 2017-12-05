@@ -11,13 +11,16 @@ using namespace std;
 
 class MathlangPlugin : public BaseModule
 {
+public:
+    typedef map<string, string> MlFileIndex;
 private:
     // Здесь описываются необходимые переменные
     NamedNode* storage;
     NamedNode* current;
     void resetStorage(NamedNode* _storage);
-    string userCheck();
+    string userCheck() const;
     void printIncr();
+    json getUserIndex(const string& userName = "");
 
     // Далее следуют функции, реализующие функционал плагина
     void startCourse (vector<string> cmdArgs);
@@ -27,7 +30,9 @@ private:
     void toSuper  (vector<string> cmdArgs);
     void toSubNode(vector<string> cmdArgs);
     void viewNode (vector<string> cmdArgs);
-    void saveAll(vector<string> cmdArgs);
+
+    void saveAs(vector<string> cmdArgs);
+    void saveChanges(vector<string> cmdArgs);
     void loadAll(vector<string> cmdArgs);
 
     void addType(vector<string> cmdArgs);
@@ -59,8 +64,7 @@ public:
     void write(const INFO_TYPE&, const std::string& mess) override;
 };
 
-void MathlangPlugin::resetStorage(NamedNode* _storage)
-{
+void MathlangPlugin::resetStorage(NamedNode* _storage) {
     delete storage;
     storage = _storage;
     current = storage;
@@ -81,8 +85,7 @@ void MathlangPlugin::resetStorage(NamedNode* _storage)
     }\
 }
 
-void MathlangPlugin::printIncr()
-{
+void MathlangPlugin::printIncr() {
     AsMlObj asMlObj;
     current->Node::print(&asMlObj, true);
     for (const auto& l : asMlObj.buffer)
@@ -92,7 +95,7 @@ void MathlangPlugin::printIncr()
 void MathlangPlugin::startCourse(vector<string> cmdArgs) {
     CALL_INFO("курс", "<курс [title]> - начать курс с названием title.")
 
-    if (auto* bn = static_cast<BranchNode*>(current)) {
+    if (auto* bn = dynamic_cast<BranchNode*>(current)) {
         if (cmdArgs.size() < 1)
             bn->startCourse();
         else
@@ -107,7 +110,7 @@ void MathlangPlugin::startCourse(vector<string> cmdArgs) {
 void MathlangPlugin::startSection(vector<string> cmdArgs) {
     CALL_INFO("раздел", "<раздел [title]> - начать раздел с названием title.")
 
-    if (auto* bn = static_cast<BranchNode*>(current)) {
+    if (auto* bn = dynamic_cast<BranchNode*>(current)) {
         if (cmdArgs.size() < 1)
             bn->startSection();
         else
@@ -122,7 +125,7 @@ void MathlangPlugin::startSection(vector<string> cmdArgs) {
 void MathlangPlugin::startLecture(vector<string> cmdArgs) {
     CALL_INFO("лекция", "<лекция [title]> - начать лекцию с названием title.")
 
-    if (auto* bn = static_cast<BranchNode*>(current)) {
+    if (auto* bn = dynamic_cast<BranchNode*>(current)) {
         if (cmdArgs.size() < 1)
             bn->startLecture();
         else
@@ -149,7 +152,7 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
     if (cmdArgs.size() < 1)
         return;
 
-    if (auto* bn = static_cast<BranchNode*>(current)) {
+    if (auto* bn = dynamic_cast<BranchNode*>(current)) {
         NamedNode* target = static_cast<NamedNode*>(    // у BranchNode subs гарантированно
                 bn->getSub( atoi(cmdArgs[0].c_str()) ));// имеют тип NamedNode
         if (target)
@@ -160,44 +163,138 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
 
 void MathlangPlugin::viewNode(vector<string> cmdArgs) {
     CALL_INFO("показать", "<показать> - показать работу целиком.")
-    printIncr();
+
+    AsMlObj asMlObj;
+    current->Node::print(&asMlObj, false);
+    for (const auto& l : asMlObj.buffer)
+        write(INFO_TYPE::ML_OBJ, l);
 }
 
-string MathlangPlugin::userCheck() {
+
+string random_string(size_t length) {
+    auto randchar = []() -> char {
+        string charset = "0123456789"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "abcdefghijklmnopqrstuvwxyz";
+        const size_t max_index = charset.length() - 1;
+        return charset[rand() % max_index];
+    };
+    string str(length, 0);
+    generate_n(str.begin(), length, randchar);
+    return str;
+}
+
+string MathlangPlugin::userCheck() const {
     BaseModule* parent = this->getParent();
     while (BaseModule* p = parent->getParent())
         parent = p;
-    Core* core;
-    if (!(core = dynamic_cast<Core*>(parent))) {
-        write(INFO_TYPE::TXT, "Ошибка: сохранение не удалось по внутрненним причинам.");
-        return "";
-    }
+    auto* core = static_cast<Core*>(parent); // предполагается, что в корне обязательно Core
 
     string userName = core->user();
-    if (userName == "?") {
-        write(INFO_TYPE::TXT, "Ошибка: сохранение и загрузка недоступны в анонимном режиме.");
+    if (userName == "?")
         return "";
-    }
     return userName;
 }
 
-void MathlangPlugin::saveAll(vector<string> cmdArgs) {
-    CALL_INFO("сохранить",
-              "<сохранить> - запись для последующего использования.")
+json MathlangPlugin::getUserIndex(const string& userName) {
+    string indexFileName;
+    if (!userName.empty())
+        indexFileName = "data/users/" + userName + "/mathlang/index.json";
+    else
+        indexFileName = "data/mathlang/index.json";
+
+    ifstream userIndexFile(indexFileName);
+    if (!userIndexFile.is_open()) {
+        write(INFO_TYPE::TXT, "Ошибка: не удалось получить список доступных файлов.");
+        throw std::invalid_argument("Файл \"" + indexFileName + " недоступен.");
+    }
+    stringstream buf;
+    buf << userIndexFile.rdbuf();
+    return json::parse(buf.str());
+}
+
+bool isFNameCollision(const json& ind, string value) {
+    for (const auto& i : ind)
+        if (i.at(1) == value)
+            return true;
+    return false;
+}
+
+void MathlangPlugin::saveAs(vector<string> cmdArgs) {
+    CALL_INFO("создать",
+              "<создать [имя]> - сохранить работу в новый файл [имя].")
 
     string userName = userCheck();
-    if (userName.empty())
+    if (userName.empty()) {
+        write(INFO_TYPE::TXT, "Ошибка: сохранение недоступно в анонимном режиме.");
         return;
+    }
 
-    string fileName = "data/users/" + userName +
-                      "/data/mathlang/section/" + current->getName();
-    ofstream osf(fileName);
+    json ind;
+    try { ind = getUserIndex(userName); }
+    catch (std::invalid_argument&) { return; }
+
+    auto search = ind.find(cmdArgs[0]);
+    if (search != ind.end()) {
+        write(INFO_TYPE::TXT, "Ошибка: такое имя уже используется.");
+        return;
+    }
+    storage->setName(cmdArgs[0]);
+    string fileName = random_string(16);
+    while (isFNameCollision(ind, fileName))
+        fileName = random_string(16);
+
+    ind[cmdArgs[0]] = fileName;
+    {
+        string indexFileName = "data/users/" + userName + "/mathlang/index.json";
+        ofstream userIndexFile(indexFileName, ios::trunc);
+        userIndexFile << ind.dump(2) << endl;
+    }
+
+    string filePath = "data/users/" + userName + "/mathlang/" + fileName;
+
+    ofstream osf(filePath);
     if (!osf.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
         return;
     }
     auto aj = new AsJson();
-    osf << current->print(aj, false) << endl;
+    osf << storage->print(aj, false) << endl;
+    write(INFO_TYPE::TXT, "Сохранено.");
+    delete aj;
+}
+
+void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
+    CALL_INFO("сохранить",
+              "<сохранить> - запись изменения в файл.")
+
+    string userName = userCheck();
+    if (userName.empty()) {
+        write(INFO_TYPE::TXT, "Ошибка: сохранение недоступно в анонимном режиме.");
+        return;
+    }
+
+    json ind;
+    try { ind = getUserIndex(userName); }
+    catch (std::invalid_argument&) { return; }
+
+    string fileName, filePath;
+    string stTitle = storage->getName();
+    if (stTitle != "Новый курс" && ind.find(stTitle) != ind.end())
+            fileName = ind[storage->getName()];
+    else {
+        write(INFO_TYPE::TXT, "Ошибка: эта команда не для первичного сохранения.");
+        return;
+    }
+    filePath = "data/users/" + userName + "/mathlang/" + fileName;
+
+    ofstream osf(filePath);
+    if (!osf.is_open()) {
+        write(INFO_TYPE::TXT, "Ошибка: не удалось создать файл.");
+        return;
+    }
+    auto aj = new AsJson();
+    osf << storage->print(aj, false) << endl;
     write(INFO_TYPE::TXT, "Сохранено.");
     delete aj;
 }
@@ -208,12 +305,22 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
     if (cmdArgs.size() < 1)
         return;
 
-    string userName = userCheck();
-    if (userName.length() == 0)
-        return;
+    json commonInd, userInd;
+    try { commonInd = getUserIndex(); }
+    catch (std::invalid_argument&) { return; }
 
-    string fileName = "data/users/" + userName +
-                      "/data/mathlang/section/" + cmdArgs[0];
+    string userName = userCheck();
+    if (userName.empty()) {
+        try { userInd = getUserIndex(userName); }
+        catch (std::invalid_argument&) { return; }
+    }
+
+    string fileName = "";
+    if (userInd.find(cmdArgs[0]) != userInd.end())
+        fileName = "data/users/" + userName + "/mathlang/" + userInd[cmdArgs[0]];
+    else if (commonInd.find(cmdArgs[0]) != commonInd.end())
+        fileName = "data/users/" + userName + "/mathlang/" + commonInd[cmdArgs[0]];
+
     ifstream isf(fileName);
     if (!isf.is_open()) {
         write(INFO_TYPE::TXT, "Ошибка: не удалось открыть файл.");
@@ -236,7 +343,7 @@ void MathlangPlugin::addType(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 1)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         try {
             pn->defType(cmdArgs[0]);
             printIncr();
@@ -251,7 +358,7 @@ void MathlangPlugin::addSym(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 2)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
         try {
             pn->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
@@ -267,7 +374,7 @@ void MathlangPlugin::addVar(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 2)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         try {
             pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1]).getName());
             printIncr();
@@ -281,7 +388,7 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 1)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->addAxiom(cmdArgs[0]);
         printIncr();
     }
@@ -312,13 +419,14 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs) {
         write(INFO_TYPE::TXT, n);
 }
 
+
 void MathlangPlugin::deduceMP(vector<string> cmdArgs) {
     CALL_INFO("MP",
              "<MP [PathPre] [PathImpl]> - применить правило вывода MP для Pre и Impl.")
 
     if (cmdArgs.size() < 2)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doMP(cmdArgs[0], cmdArgs[1]);
         printIncr();
     }
@@ -330,7 +438,7 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 2)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doSpec(cmdArgs[0], cmdArgs[1]);
         printIncr();
     }
@@ -342,25 +450,23 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs) {
 
     if (cmdArgs.size() < 2)
         return;
-    if (auto* pn = static_cast<PrimaryNode*>(current)) {
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         pn->doGen(cmdArgs[0], cmdArgs[1]);
         printIncr();
     }
 }
 
 MathlangPlugin::MathlangPlugin(BaseModule* _parent, SharedObject* _fabric)
-: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent)
-{
+: BaseModule(ModuleInfo("Теория типов", "0.3", "04.07.17"), _parent) {
     // Инициализация переменных здесь
-    storage = new BranchNode("Главный");
+    storage = new BranchNode("Новый курс");
     current = storage;
 
     methodsCfg();
     fabric = _fabric;
 }
 
-void MathlangPlugin::methodsCfg()
-{
+void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("start_course" , &MathlangPlugin::startCourse ));
     methods.insert(make_pair("start_section", &MathlangPlugin::startSection));
     methods.insert(make_pair("start_lecture", &MathlangPlugin::startLecture));
@@ -368,7 +474,9 @@ void MathlangPlugin::methodsCfg()
     methods.insert(make_pair("to_super",&MathlangPlugin::toSuper));
     methods.insert(make_pair("to_sub",  &MathlangPlugin::toSubNode));
     methods.insert(make_pair("view", &MathlangPlugin::viewNode));
-    methods.insert(make_pair("save", &MathlangPlugin::saveAll));
+
+    methods.insert(make_pair("save_as", &MathlangPlugin::saveAs));
+    methods.insert(make_pair("save_changes", &MathlangPlugin::saveChanges));
     methods.insert(make_pair("load", &MathlangPlugin::loadAll));
 
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
@@ -380,16 +488,13 @@ void MathlangPlugin::methodsCfg()
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));
     methods.insert(make_pair("view_vars", &MathlangPlugin::viewVars));
 
-
-
     methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
     methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));
     methods.insert(make_pair("deduce_Gen", &MathlangPlugin::deduceGen));
     // Сюда добавлять функционал плагина
 }
 
-void MathlangPlugin::ifaceCfg()
-{
+void MathlangPlugin::ifaceCfg() {
     BaseModule* mod = this;
     while (mod->getParent())
         mod = mod->getParent();
@@ -411,8 +516,7 @@ void MathlangPlugin::ifaceCfg()
     cout.rdbuf(backup);
 }
 
-void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess)
-{
+void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess) {
     // todo Написать Core* BaseModule::getRoot()
     BaseModule* mod = this;
     while (mod->getParent())
