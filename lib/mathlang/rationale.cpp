@@ -14,18 +14,18 @@ Symbol   getSym (const NameSpaceIndex& index, const std::string& name)
 
 std::string toStr(NamedNodeType nnt) {
     switch (nnt) {
-        case NamedNodeType::COURSE  : return "Course" ;
-        case NamedNodeType::SECTION : return "Section";
-        case NamedNodeType::LECTURE : return "Lecture";
-        case NamedNodeType::CLOSURE : return "Closure";
+        case NamedNodeType::COURSE  : return "Курс" ;
+        case NamedNodeType::SECTION : return "Раздел";
+        case NamedNodeType::LECTURE : return "Лекция";
+        case NamedNodeType::CLOSURE : return "Замыкание";
     }
 }
 NamedNodeType nntFromStr(std::string str) {
-    if (str == "Course")
+    if (str == "Курс")
         return NamedNodeType::COURSE;
-    else if (str == "Section")
+    else if (str == "Раздел")
         return NamedNodeType::SECTION;
-    else if (str == "Lecture")
+    else if (str == "Лекция")
         return NamedNodeType::LECTURE;
     else
         return NamedNodeType::CLOSURE;
@@ -165,9 +165,9 @@ BranchNode* BranchNode::fromJson(const json& j, BranchNode* parent) {
     json jsubs = j.at("subs");
     for (const auto& s : jsubs) {
         auto o = s.at(1);
-        if (o.at("type") == "Course" || o.at("type") == "Section")
+        if (o.at("type") == "Курс" || o.at("type") == "Раздел")
             BranchNode ::fromJson(o, bn);
-        else if (o.at("type") == "Lecture" || o.at("type") == "Closure")
+        else if (o.at("type") == "Лекция" || o.at("type") == "Замыкание")
             PrimaryNode::fromJson(o, bn);
     }
     return bn;

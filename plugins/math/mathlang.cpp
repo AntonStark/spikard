@@ -27,11 +27,12 @@ private:
 
     void toPar(vector<string> cmdArgs);
     void toSubNode(vector<string> cmdArgs);
-    void viewNode (vector<string> cmdArgs);
+    void viewWork(vector<string> cmdArgs);
 
     void saveAs(vector<string> cmdArgs);
     void saveChanges(vector<string> cmdArgs);
     void loadAll(vector<string> cmdArgs);
+    void viewIndex(vector<string> cmdArgs);
 
     void addType(vector<string> cmdArgs);
     void addSym(vector<string> cmdArgs);
@@ -153,7 +154,7 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
     }
 }
 
-void MathlangPlugin::viewNode(vector<string> cmdArgs) {
+void MathlangPlugin::viewWork(vector<string> cmdArgs) {
     CALL_INFO("показать", "<показать> - показать работу целиком.")
 
     print(false);
@@ -288,8 +289,8 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
         return;
 
     json commonInd, userInd;
-    string commondIndPath = "data/math/index.json";
-    try { commonInd = getIndexFromFile(commondIndPath); }
+    string commonIndPath = "data/math/index.json";
+    try { commonInd = getIndexFromFile(commonIndPath); }
     catch (std::invalid_argument&) { return; }
 
     string userName = userCheck();
@@ -321,6 +322,29 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
         resetStorage(read);
     print(false);
 }
+
+void MathlangPlugin::viewIndex(vector<string> cmdArgs) {
+    CALL_INFO("работы", "<работы> - показать доступные для загрузки работы.")
+
+    json commonInd, userInd;
+    string commonIndPath = "data/math/index.json";
+    try { commonInd = getIndexFromFile(commonIndPath); }
+    catch (std::invalid_argument&) { return; }
+
+    string userName = userCheck();
+    if (!userName.empty()) {
+        string userIndPath = "data/users/" + userName + "/math/index.json";
+        try { userInd = getIndexFromFile(userIndPath); }
+        catch (std::invalid_argument&) { userInd = {}; }
+        auto e = userInd.end();
+        for (auto it = userInd.begin(); it != e; ++it)
+            commonInd[it.key()] = it.value();
+    }
+    auto e = commonInd.end();
+    for (auto it = commonInd.begin(); it != e; ++it)
+        write(INFO_TYPE::TXT, it.key());
+}
+
 
 void MathlangPlugin::addType(vector<string> cmdArgs) {
     CALL_INFO("тип", "<тип [typeName]> - ввести тип typeName.")
@@ -465,11 +489,12 @@ void MathlangPlugin::methodsCfg() {
 
     methods.insert(make_pair("to_par", &MathlangPlugin::toPar));
     methods.insert(make_pair("to_sub", &MathlangPlugin::toSubNode));
-    methods.insert(make_pair("view",   &MathlangPlugin::viewNode));
+    methods.insert(make_pair("view_work", &MathlangPlugin::viewWork));
 
     methods.insert(make_pair("save_as", &MathlangPlugin::saveAs));
     methods.insert(make_pair("save_changes", &MathlangPlugin::saveChanges));
     methods.insert(make_pair("load", &MathlangPlugin::loadAll));
+    methods.insert(make_pair("view_index", &MathlangPlugin::viewIndex));
 
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
     methods.insert(make_pair("add_sym"  , &MathlangPlugin::addSym));
@@ -483,7 +508,6 @@ void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
     methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));
     methods.insert(make_pair("deduce_Gen", &MathlangPlugin::deduceGen));
-    // Сюда добавлять функционал плагина
 }
 
 void MathlangPlugin::ifaceCfg() {
