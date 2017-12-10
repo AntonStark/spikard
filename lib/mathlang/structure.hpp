@@ -80,6 +80,7 @@ private:
 protected:
     ListStorage() : subs(), newInfo(false, subs.begin()) {}
     void push(Hierarchy* item);
+    void forget(Hierarchy* what);
     Hierarchy* getByNumber(size_t number) const;
 public:
     virtual ~ListStorage();
@@ -99,7 +100,11 @@ protected:
     explicit Node(Node* parent, NameStoringStrategy* naming)
             : Hierarchy(parent), _naming(naming) { }
 public:
-    ~Node() override { delete _naming; }
+    ~Node() override {
+        delete _naming;
+        if (getParent())
+            getParent()->forget(this);
+    }
     using ListStorage::push;
     Hierarchy* getByPass(Path path) override;
 

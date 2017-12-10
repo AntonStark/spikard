@@ -62,6 +62,15 @@ void ListStorage::push(Hierarchy* item) {
     if (!newInfo.first)
         newInfo = {true, std::prev(subs.end())};
 }
+void ListStorage::forget(Hierarchy* what) {
+    auto e = subs.end();
+    for (auto it = subs.begin(); it != e; ++it)
+        if (*it == what) {
+            auto updNInfo = prev(subs.erase(it));
+            newInfo = {false, updNInfo};
+            break;
+        }
+}
 Hierarchy* ListStorage::getByNumber(size_t number) const {
     if (number > subs.size())
         return nullptr;

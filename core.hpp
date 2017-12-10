@@ -44,7 +44,7 @@ struct ModuleInfo {
 };
 
 // описывает типы информации в потоках вывода
-enum class INFO_TYPE {ANCL, TXT, TEX_EXP, ML_OBJ, ERR};
+enum class INFO_TYPE {ANCL, TXT, TEX_EXP, ML_OBJ, ERR, NAME};
 std::string toStr(const INFO_TYPE& infoType);
 
 class BaseModule {

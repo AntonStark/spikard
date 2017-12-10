@@ -67,6 +67,8 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
     delete storage;
     storage = _storage;
     current = storage;
+    json types = { {"types", current->index().getNames(NameTy::MT)} };
+    write(INFO_TYPE::NAME, types.dump());
 }
 
 void MathlangPlugin::print(bool incr = true) {
@@ -271,7 +273,7 @@ void MathlangPlugin::saveChanges(vector<string> cmdArgs) {
     }
     filePath = "data/users/" + userName + "/math/" + fileName;
 
-    ofstream osf(filePath);
+    ofstream osf(filePath, ios::trunc);
     if (!osf.is_open()) {
         write(INFO_TYPE::ERR, "не удалось создать файл.");
         return;
@@ -308,9 +310,13 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
         auto fileInfo = commonInd.at(cmdArgs[0]);
         fileName += fileInfo.at(0).get<string>() + "/math/" + fileInfo.at(1).get<string>();
     }
+    else {
+        write(INFO_TYPE::ERR, "не удалось найти файл.");
+        return;
+    }
 
     ifstream isf(fileName);
-    if (!isf.is_open()) {
+    if (isf.fail()) {
         write(INFO_TYPE::ERR, "не удалось открыть файл.");
         return;
     }
@@ -321,6 +327,7 @@ void MathlangPlugin::loadAll(vector<string> cmdArgs) {
     if (read)
         resetStorage(read);
     print(false);
+    write(INFO_TYPE::TXT, "Загружено.");
 }
 
 void MathlangPlugin::viewIndex(vector<string> cmdArgs) {
@@ -356,7 +363,10 @@ void MathlangPlugin::addType(vector<string> cmdArgs) {
             pn->defType(cmdArgs[0]);
             print();
         }
-        catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); }
+        catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); return; }
+
+        json addType = { {"type", cmdArgs[0]} };
+        write(INFO_TYPE::NAME, addType.dump());
     }
     else
         write(INFO_TYPE::ERR, "возможно только в первичном узле.");
@@ -403,7 +413,11 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
     if (cmdArgs.size() < 1)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        pn->addAxiom(cmdArgs[0]);
+        try { pn->addAxiom(cmdArgs[0]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
         print();
     }
     else
@@ -417,6 +431,9 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs) {
     write(INFO_TYPE::TXT, "Опеределены следующие типы:");
     for (const auto& n : current->index().getNames(NameTy::MT))
         write(INFO_TYPE::TXT, n);
+
+    json types = { {"types", current->index().getNames(NameTy::MT)} };
+    write(INFO_TYPE::NAME, types.dump());
 }
 
 void MathlangPlugin::viewSyms(vector<string> cmdArgs) {
@@ -491,10 +508,10 @@ void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("to_sub", &MathlangPlugin::toSubNode));
     methods.insert(make_pair("view_work", &MathlangPlugin::viewWork));
 
-    methods.insert(make_pair("save_as", &MathlangPlugin::saveAs));
-    methods.insert(make_pair("save_changes", &MathlangPlugin::saveChanges));
-    methods.insert(make_pair("load", &MathlangPlugin::loadAll));
-    methods.insert(make_pair("view_index", &MathlangPlugin::viewIndex));
+    methods.insert(make_pair("load",   &MathlangPlugin::loadAll));
+    methods.insert(make_pair("save_as",&MathlangPlugin::saveAs));
+    methods.insert(make_pair("save_changes",&MathlangPlugin::saveChanges));
+    methods.insert(make_pair("view_index",  &MathlangPlugin::viewIndex));
 
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
     methods.insert(make_pair("add_sym"  , &MathlangPlugin::addSym));

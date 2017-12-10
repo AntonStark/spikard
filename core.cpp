@@ -18,6 +18,8 @@ std::string toStr(const INFO_TYPE& infoType)
             return "mathlang_object";
         case INFO_TYPE::ERR :
             return "error";
+        case INFO_TYPE::NAME :
+            return "mathlang_name";
     }
 }
 
