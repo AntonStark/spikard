@@ -199,7 +199,7 @@ json MathlangPlugin::getIndexFromFile(const string& indexFilePath) {
 
 bool isFNameCollision(const json& ind, string value) {
     for (const auto& i : ind)
-        if (i.at(1) == value)
+        if (i == value)
             return true;
     return false;
 }

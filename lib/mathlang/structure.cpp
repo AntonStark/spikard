@@ -50,6 +50,10 @@ Hierarchy::Hierarchy(Node* parent) : _parent(parent) {
     if (parent)
         getParent()->push(this);
 }
+Hierarchy::~Hierarchy() {
+    if (auto *p = getParent())
+        p->forget(this);
+}
 size_t Hierarchy::getNumber() const {
     auto parent = getParent();
     if (!parent)
@@ -78,8 +82,8 @@ Hierarchy* ListStorage::getByNumber(size_t number) const {
         return *std::next(subs.begin(), number-1);
 }
 ListStorage::~ListStorage() {
-    for (auto& s : subs)    // Таким образом элемент владеет своими subs, поэтому
-        delete s;           // они должны создаваться в куче
+    while (!subs.empty())   // Таким образом элемент владеет своими subs, поэтому
+        delete subs.back(); // они должны создаваться в куче
 }
 size_t ListStorage::getChNumber(const Hierarchy* child) const {
     size_t n = 1;

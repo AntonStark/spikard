@@ -43,7 +43,7 @@ protected:
     explicit Hierarchy(Node* parent);
 public:
     Hierarchy() : Hierarchy(nullptr) {};
-    virtual ~Hierarchy() = default;
+    virtual ~Hierarchy();
     Hierarchy(const Hierarchy&) = delete;
     Hierarchy& operator=(const Hierarchy&) = delete;
 
@@ -100,12 +100,9 @@ protected:
     explicit Node(Node* parent, NameStoringStrategy* naming)
             : Hierarchy(parent), _naming(naming) { }
 public:
-    ~Node() override {
-        delete _naming;
-        if (getParent())
-            getParent()->forget(this);
-    }
+    ~Node() override { delete _naming; }
     using ListStorage::push;
+    using ListStorage::forget;
     Hierarchy* getByPass(Path path) override;
 
     virtual const NameSpaceIndex& index() const
