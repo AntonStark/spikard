@@ -148,8 +148,13 @@ void MathlangPlugin::toSubNode(vector<string> cmdArgs) {
         return;
 
     if (auto* bn = dynamic_cast<BranchNode*>(current)) {
-        NamedNode* target = static_cast<NamedNode*>(    // у BranchNode subs гарантированно
-                bn->getSub( atoi(cmdArgs[0].c_str()) ));// имеют тип NamedNode
+        size_t sub = atoi(cmdArgs[0].c_str());
+        if (sub < 1) {
+            write(INFO_TYPE::ERR, "нумерация должна быть с единицы.");
+            return;
+        }
+        // у BranchNode subs гарантированно имеют тип NamedNode
+        NamedNode* target = static_cast<NamedNode*>(bn->getSub(sub));
         if (target) {
             current = target;
             write(INFO_TYPE::TXT, "Переход выполнен.");
