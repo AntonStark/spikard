@@ -30,7 +30,7 @@ public:
 };
 
 void printHelloMsg();
-void parseComand(string, string&, vector<string>&);
+void parseCommand(const json&, string&, vector<string>&);
 void reqHandler(FCGX_Request&);
 void FcgiToJson(FCGX_Stream*, json&);
 
@@ -44,16 +44,14 @@ int main() {
     int socketId;
     FCGX_Init();
     socketId = FCGX_OpenSocket("127.0.0.1:8000", queueLen);
-    if (socketId < 0)
-    {
+    if (socketId < 0) {
         //ошибка при открытии сокета
         cerr << "Не удаётся открыть сокет" << endl;
         return 1;
     }
 
     FCGX_Request request;
-    if (FCGX_InitRequest(&request, socketId, 0) != 0)
-    {
+    if (FCGX_InitRequest(&request, socketId, 0) != 0) {
         //ошибка при инициализации структуры запроса
         cerr << "Не удаётся инициализировать FCGX_Request" << endl;
         return 1;
@@ -65,83 +63,25 @@ int main() {
     return 0;
 }
 
-void printHelloMsg()
-{
+void printHelloMsg() {
     cout<<"Это черновой вариант ядра программы для моделирования и изменения объектов."<<endl;
     cout<<"\tВерсия программы от 30 января '16.\n\tРеализована возможность логина (лог действий и дневник) и главное меню."<<endl;
     cout<<"Для вывода списка доступных команд введите <помощь>"<<endl;
     return;
 }
 
-void collapseBr(string& line, list<string>& collapsed)
-{
-    size_t from, b, bb;
-    from = 0;
-    while (true)
-    {
-        b = line.find('"', from);
-        if (b == string::npos)
-            return;
-        bb = line.find('"', b + 1);
-        if (bb == string::npos)
-            return;
-        collapsed.push_back(line.substr(b + 1, bb - b - 1));
-        line.replace(b, bb - b + 1, " \"\" "); //Длина содержимого bb-b-1. +2 сами кавычки = bb-b+1
-        from = b+3; //На b теперь находится ' ' и дальше два '\"'
-    }
+void parseCommand(const json& line, string& cmdName, vector<string>& cmdArgs) {
+    auto it = line.begin();
+    cmdName = *it++;
+    auto e = line.end();
+    while (it != e)
+        cmdArgs.push_back(*it++);
 }
 
-void expandBr(vector<string>& cmdArgs, list<string> collapsed)
-{
-    for (int i = 0; i < cmdArgs.size(); ++i)
-    {
-        if (collapsed.empty())
-            break;
-        if (cmdArgs[i] == "\"\"")
-        {
-            cmdArgs[i] = collapsed.front();
-            collapsed.pop_front();
-        }
-    }
-}
-
-void parseComand(string line, string& cmdName, vector<string>& cmdArgs)
-{
-    unsigned long s = line.find(' ');
-    if (s == string::npos) {
-        cmdName = line;
-        return;
-    }
-    else {
-        cmdName = line.substr(0, s);
-        line.erase(0, s+1);
-
-        list<string> collapsed;
-        collapseBr(line, collapsed);
-
-        s = line.find(' ');
-        while (s != string::npos) {
-            if (s != 0)
-                cmdArgs.push_back(line.substr(0, s));
-            line.erase(0, s+1);
-            s = line.find(' ');
-        }
-        if (!line.empty())
-            cmdArgs.push_back(line);
-
-        expandBr(cmdArgs, collapsed);
-    }
-    return;
-}
-
-void reqHandler(FCGX_Request& request)
-{
-    int rc;
-    while (true)
-    {
-        rc = FCGX_Accept_r(&request);
-        if (rc < 0)
-        {
+void reqHandler(FCGX_Request& request) {
+    while (true) {
+        int rc = FCGX_Accept_r(&request);
+        if (rc < 0) {
             //ошибка при получении запроса
             cerr << "Не удаётся принять запрос" << endl;
             break;
@@ -152,16 +92,13 @@ void reqHandler(FCGX_Request& request)
         string userIdStr;
         // пока неявно предполагается, что в массиве данных
         // один элемент, а тип информации - text.
-        string reqStr;
-        try
-        {
-            try
-            { FcgiToJson(request.in, req); }
+        json reqMess;
+        try {
+            try { FcgiToJson(request.in, req); }
             catch (std::invalid_argument&)
             { throw bad_req("запрос не является json-объектом"); }
 
-            try
-            {
+            try {
                 reqMeta = req.at("meta");
                 reqData = req.at("data");
             }
@@ -173,17 +110,15 @@ void reqHandler(FCGX_Request& request)
             catch (std::logic_error&)
             { throw bad_req("нет заголовка \"user-id\""); }
 
-            try
-            {
+            try {
                 json firstEntry = reqData.at(0);
-                reqStr = firstEntry.at("mess");
+                reqMess = firstEntry.at("mess");
             }
             catch (std::logic_error&)
             { throw bad_req("массив данных не соотвествует формату "
                                     "[ {\"type\": ..., \"mess\": ...}, ... ]"); }
         }
-        catch (bad_req& br)
-        {
+        catch (bad_req& br) {
             cerr << br.what() << endl;
             continue;
         }
@@ -192,8 +127,7 @@ void reqHandler(FCGX_Request& request)
         cerr << userId << "; " << flush;
 
         Core *localCore;
-        if (userId == 0)
-        {
+        if (userId == 0) {
             bad_id: ;
             localCore = new Core();
             srand ((unsigned int)time(NULL));
@@ -208,13 +142,11 @@ void reqHandler(FCGX_Request& request)
             stringstream t; t<<userId; userIdStr = t.str();
             cerr << "Присвоен id=" << userId << "; " << flush;
         }
-        else    //уже есть user-id
-        {
+        else {  //уже есть user-id
             {
                 unique_lock<mutex> lockerC(cores_mutex);
                 auto cit = cores.find(userId);
-                if (cit == cores.end())
-                {
+                if (cit == cores.end()) {
                     //прислан ошибочный id
                     cerr << "Ошибочный \"user-id\"!;" << flush;
                     goto bad_id;
@@ -226,14 +158,13 @@ void reqHandler(FCGX_Request& request)
 
         string cmdName;
         vector<string> cmdArgs;
-        parseComand(reqStr, cmdName, cmdArgs);
+        parseCommand(reqMess, cmdName, cmdArgs);
         cerr << "Вызов: [" << cmdName << "] {";
-        for (string arg : cmdArgs)
+        for (const string& arg : cmdArgs)
             cerr << arg << ", ";
         cerr << "};" << flush;
 
-        try
-        { localCore->call(cmdName, cmdArgs); }
+        try { localCore->call(cmdName, cmdArgs); }
         catch (no_fun_ex&)
         { cerr << "Обращение к несуществующей функции!;" << flush; }
         catch  (std::exception& e)
@@ -251,11 +182,9 @@ void reqHandler(FCGX_Request& request)
         FCGX_PutS(resp.dump().c_str(), request.out);
         FCGX_Finish_r(&request);
     }
-    return;
 }
 
-void FcgiToJson(FCGX_Stream* fin, json& j)
-{
+void FcgiToJson(FCGX_Stream* fin, json& j) {
     stringstream source;
     char line[1024];
     while (FCGX_GetLine(line, 1024, fin) != nullptr)
