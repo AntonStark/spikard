@@ -60,7 +60,7 @@ public:
     void ask(string cmdName, vector<string> cmdArgs) override
     { (this->*methods[cmdName])(cmdArgs); }
     virtual void ifaceCfg() override;
-    void write(const INFO_TYPE&, const std::string& mess) override;
+    void write(const INFO_TYPE&, const json& mess) override;
 };
 
 void MathlangPlugin::resetStorage(NamedNode* _storage) {
@@ -73,6 +73,10 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
 
 void MathlangPlugin::print(bool incr = true) {
     AsMlObj asMlObj;
+    if (!incr) {
+        current->print(&asMlObj);
+        asMlObj.buffer.front()["label"] = {0};
+    }
     current->Node::print(&asMlObj, incr);
     for (const auto& l : asMlObj.buffer)
         write(INFO_TYPE::ML_OBJ, l);
@@ -546,7 +550,7 @@ void MathlangPlugin::ifaceCfg() {
     cout.rdbuf(backup);
 }
 
-void MathlangPlugin::write(const INFO_TYPE& type, const std::string& mess) {
+void MathlangPlugin::write(const INFO_TYPE& type, const json& mess) {
     Core* root = static_cast<Core*>(getRoot());
     return root->write(type, mess);
 }

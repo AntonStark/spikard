@@ -162,15 +162,13 @@ void AsMlObj::process(const NamedNode* nn) {
     body << nn->getNumber() << ". " << toStr(nn->_type)
          << " \"" << nn->getName() << "\".";
     buffer.push_back(
-        MlObj("named_node", nn->getNumber(), body.str())
-        .toJson().dump(2)
+        MlObj("named_node", nn->getNumber(), body.str()).toJson()
     );
 }
 
 void AsMlObj::process(const DefType* dt) {
     buffer.push_back(
-        MlObj("def_type", dt->getNumber(), dt->getName())
-            .toJson().dump(2)
+        MlObj("def_type", dt->getNumber(), dt->getName()).toJson()
     );
 }
 
@@ -178,8 +176,7 @@ void AsMlObj::process(const DefVar* dv) {
     std::stringstream body;
     body << dv->getName() << "\\in " << dv->getType().getName();
     buffer.push_back(
-        MlObj("def_var", dv->getNumber(), body.str())
-            .toJson().dump(2)
+        MlObj("def_var", dv->getNumber(), body.str()).toJson()
     );
 }
 
@@ -196,8 +193,7 @@ void AsMlObj::process(const DefSym* ds) {
     }
     out << "\\rightarrow " << ds->getType().getName();
     buffer.push_back(
-        MlObj("def_sym", ds->getNumber(), out.str())
-            .toJson().dump(2)
+        MlObj("def_sym", ds->getNumber(), out.str()).toJson()
     );
 }
 
@@ -205,8 +201,7 @@ void AsMlObj::process(const Axiom* ax) {
     std::stringstream formula;
     ax->get()->print(formula);
     buffer.push_back(
-        MlObj("axiom", ax->getNumber(), formula.str())
-            .toJson().dump(2)
+        MlObj("axiom", ax->getNumber(), formula.str()).toJson()
     );
 }
 
@@ -221,7 +216,6 @@ void AsMlObj::process(const AbstrInf* ai) {
     std::stringstream inf;
     ai->get()->print(inf);
     buffer.push_back(
-        MlObj(infType, ai->getNumber(), inf.str(), ai->premises)
-            .toJson().dump(2)
+        MlObj(infType, ai->getNumber(), inf.str(), ai->premises).toJson()
     );
 }

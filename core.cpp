@@ -205,7 +205,7 @@ void Core::call(string cmdName, vector<string> cmdArgs)
     return;
 }
 
-void Core::write(const INFO_TYPE& infoType, const std::string& mess)
+void Core::write(const INFO_TYPE& infoType, const json& mess)
 {
     outputs.push_back({infoType, mess});
 }
@@ -276,7 +276,7 @@ void Core::logIn(vector<string> cmdArgs)
         case 0:
         {
             json u = { {"user-name", user()} };
-            write(INFO_TYPE::ANCL, u.dump());
+            write(INFO_TYPE::ANCL, u);
             return;
         }
         //Проверка существования данного имени пользователя
@@ -293,7 +293,7 @@ void Core::logIn(vector<string> cmdArgs)
         {
             json u = { {"login-error",
                         "Неверный формат данных для входа."} };
-            write(INFO_TYPE::ANCL, u.dump());
+            write(INFO_TYPE::ANCL, u);
             return;
         }
         //Регистрация или вход (гарантированно >=3 аргументов)
@@ -303,7 +303,7 @@ void Core::logIn(vector<string> cmdArgs)
             {
                 json u = { {"login-error",
                             "Неверный формат данных для входа."} };
-                write(INFO_TYPE::ANCL, u.dump());
+                write(INFO_TYPE::ANCL, u);
                 return;
             }
             //Вход
@@ -315,7 +315,7 @@ void Core::logIn(vector<string> cmdArgs)
                 {
                     json u = { {"login-error",
                                 "Неверный логин или пароль."} };
-                    write(INFO_TYPE::ANCL, u.dump());
+                    write(INFO_TYPE::ANCL, u);
                     return;
                 }
                 else
@@ -324,14 +324,14 @@ void Core::logIn(vector<string> cmdArgs)
                     {
                         json u = { {"login-error",
                                     "Неверный логин или пароль."} };
-                        write(INFO_TYPE::ANCL, u.dump());
+                        write(INFO_TYPE::ANCL, u);
                         return;
                     }
                     else
                     {
                         userName = cmdArgs[1];
                         json u = { {"user-name", user()} };
-                        write(INFO_TYPE::ANCL, u.dump());
+                        write(INFO_TYPE::ANCL, u);
                         return;
                     }
                 }
@@ -344,7 +344,7 @@ void Core::logIn(vector<string> cmdArgs)
                 {
                     json u = { {"login-error",
                                 "Пользователь с таким именем уже сществует."} };
-                    write(INFO_TYPE::ANCL, u.dump());
+                    write(INFO_TYPE::ANCL, u);
                     return;
                 }
                 else
@@ -352,7 +352,7 @@ void Core::logIn(vector<string> cmdArgs)
                     addUserAcc(cmdArgs[1], cmdArgs[2]);
                     userName = cmdArgs[1];
                     json u = { {"user-name", user()} };
-                    write(INFO_TYPE::ANCL, u.dump());
+                    write(INFO_TYPE::ANCL, u);
                     return;
                 }
             }
@@ -378,7 +378,7 @@ void Core::logOut(vector<string> cmdArgs)
     
     userName = "?";
     json u = { {"user-name", user()} };
-    write(INFO_TYPE::ANCL, u.dump());
+    write(INFO_TYPE::ANCL, u);
     return;
 }
 
@@ -495,7 +495,7 @@ void Core::getInterface(std::vector<std::string> cmdArgs)
 
     map<string, string> iFace = coreIface.getIface();
     json j = {"interface", iFace};
-    write(INFO_TYPE::ANCL, j.dump());
+    write(INFO_TYPE::ANCL, j);
 }
 
 //todo На стороне сервера: при подключении плагина <помощь> пополняется.

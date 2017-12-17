@@ -67,8 +67,8 @@ public:
         }
     };
 
-    std::list<std::string> buffer;
-    virtual std::string str() override { return "Use .buffer insted."; }
+    std::list<json> buffer;
+    virtual std::string str() override { return "Use .buffer() instead."; }
 
     void process(const ListStorage* ls) override;
     void process(const NamedNode* nn) override;

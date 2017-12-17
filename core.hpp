@@ -98,7 +98,7 @@ public:
     void ifaceRefresh();
 
     virtual void ifaceCfg() = 0;
-    virtual void write(const INFO_TYPE&, const std::string& mess) = 0;
+    virtual void write(const INFO_TYPE&, const json& mess) = 0;
 };
 
 class SharedObject {
@@ -180,7 +180,7 @@ private:
     std::map<std::string, SharedObject *> SO_inWork;
 
     //словарь каналов вывода по типам информации
-    std::vector<std::pair<INFO_TYPE, std::string> > outputs;
+    std::vector<std::pair<INFO_TYPE, json> > outputs;
 public:
     Core();
 
@@ -195,7 +195,7 @@ public:
 
     void call(std::string, std::vector<std::string>);
 
-    void write(const INFO_TYPE&, const std::string& mess) override;
+    void write(const INFO_TYPE&, const json& mess) override;
     json collectOut();
 
     std::string user() const { return userName; }
