@@ -16,6 +16,7 @@ private:
     NamedNode* storage;
     NamedNode* current;
     void resetStorage(NamedNode* _storage);
+    void tellTypeNames();
     string userCheck() const;
     void print(bool incr);
     json getIndexFromFile(const string& indexFilePath);
@@ -67,8 +68,11 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
     delete storage;
     storage = _storage;
     current = storage;
+}
+
+void MathlangPlugin::tellTypeNames() {
     json types = { {"types", current->index().getNames(NameTy::MT)} };
-    write(INFO_TYPE::NAME, types.dump());
+    write(INFO_TYPE::NAME, types);
 }
 
 void MathlangPlugin::print(bool incr = true) {
@@ -373,9 +377,6 @@ void MathlangPlugin::addType(vector<string> cmdArgs) {
             print();
         }
         catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); return; }
-
-        json addType = { {"type", cmdArgs[0]} };
-        write(INFO_TYPE::NAME, addType.dump());
     }
     else
         write(INFO_TYPE::ERR, "возможно только в первичном узле.");
@@ -437,12 +438,13 @@ void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
 void MathlangPlugin::viewTypes(vector<string> cmdArgs) {
     CALL_INFO("типы", "<типы> - перечислить уже определённые типы.")
 
-    write(INFO_TYPE::TXT, "Опеределены следующие типы:");
+    tellTypeNames();
+    if (cmdArgs.size() > 0 && cmdArgs[0] == "0")
+        return;
+
+    write(INFO_TYPE::TXT, "Определены следующие типы:");
     for (const auto& n : current->index().getNames(NameTy::MT))
         write(INFO_TYPE::TXT, n);
-
-    json types = { {"types", current->index().getNames(NameTy::MT)} };
-    write(INFO_TYPE::NAME, types.dump());
 }
 
 void MathlangPlugin::viewSyms(vector<string> cmdArgs) {
