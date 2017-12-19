@@ -66,8 +66,17 @@ void ParenSymbol::print(std::ostream &out) const
 }
 void Term::print(std::ostream &out) const
 {
-    Symbol::print(out);
-    ParenSymbol::print(out);
+    if (getArity() == 2) {
+        out << '(';
+        args[0]->print(out);
+        Symbol::print(out);
+        args[1]->print(out);
+        out << ')';
+    }
+    else {
+        Symbol::print(out);
+        ParenSymbol::print(out);
+    }
 }
 void Term::printQ(std::ostream& out) const
 {

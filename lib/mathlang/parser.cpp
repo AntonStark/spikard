@@ -182,6 +182,7 @@ void Lexer::recognize(std::string source)
     }
 }
 
+// QuantedTerm ::= Q V Term
 Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
@@ -209,6 +210,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
     return qterm;
 }
 
+// Term ::= S lb [Term [c Term]] rb
 Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
@@ -248,6 +250,19 @@ Term* Lexer::parseTerm(Lexer::LexList& list)
     return tterm;
 }
 
+Term* Lexer::parseInfixTerm(Lexer::LexList& list) {
+    Variable* op1 = getVar(where->index(), list.front().val).clone();
+    list.pop_front();
+    Symbol s = getSym(where->index(), list.front().val);
+    list.pop_front();
+    Variable* op2 = getVar(where->index(), list.front().val).clone();
+    list.pop_front();
+    Term* iterm = new Term(s, {op1, op2});
+    delete op1;
+    delete op2;
+    return iterm;
+}
+
 Terms* Lexer::parseTerms(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
@@ -259,9 +274,13 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
             return parseTerm(list);
         case Token::V:
         {
-            Variable* var = getVar(where->index(), list.front().val).clone();
-            list.pop_front();
-            return var;
+            if (next(list.begin())->tok == Token::S)    // случай инфиксной записи бинарного терма
+                return parseInfixTerm(list);
+            else {
+                Variable* var = getVar(where->index(), list.front().val).clone();
+                list.pop_front();
+                return var;
+            }
         }
         case Token::lb:
         {
