@@ -132,8 +132,7 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(
-            NameTy type, const std::string &name, AbstrDef* where) override
+    void registerName(NameTy type, const std::string &name, AbstrDef* where) override
     { atTheEnd.add(type, name, where); }
     std::string printType() const override { return "Hidden"; }
 };
@@ -142,14 +141,22 @@ class Appending : public NameStoringStrategy
 /// Стратегия внешнего хранения имён как в Лекциях и Разделах
 {
 private:
+    /*  Здесь хранится NSI, соответствующее концу Node,
+    потому что запись ведётся именно в конец.
+    Вставки Def-ов влекут обновление. */
+    NameSpaceIndex atTheEnd;
     Node* _parent;
 public:
-    explicit Appending(Node* parent) : _parent(parent) {}
+    explicit Appending(Node* parent) : _parent(parent) {
+        if (parent)
+            atTheEnd = parent->index();
+    }
 
-    const NameSpaceIndex& index() const override { return _parent->index(); }
-    void registerName(
-            NameTy type, const std::string& name, AbstrDef* where) override
-    { _parent->registerName(type, name, where); }
+    const NameSpaceIndex& index() const override { return atTheEnd; }
+    void registerName(NameTy type, const std::string& name, AbstrDef* where) override {
+        _parent->registerName(type, name, where);
+        atTheEnd.add(type, name, where);
+    }
     std::string printType() const override { return "Appending"; }
 };
 
