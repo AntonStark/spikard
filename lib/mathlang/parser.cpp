@@ -201,11 +201,14 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
     Terms* term = parseTerms(list);
     if (term == nullptr)
         return nullptr;
-    Term* qterm;
-    if (type == Term::QType::FORALL)
-        qterm = new ForallTerm(var, term);
-    else
-        qterm = new ExistsTerm(var, term);
+    Term* qterm = nullptr;
+    try {
+        if (type == Term::QType::FORALL)
+            qterm = new ForallTerm(var, term);
+        else
+            qterm = new ExistsTerm(var, term);
+    }
+    catch (std::invalid_argument&) {}
     delete term;
     return qterm;
 }
@@ -214,7 +217,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
-    Symbol s = getSym(where->index(), list.front().val);
+    std::set<Symbol> syms = getSym(where->index(), list.front().val);
     list.pop_front();
 
     if (list.front().tok != Token::lb)
@@ -244,54 +247,48 @@ Term* Lexer::parseTerm(Lexer::LexList& list)
         else
             return nullptr;
     }
-    Term* tterm = new Term(s, terms);
+    Term* tterm = nullptr;
+    try { tterm = new Term(syms, terms); }
+    catch (std::invalid_argument&) {}
     for (auto t : terms)
         delete t;
     return tterm;
 }
 
-Term* Lexer::parseInfixTerm(Lexer::LexList& list) {
-    Variable* op1 = getVar(where->index(), list.front().val).clone();
-    list.pop_front();
-    Symbol s = getSym(where->index(), list.front().val);
-    list.pop_front();
-    Variable* op2 = getVar(where->index(), list.front().val).clone();
-    list.pop_front();
-    Term* iterm = new Term(s, {op1, op2});
-    delete op1;
-    delete op2;
-    return iterm;
-}
-
 Terms* Lexer::parseTerms(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
+    Terms* parsed = nullptr;
     switch (list.front().tok)
     {
-        case Token::Q :
-            return parseQuantedTerm(list);
-        case Token::S :
-            return parseTerm(list);
-        case Token::V:
-        {
-            if (next(list.begin())->tok == Token::S)    // случай инфиксной записи бинарного терма
-                return parseInfixTerm(list);
-            else {
-                Variable* var = getVar(where->index(), list.front().val).clone();
-                list.pop_front();
-                return var;
-            }
+        case Token::Q : {
+            parsed = parseQuantedTerm(list); break;
         }
-        case Token::lb:
-        {
+        case Token::S : {
+            parsed = parseTerm(list); break;
+        }
+        case Token::V: {
+            parsed = getVar(where->index(), list.front().val).clone();
             list.pop_front();
-            Terms* bterm = parseTerms(list);
+            break;
+        }
+        case Token::lb: {
             list.pop_front();
-            return bterm;
+            parsed = parseTerms(list);
+            list.pop_front();
+            break;
         }
         default:
             return nullptr;
     }
+    if (list.begin()->tok == Token::S) {    // случай инфиксной записи бинарного терма
+        std::set<Symbol> syms = getSym(where->index(), list.front().val);
+        list.pop_front();
+        Terms* secondOp = parseTerms(list);
+        try { parsed = new Term(syms, {parsed, secondOp}); }
+        catch (std::invalid_argument&) { parsed = nullptr; }
+    }
+    return parsed;
 }
 
 Term* parse(Axiom* where, std::string source)

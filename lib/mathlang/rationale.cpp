@@ -5,11 +5,15 @@
 #include "rationale.hpp"
 
 MathType getType(const NameSpaceIndex& index, const std::string& name)
-{ return *dynamic_cast<DefType*>(index.get(NameTy::MT, name)); }
+{ return *dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
-{ return *dynamic_cast<DefVar*>(index.get(NameTy::VAR, name)); }
-Symbol   getSym (const NameSpaceIndex& index, const std::string& name)
-{ return *dynamic_cast<DefSym*>(index.get(NameTy::SYM, name)); }
+{ return *dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
+std::set<Symbol> getSym(const NameSpaceIndex& index, const std::string& name) {
+    std::set<Symbol> buf;
+    for (const auto& def : index.get(NameTy::SYM, name))
+        buf.insert(*dynamic_cast<DefSym*>(def));
+    return buf;
+}
 
 
 std::string toStr(NamedNodeType nnt) {

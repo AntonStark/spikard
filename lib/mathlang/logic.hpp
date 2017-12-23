@@ -148,7 +148,7 @@ public:
 
 class ParenSymbol : public virtual Printable
 {
-private:
+public:
     class argN_argType_error;
 
 protected:
@@ -179,6 +179,7 @@ public:
     typedef std::set<Variable> VarSet;
     VarSet free;
     Term(Symbol f, std::vector<Terms*> _args);
+    Term(std::set<Symbol> fset, std::vector<Terms*> _args);
     Term(const Term& one)
             : Terms(one), Symbol(one), ParenSymbol(one), free(one.free) {}
     virtual ~Term() {}

@@ -54,7 +54,6 @@ private:
     // todo дорефакторить, чтобы они были аккуратно интегрированы
     Term* parseQuantedTerm(Lexer::LexList& list);
     Term* parseTerm(Lexer::LexList& list);
-    Term* parseInfixTerm(Lexer::LexList& list);
     Terms* parseTerms(Lexer::LexList& list);
 };
 

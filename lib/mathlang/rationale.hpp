@@ -18,7 +18,7 @@ using json = nlohmann::json;
 
 MathType getType(const NameSpaceIndex& index, const std::string& name);
 Variable getVar (const NameSpaceIndex& index, const std::string& name);
-Symbol   getSym (const NameSpaceIndex& index, const std::string& name);
+std::set<Symbol> getSym(const NameSpaceIndex& index, const std::string& name);
 
 enum class NamedNodeType {COURSE, SECTION, LECTURE, CLOSURE};
 std::string toStr(NamedNodeType nnt);

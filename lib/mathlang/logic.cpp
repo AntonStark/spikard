@@ -177,6 +177,19 @@ Term::Term(Symbol f, std::vector<Terms*> _args)
     }
 }
 
+Symbol takeFirstMatchTypes(std::set<Symbol> syms, const std::vector<Terms*>& _args) {
+    std::list<MathType> _argsType;
+    for (auto a : _args)
+        _argsType.push_back(a->getType());
+
+    for (const auto& s : syms)
+        if (s.matchArgType(_argsType))
+            return s;
+    throw ParenSymbol::argN_argType_error();
+}
+Term::Term(std::set<Symbol> fset, std::vector<Terms*> _args)
+    : Term(takeFirstMatchTypes(fset, _args), _args) {}
+
 void Term::boundVar(Variable var)
 {
     auto search = free.find(var);

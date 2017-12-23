@@ -18,7 +18,7 @@ class NameSpaceIndex
 public:
     enum class NameTy {SYM, VAR, MT};
 private:
-    std::map<std::string, std::pair<NameTy, AbstrDef*> > data;
+    std::map<std::string, std::pair<NameTy, std::set<AbstrDef*> > > data;
 
     class name_doubling;
     class no_name;
@@ -28,7 +28,7 @@ public:
     bool isSomeType(const std::string& name) const;
 
     std::set<std::string> getNames(NameTy type) const;
-    AbstrDef* get(NameTy type, const std::string& name) const;
+    std::set<AbstrDef*> get(NameTy type, const std::string& name) const;
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
