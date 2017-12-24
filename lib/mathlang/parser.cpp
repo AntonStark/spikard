@@ -121,9 +121,9 @@ bool mayFollow(const Lexer::Token& one, const Lexer::Token& two)
     switch (one)
     {
         case Token::S :
-            return (two == Token::lb);
+            return (two == Token::lb || two == Token::V || termBegin(two));
         case Token::V :
-            return (two == Token::c || two == Token::rb || termBegin(two));
+            return (two == Token::c || two == Token::rb || termBegin(two) || two == Token::S);
         /*case Token::T :
             return false;*/
         case Token::Q :
@@ -131,7 +131,7 @@ bool mayFollow(const Lexer::Token& one, const Lexer::Token& two)
         case Token::lb :
             return (two == Token::rb || two == Token::V || termBegin(two));
         case Token::rb :
-            return (two == Token::rb || two == Token::c);
+            return (two == Token::rb || two == Token::c || two == Token::S);
         case Token::c :
             return (two == Token::V || two == Token::S);
         case Token::s :
@@ -214,6 +214,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 }
 
 // Term ::= S lb [Term [c Term]] rb
+// Term ::= Terms S Terms
 Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
@@ -225,10 +226,8 @@ Term* Lexer::parseTerm(Lexer::LexList& list)
     list.pop_front();
 
     std::vector<Terms*> terms;
-    while (true)
-    {
-        if (list.front().tok == Token::rb)
-        {
+    while (true) {
+        if (list.front().tok == Token::rb) {
             list.pop_front();
             break;
         }
@@ -239,8 +238,7 @@ Term* Lexer::parseTerm(Lexer::LexList& list)
 
         if (list.front().tok == Token::c)
             list.pop_front();
-        else if (list.front().tok == Token::rb)
-        {
+        else if (list.front().tok == Token::rb) {
             list.pop_front();
             break;
         }
@@ -259,8 +257,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
     Terms* parsed = nullptr;
-    switch (list.front().tok)
-    {
+    switch (list.front().tok) {
         case Token::Q : {
             parsed = parseQuantedTerm(list); break;
         }
@@ -281,7 +278,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
         default:
             return nullptr;
     }
-    if (list.begin()->tok == Token::S) {    // случай инфиксной записи бинарного терма
+    if (!list.empty() && list.begin()->tok == Token::S) {    // случай инфиксной записи бинарного терма
         std::set<Symbol> syms = getSym(where->index(), list.front().val);
         list.pop_front();
         Terms* secondOp = parseTerms(list);
