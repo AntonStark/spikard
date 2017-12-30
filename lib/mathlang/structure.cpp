@@ -151,7 +151,7 @@ Path mkPath(std::string source)
             buf = 0;
         }
         else
-            throw std::invalid_argument("Путь \"" + source + "\" некорректен.");
+            return {};
     }
     target.push_back(buf);
     return target;

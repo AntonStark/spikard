@@ -61,8 +61,8 @@ public:
                  const std::list<std::string>& argT, const std::string& retT);
     void addAxiom(const std::string& axiom);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
-    void doSpec (const std::string& pToSpec, const std::string& pToVar);
-    void doGen  (const std::string& pToGen,  const std::string& pToVar);
+    void doSpec (const std::string& pToSpec,  const std::string& termVar);
+    void doGen  (const std::string& pToGen,   const std::string& pToVar);
 };
 
 class BranchNode : public NamedNode
@@ -189,7 +189,7 @@ public:
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
 };
-extern Term* parse(Axiom* where, std::string source);
+extern Terms* parse(PrimaryNode* where, std::string source);
 
 class AbstrInf : public Item, public Statement
 // Этот класс представлет абстрактное следствие.
@@ -206,13 +206,12 @@ public:
     AbstrInf(const AbstrInf&) = delete;
     AbstrInf& operator=(const AbstrInf&) = delete;
 
+    AbstrInf(PrimaryNode* naming, InfTy _type, Path pArg1)
+        : Item(naming), premises({pArg1}), type(_type) {}
     AbstrInf(PrimaryNode* naming, InfTy _type, Path pArg1, Path pArg2)
             : Item(naming), premises({pArg1, pArg2}), type(_type) {}
 
     std::string getTypeAsStr() const;
-
-    std::string print(Representation* r, bool incremental) const override
-    { r->process(this); return r->str(); }
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
@@ -221,7 +220,7 @@ class InfMP : public AbstrInf
 private:
     Terms* data;
     friend class PrimaryNode;
-    InfMP(PrimaryNode* naming, Path pArg1, Path pArg2);
+    InfMP(PrimaryNode* naming, Path pPremise, Path pImpl);
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfMP() override = default;
@@ -229,15 +228,19 @@ public:
     InfMP& operator=(const InfMP&) = delete;
 
     const Terms* get() const override { return data; }
+    std::string print(Representation* r, bool incremental) const override
+    { r->process(this); return r->str(); }
 };
 
 Terms* specialization(const Terms* general, const Terms* t);
 class InfSpec : public AbstrInf
 {
+public:
+    const Terms* spec;
 private:
     Terms* data;
     friend class PrimaryNode;
-    InfSpec(PrimaryNode* naming, Path pArg1, Path pArg2);
+    InfSpec(PrimaryNode* naming, Path pGeneral, Terms* tCase);
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfSpec() override = default;
@@ -245,6 +248,8 @@ public:
     InfSpec& operator=(const InfSpec&) = delete;
 
     const Terms* get() const override { return data; }
+    std::string print(Representation* r, bool incremental) const override
+    { r->process(this); return r->str(); }
 };
 
 Term*   generalization  (const Terms* toGen, const Terms* x);
@@ -261,6 +266,8 @@ public:
     InfGen& operator=(const InfGen&) = delete;
 
     const Terms* get() const override { return data; }
+    std::string print(Representation* r, bool incremental) const override
+    { r->process(this); return r->str(); }
 };
 
 #endif //TEST_BUILD_SIGNATURE_HPP

@@ -24,7 +24,9 @@ public:
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
     void process(const Axiom* ax) override;
-    void process(const AbstrInf* ai) override;
+    void process(const InfMP* im) override;
+    void process(const InfSpec* is) override;
+    void process(const InfGen* ig) override;
 };
 
 class AsJson : public Representation
@@ -40,7 +42,9 @@ public:
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
     void process(const Axiom* ax) override;
-    void process(const AbstrInf* ai) override;
+    void process(const InfMP* ai) override;
+    void process(const InfSpec* ai) override;
+    void process(const InfGen* ai) override;
 };
 
 class AsMlObj : public Representation
@@ -76,7 +80,9 @@ public:
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
     void process(const Axiom* ax) override;
-    void process(const AbstrInf* ai) override;
+    void process(const InfMP* ai) override;
+    void process(const InfSpec* ai) override;
+    void process(const InfGen* ai) override;
 };
 
 #endif //TEST_BUILD_VIEW_HPP

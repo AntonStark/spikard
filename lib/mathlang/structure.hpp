@@ -168,7 +168,9 @@ class DefType;
 class DefVar;
 class DefSym;
 class Axiom;
-class AbstrInf;
+class InfMP;
+class InfSpec;
+class InfGen;
 
 class Representation
 {
@@ -184,7 +186,9 @@ public:
     virtual void process(const DefVar*) = 0;
     virtual void process(const DefSym*) = 0;
     virtual void process(const Axiom*) = 0;
-    virtual void process(const AbstrInf*) = 0;
+    virtual void process(const InfMP*) = 0;
+    virtual void process(const InfSpec*) = 0;
+    virtual void process(const InfGen*) = 0;
 };
 
 Path mkPath(std::string source);

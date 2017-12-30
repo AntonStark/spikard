@@ -11,7 +11,7 @@
 #include "rationale.hpp"
 
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word);
-Term* parse(Axiom* where, std::string source);
+Terms* parse(PrimaryNode* where, std::string source);
 
 class Lexer
 {
@@ -19,7 +19,7 @@ public:
     enum class Token {S, V, Q, /*T, to,*/
                 c, s, lb, rb};
     static std::string tokToStr(const Token& tok);
-    Lexer(Axiom* _where);
+    Lexer(PrimaryNode* _where);
 
     struct Lexeme
     {
@@ -39,7 +39,7 @@ public:
     typedef std::list<Lexeme> LexList;
     typedef std::pair<size_t, LexList> PartialResolved;
 private:
-    Axiom* where;
+    PrimaryNode* where;
     std::map<std::string, Token> words;
     std::set<LexList> lastResult;
 
@@ -47,7 +47,7 @@ private:
     void registerVars(std::string& source);
     void refreshWords(NameTy type);
 
-    friend Term* parse(Axiom* where, std::string source);
+    friend Terms* parse(PrimaryNode* where, std::string source);
     void recognize(std::string source);
 
     // Вообще, это функционал парсера

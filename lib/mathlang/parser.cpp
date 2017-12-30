@@ -28,7 +28,7 @@ std::string Lexer::tokToStr(const Token& tok)
     }
 }
 
-Lexer::Lexer(Axiom* _where) : where(_where)
+Lexer::Lexer(PrimaryNode* _where) : where(_where)
 {
     for (auto& s : where->index().getNames(NameTy::SYM))
         words[s] = Token::S;
@@ -288,7 +288,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
     return parsed;
 }
 
-Term* parse(Axiom* where, std::string source)
+Terms* parse(PrimaryNode* where, std::string source)
 {
     Lexer lex(where);
     lex.recognize(source);
@@ -302,7 +302,7 @@ Term* parse(Axiom* where, std::string source)
     }
     // todo выводить предупреждение о неоднозначности разбора,
     // если в итоге получится больше одного варианта...
-    if (Term* t = dynamic_cast<Term*>(parsed))
-        return t;
+    if (parsed)
+        return parsed;
     throw std::invalid_argument("Не удалось построить терм по строке \"" + source + "\".\n");
 }

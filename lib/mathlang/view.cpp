@@ -61,22 +61,31 @@ void PlainText::process(const Axiom* ax) {
     value = buf.str();
 }
 
-void PlainText::process(const AbstrInf* ai) {
+void PlainText::process(const InfMP* im) {
     std::stringstream buf;
-    buf << "По ";
-    switch (ai->type)
-    {
-        case AbstrInf::InfTy::MP :
-            buf << "MP ";   break;
-        case AbstrInf::InfTy::SPEC :
-            buf << "Spec "; break;
-        case AbstrInf::InfTy::GEN :
-            buf << "Gen ";  break;
-    }
-    buf << "из " <<
-            pathToStr(ai->premises[0]) << " и " <<
-            pathToStr(ai->premises[1]) << " следует: ";
-    ai->get()->print(buf);
+    buf << "По ModusPonens из " <<
+            pathToStr(im->premises[0]) << " и " <<
+            pathToStr(im->premises[1]) << " следует: ";
+    im->get()->print(buf);
+    value = buf.str();
+}
+
+void PlainText::process(const InfSpec* is) {
+    std::stringstream buf;
+    buf << "По " <<
+    pathToStr(is->premises[0]) << " для ";
+    is->spec->print(buf);
+    buf << " получаем: ";
+    is->get()->print(buf);
+    value = buf.str();
+}
+
+void PlainText::process(const InfGen* ig) {
+    std::stringstream buf;
+    buf << "Обобщая " <<
+    pathToStr(ig->premises[0]) << " для " <<
+    pathToStr(ig->premises[1]) << " получаем: ";
+    ig->get()->print(buf);
     value = buf.str();
 }
 
@@ -135,19 +144,30 @@ void AsJson::process(const Axiom* ax) {
                    });
 }
 
-void AsJson::process(const AbstrInf* ai) {
-    std::string infType;
-    switch (ai->type)
-    {
-        case AbstrInf::InfTy::MP  : { infType = "InfMP";   break; }
-        case AbstrInf::InfTy::GEN : { infType = "InfGen";  break; }
-        case AbstrInf::InfTy::SPEC: { infType = "InfSpec"; break; }
-    }
-    value.push_back({infType,
-                    {
-                        {"arg1", pathToStr(ai->premises.at(0))},
-                        {"arg2", pathToStr(ai->premises.at(1))}
-                    } });
+void AsJson::process(const InfMP* im) {
+    value.push_back({"InfMP",
+                     {
+                         {"premise", pathToStr(im->premises.at(0))},
+                         {"impl",    pathToStr(im->premises.at(1))}
+                     } });
+}
+
+void AsJson::process(const InfSpec* is) {
+    std::stringstream ss;
+    is->spec->print(ss);
+    value.push_back({"InfSpec",
+                     {
+                         {"general", pathToStr(is->premises.at(0))},
+                         {"case",    ss.str()}
+                     } });
+}
+
+void AsJson::process(const InfGen* ig) {
+    value.push_back({"InfGen",
+                     {
+                         {"arg1", pathToStr(ig->premises.at(0))},
+                         {"arg2", pathToStr(ig->premises.at(1))}
+                     } });
 }
 
 
@@ -205,17 +225,28 @@ void AsMlObj::process(const Axiom* ax) {
     );
 }
 
-void AsMlObj::process(const AbstrInf* ai) {
-    std::string infType;
-    switch (ai->type)
-    {
-        case AbstrInf::InfTy::MP   : { infType = "inf_mp";  break; }
-        case AbstrInf::InfTy::GEN  : { infType = "inf_gen"; break; }
-        case AbstrInf::InfTy::SPEC : { infType = "inf_spec";break; }
-    }
+void AsMlObj::process(const InfMP* ai) {
     std::stringstream inf;
     ai->get()->print(inf);
     buffer.push_back(
-        MlObj(infType, ai->getNumber(), inf.str(), ai->premises).toJson()
+        MlObj("inf_mp", ai->getNumber(), inf.str(), ai->premises).toJson()
+    );
+}
+
+void AsMlObj::process(const InfSpec* ai) {
+    std::stringstream inf;
+    ai->get()->print(inf);
+    json temp = MlObj("inf_spec", ai->getNumber(), inf.str(), ai->premises).toJson();
+    std::stringstream term;
+    ai->spec->print(term);
+    temp["case"] = term.str();
+    buffer.push_back(temp);
+}
+
+void AsMlObj::process(const InfGen* ai) {
+    std::stringstream inf;
+    ai->get()->print(inf);
+    buffer.push_back(
+        MlObj("inf_gen", ai->getNumber(), inf.str(), ai->premises).toJson()
     );
 }

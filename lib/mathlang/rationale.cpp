@@ -53,8 +53,8 @@ void PrimaryNode::addAxiom(const std::string& axiom)
 { new Axiom(this, axiom); }
 void PrimaryNode::doMP  (const std::string& pPremise, const std::string& pImpl)
 { new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
-void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& pToVar)
-{ new InfSpec(this, mkPath(pToSpec), mkPath(pToVar)); }
+void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& termVar)
+{ new InfSpec(this, mkPath(pToSpec), parse(this, termVar)); }
 void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 
@@ -104,9 +104,9 @@ Terms* modusPonens(const Terms* premise, const Terms* impl) {
     else
         return nullptr; //impl не является термом
 }
-InfMP::InfMP(PrimaryNode* naming, Path pArg1, Path pArg2)
-        : AbstrInf(naming, AbstrInf::InfTy::MP, pArg1, pArg2),
-          data(modusPonens(getTerms(pArg1), getTerms(pArg2)))
+InfMP::InfMP(PrimaryNode* naming, Path pPremise, Path pImpl)
+        : AbstrInf(naming, AbstrInf::InfTy::MP, pPremise, pImpl),
+          data(modusPonens(getTerms(pPremise), getTerms(pImpl)))
 { if (!data) throw bad_inf(); }
 
 Terms* specialization(const Terms* general, const Terms* t) {
@@ -117,12 +117,12 @@ Terms* specialization(const Terms* general, const Terms* t) {
     else
         return nullptr;
 }
-InfSpec::InfSpec(PrimaryNode* naming, Path pArg1, Path pArg2)
-        : AbstrInf(naming, AbstrInf::InfTy::SPEC, pArg1, pArg2),
-          data(specialization(getTerms(pArg1), getTerms(pArg2)))
+InfSpec::InfSpec(PrimaryNode* naming, Path pGeneral, Terms* tCase)
+    : AbstrInf(naming, AbstrInf::InfTy::SPEC, pGeneral),
+      data(specialization(getTerms(pGeneral), tCase)), spec(tCase)
 { if (!data) throw bad_inf(); }
 
-Term* generalization  (const Terms* toGen, const Terms* x) {
+Term* generalization(const Terms* toGen, const Terms* x) {
     if (const auto* v = dynamic_cast<const Variable*>(x)) {
         if (const auto* tG = dynamic_cast<const Term*>(toGen)) {
             if (tG->free.find(*v) != tG->free.end())
@@ -197,8 +197,8 @@ Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
 Hierarchy* Axiom::fromJson(const json& j, PrimaryNode* parent)
 { return new Axiom(parent, j.at("axiom")); }
 Hierarchy* InfMP::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfMP(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+{ return new InfMP(parent, mkPath(j.at("premise")), mkPath(j.at("impl"))); }
 Hierarchy* InfSpec::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfSpec(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+{ return new InfSpec(parent, mkPath(j.at("general")), parse(parent, j.at("case"))); }
 Hierarchy* InfGen::fromJson(const json& j, PrimaryNode* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
