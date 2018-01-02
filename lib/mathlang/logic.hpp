@@ -211,6 +211,7 @@ public:
     virtual ~ForallTerm() {}
     virtual void print(std::ostream& out = std::cout) const override
     { printQ(out); }
+    virtual Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
 class ExistsTerm : virtual public Printable, public Term
@@ -225,6 +226,7 @@ public:
     virtual ~ExistsTerm() {}
     virtual void print(std::ostream& out = std::cout) const override
     { printQ(out); }
+    virtual Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
 #endif //TEST_BUILD_LOGIC_HPP

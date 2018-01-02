@@ -80,10 +80,12 @@ void Term::print(std::ostream &out) const
 }
 void Term::printQ(std::ostream& out) const
 {
+    out << '(';
     Symbol::print(out);
     auto var = dynamic_cast<const Variable*>(arg(1)); //по пострению arg(1) типа Variable*
     out << var->getName() << "\\in " << var->getType().getName();
     arg(2)->print(out);
+    out << ')';
 }
 
 
@@ -261,5 +263,37 @@ const Terms* Term::get(Path path) const
             return nullptr;
         else
             return arg(n)->get(path);
+    }
+}
+
+Terms* ForallTerm::replace(const Terms* x, const Terms* t) const
+{
+    if (auto var = dynamic_cast<const Variable*>(x))
+    {
+        if (free.find(*var) == free.end())
+            return this->clone();
+        else
+        {
+            Terms* termReplaced = arg(2)->replace(x, t);
+            return new ForallTerm(
+                    *static_cast<Variable*>(arg(1)->clone()),
+                    termReplaced);
+        }
+    }
+}
+
+Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const
+{
+    if (auto var = dynamic_cast<const Variable*>(x))
+    {
+        if (free.find(*var) == free.end())
+            return this->clone();
+        else
+        {
+            Terms* termReplaced = arg(2)->replace(x, t);
+            return new ExistsTerm(
+                    *static_cast<Variable*>(arg(1)->clone()),
+                    termReplaced);
+        }
     }
 }

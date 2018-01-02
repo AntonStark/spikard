@@ -23,7 +23,7 @@ public:
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
-    void process(const Axiom* ax) override;
+    void process(const TermsBox* ax) override;
     void process(const InfMP* im) override;
     void process(const InfSpec* is) override;
     void process(const InfGen* ig) override;
@@ -41,7 +41,7 @@ public:
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
-    void process(const Axiom* ax) override;
+    void process(const TermsBox* ax) override;
     void process(const InfMP* ai) override;
     void process(const InfSpec* ai) override;
     void process(const InfGen* ai) override;
@@ -79,10 +79,10 @@ public:
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
     void process(const DefSym* ds) override;
-    void process(const Axiom* ax) override;
-    void process(const InfMP* ai) override;
-    void process(const InfSpec* ai) override;
-    void process(const InfGen* ai) override;
+    void process(const TermsBox* ax) override;
+    void process(const InfMP* im) override;
+    void process(const InfSpec* is) override;
+    void process(const InfGen* ig) override;
 };
 
 #endif //TEST_BUILD_VIEW_HPP

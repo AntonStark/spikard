@@ -49,27 +49,33 @@ void PrimaryNode::defSym(
     new DefSym(this, symName, argMT, getType(index(), retT));
 }
 
-void PrimaryNode::addAxiom(const std::string& axiom)
-{ new Axiom(this, axiom); }
+void PrimaryNode::addTerm(const std::string& term)
+{ new TermsBox(this, term); }
 void PrimaryNode::doMP  (const std::string& pPremise, const std::string& pImpl)
 { new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
 void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& termVar)
-{ new InfSpec(this, mkPath(pToSpec), parse(this, termVar)); }
+{
+    Path pTerm = mkPath(termVar);
+    if (pTerm.empty()) {
+        addTerm(termVar);
+        pTerm = backLabel();
+    }
+    new InfSpec(this, mkPath(pToSpec), pTerm);
+}
 void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
 { new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
 
 
-Axiom::Axiom(PrimaryNode* parent, std::string source)
+TermsBox::TermsBox(PrimaryNode* parent, std::string source)
         : PrimaryNode(parent, new Hidden(parent), NamedNodeType::CLOSURE, ""),
-          data(parse(this, source)) {
-    if (data->getType() != logical_mt)
-        throw std::invalid_argument("Аксиома должна быть логического типа.\n");
-}
+          data(parse(this, source)) {}
 
 class AbstrInf::bad_inf : public std::invalid_argument
 {
 public:
-    bad_inf() : std::invalid_argument("Неподходящие аргументы для данного вывода.") {}
+    bad_inf(const std::string& args)
+            : std::invalid_argument("Неподходящие аргументы " + args +
+                                            " для данного вывода.") {}
 };
 
 const Terms* AbstrInf::getTerms(Path pathToTerm) {
@@ -107,7 +113,7 @@ Terms* modusPonens(const Terms* premise, const Terms* impl) {
 InfMP::InfMP(PrimaryNode* naming, Path pPremise, Path pImpl)
         : AbstrInf(naming, AbstrInf::InfTy::MP, pPremise, pImpl),
           data(modusPonens(getTerms(pPremise), getTerms(pImpl)))
-{ if (!data) throw bad_inf(); }
+{ if (!data) throw bad_inf(pathToStr(pPremise) + ", " + pathToStr(pImpl)); }
 
 Terms* specialization(const Terms* general, const Terms* t) {
     if (const auto* fT = dynamic_cast<const ForallTerm*>(general)) {
@@ -117,10 +123,11 @@ Terms* specialization(const Terms* general, const Terms* t) {
     else
         return nullptr;
 }
-InfSpec::InfSpec(PrimaryNode* naming, Path pGeneral, Terms* tCase)
-    : AbstrInf(naming, AbstrInf::InfTy::SPEC, pGeneral),
-      data(specialization(getTerms(pGeneral), tCase)), spec(tCase)
-{ if (!data) throw bad_inf(); }
+InfSpec::InfSpec(PrimaryNode* naming, Path pGeneral, Path pCase)
+    : AbstrInf(naming, AbstrInf::InfTy::SPEC, pGeneral, pCase),
+      data(specialization(getTerms(pGeneral), getTerms(pCase))),
+      spec(getTerms(pCase))
+{ if (!data) throw bad_inf(pathToStr(pGeneral) + ", " + pathToStr(pCase)); }
 
 Term* generalization(const Terms* toGen, const Terms* x) {
     if (const auto* v = dynamic_cast<const Variable*>(x)) {
@@ -135,7 +142,7 @@ Term* generalization(const Terms* toGen, const Terms* x) {
 InfGen::InfGen(PrimaryNode* naming, Path pArg1, Path pArg2)
         : AbstrInf(naming, AbstrInf::InfTy::GEN, pArg1, pArg2),
           data(generalization(getTerms(pArg1), getTerms(pArg2)))
-{ if (!data) throw bad_inf(); }
+{ if (!data) throw bad_inf(pathToStr(pArg1) + ", " + pathToStr(pArg2)); }
 
 
 PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
@@ -151,8 +158,8 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
             DefVar:: fromJson(data, pn);
         else if (type == "DefSym")
             DefSym:: fromJson(data, pn);
-        else if (type == "Axiom")
-            Axiom::  fromJson(data, pn);
+        else if (type == "TermsBox")
+            TermsBox::  fromJson(data, pn);
         else if (type == "InfMP")
             InfMP::  fromJson(data, pn);
         else if (type == "InfSpec")
@@ -194,11 +201,11 @@ Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
     return new DefSym(parent, j.at("name"), argT, retT);
 }
 
-Hierarchy* Axiom::fromJson(const json& j, PrimaryNode* parent)
-{ return new Axiom(parent, j.at("axiom")); }
+Hierarchy* TermsBox::fromJson(const json& j, PrimaryNode* parent)
+{ return new TermsBox(parent, j.at("axiom")); }
 Hierarchy* InfMP::fromJson(const json& j, PrimaryNode* parent)
 { return new InfMP(parent, mkPath(j.at("premise")), mkPath(j.at("impl"))); }
 Hierarchy* InfSpec::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfSpec(parent, mkPath(j.at("general")), parse(parent, j.at("case"))); }
+{ return new InfSpec(parent, mkPath(j.at("general")), mkPath(j.at("case"))); }
 Hierarchy* InfGen::fromJson(const json& j, PrimaryNode* parent)
 { return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }

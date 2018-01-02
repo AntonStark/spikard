@@ -38,7 +38,7 @@ private:
     void addType(vector<string> cmdArgs);
     void addSym(vector<string> cmdArgs);
     void addVar(vector<string> cmdArgs);
-    void addAxiom(vector<string> cmdArgs);
+    void addTerm(vector<string> cmdArgs);
 
     void viewTypes(vector<string> cmdArgs);
     void viewSyms(vector<string> cmdArgs);
@@ -417,13 +417,13 @@ void MathlangPlugin::addVar(vector<string> cmdArgs) {
         write(INFO_TYPE::ERR, "возможно только в первичном узле.");
 }
 
-void MathlangPlugin::addAxiom(vector<string> cmdArgs) {
+void MathlangPlugin::addTerm(vector<string> cmdArgs) {
     CALL_INFO("пусть", "<пусть [statement]> - ввести утверждение statement.")
 
     if (cmdArgs.size() < 1)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        try { pn->addAxiom(cmdArgs[0]); }
+        try { pn->addTerm(cmdArgs[0]); }
         catch (std::invalid_argument& e) {
             write(INFO_TYPE::ERR, e.what());
             return;
@@ -527,7 +527,7 @@ void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("add_type" , &MathlangPlugin::addType));
     methods.insert(make_pair("add_sym"  , &MathlangPlugin::addSym));
     methods.insert(make_pair("add_var"  , &MathlangPlugin::addVar));
-    methods.insert(make_pair("add_axiom", &MathlangPlugin::addAxiom));
+    methods.insert(make_pair("add_axiom", &MathlangPlugin::addTerm));
 
     methods.insert(make_pair("view_types",&MathlangPlugin::viewTypes));
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));

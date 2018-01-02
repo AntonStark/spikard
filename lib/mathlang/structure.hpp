@@ -89,6 +89,7 @@ public:
     std::string print(Representation* r, bool incremental) const;
     HiList_cIter start() const { return newInfo.second; }
     HiList_cIter end() const { return  subs.end(); }
+    Path backLabel() const { return {subs.size()}; }
 };
 
 class Node : public Hierarchy, public ListStorage
@@ -167,7 +168,7 @@ class NamedNode;
 class DefType;
 class DefVar;
 class DefSym;
-class Axiom;
+class TermsBox;
 class InfMP;
 class InfSpec;
 class InfGen;
@@ -185,7 +186,7 @@ public:
     virtual void process(const DefType*) = 0;
     virtual void process(const DefVar*) = 0;
     virtual void process(const DefSym*) = 0;
-    virtual void process(const Axiom*) = 0;
+    virtual void process(const TermsBox*) = 0;
     virtual void process(const InfMP*) = 0;
     virtual void process(const InfSpec*) = 0;
     virtual void process(const InfGen*) = 0;

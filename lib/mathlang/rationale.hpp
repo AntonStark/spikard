@@ -41,7 +41,7 @@ class PrimaryNode : public NamedNode
 {
 protected:
     friend class BranchNode;
-    friend class Axiom;
+    friend class TermsBox;
     PrimaryNode(Node* parent, NameStoringStrategy* nss,
                 NamedNodeType type, const std::string& title)
             : NamedNode(parent, nss, type, title) {}
@@ -59,7 +59,7 @@ public:
     void defVar (const std::string& varName, const std::string& typeName);
     void defSym (const std::string& symName,
                  const std::list<std::string>& argT, const std::string& retT);
-    void addAxiom(const std::string& axiom);
+    void addTerm(const std::string& term);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec,  const std::string& termVar);
     void doGen  (const std::string& pToGen,   const std::string& pToVar);
@@ -168,7 +168,7 @@ public:
     virtual const Terms* get() const = 0;
 };
 
-class Axiom : public PrimaryNode, public Statement
+class TermsBox : public PrimaryNode, public Statement
 /// Этот класс представляет аксиомы. Наследование от PrimaryNode из-за
 /// необходиомости хранить имена при кванторах
 {
@@ -177,12 +177,12 @@ private:
 
     friend class PrimaryNode;
     friend class Lexer;
-    Axiom(PrimaryNode* parent, std::string source);
+    TermsBox(PrimaryNode* parent, std::string source);
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
-    ~Axiom() override = default;
-    Axiom(const Axiom&) = delete;
-    Axiom& operator=(const Axiom&) = delete;
+    ~TermsBox() override = default;
+    TermsBox(const TermsBox&) = delete;
+    TermsBox& operator=(const TermsBox&) = delete;
 
     const Terms* get() const override { return data; }
 
@@ -240,7 +240,7 @@ public:
 private:
     Terms* data;
     friend class PrimaryNode;
-    InfSpec(PrimaryNode* naming, Path pGeneral, Terms* tCase);
+    InfSpec(PrimaryNode* naming, Path pGeneral, Path pCase);
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~InfSpec() override = default;

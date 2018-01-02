@@ -46,7 +46,7 @@ int main(void)
         pn->defVar("A", "Logical");
         pn->defSym("\\Rightarrow ", {"Logical", "Logical"}, "Logical");
         pn->defVar("B", "Logical");
-        pn->addAxiom("\\forall C\\in Logical \\Rightarrow (A, B)");
+        pn->addTerm("\\forall C\\in Logical \\Rightarrow (A, B)");
         pn->doSpec("5", "5.1");
         pn->doMP("(2)", "(6)");
 
