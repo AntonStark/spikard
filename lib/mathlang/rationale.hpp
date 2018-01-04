@@ -8,6 +8,7 @@
 #include <string>
 #include <set>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 #include <sstream>
 #include "../../json.hpp"
@@ -191,83 +192,36 @@ public:
 };
 extern Terms* parse(PrimaryNode* where, std::string source);
 
-class AbstrInf : public Item, public Statement
-// Этот класс представлет абстрактное следствие.
+class Inference : public Item, public Statement
+// Этот класс представлет любые следствия.
 {
 public:
     class bad_inf;
-    enum class InfTy {MP, GEN, SPEC};
-    const InfTy type;
+    enum class InfTy {MP, SPEC, GEN};
+
     const std::vector<Path> premises;
+    const InfTy type;
+    const Terms* data;
 protected:
     const Terms* getTerms(Path pathToTerm);
+    const Terms* inference();
 public:
-    ~AbstrInf() override = default;
-    AbstrInf(const AbstrInf&) = delete;
-    AbstrInf& operator=(const AbstrInf&) = delete;
+    ~Inference() override = default;
+    Inference(const Inference&) = delete;
+    Inference& operator=(const Inference&) = delete;
 
-    AbstrInf(PrimaryNode* naming, InfTy _type, Path pArg1)
-        : Item(naming), premises({pArg1}), type(_type) {}
-    AbstrInf(PrimaryNode* naming, InfTy _type, Path pArg1, Path pArg2)
-            : Item(naming), premises({pArg1, pArg2}), type(_type) {}
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
+    Inference(PrimaryNode* naming, Path pArg1, Path pArg2,  InfTy _type);
 
+    const Terms* get() const override { return data; }
     std::string getTypeAsStr() const;
+    std::string print(Representation* r, bool incremental) const override
+    { r->process(this); return r->str(); }
 };
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
-class InfMP : public AbstrInf
-{
-private:
-    Terms* data;
-    friend class PrimaryNode;
-    InfMP(PrimaryNode* naming, Path pPremise, Path pImpl);
-    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
-public:
-    ~InfMP() override = default;
-    InfMP(const InfMP&) = delete;
-    InfMP& operator=(const InfMP&) = delete;
-
-    const Terms* get() const override { return data; }
-    std::string print(Representation* r, bool incremental) const override
-    { r->process(this); return r->str(); }
-};
-
 Terms* specialization(const Terms* general, const Terms* t);
-class InfSpec : public AbstrInf
-{
-public:
-    const Terms* spec;
-private:
-    Terms* data;
-    friend class PrimaryNode;
-    InfSpec(PrimaryNode* naming, Path pGeneral, Path pCase);
-    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
-public:
-    ~InfSpec() override = default;
-    InfSpec(const InfSpec&) = delete;
-    InfSpec& operator=(const InfSpec&) = delete;
-
-    const Terms* get() const override { return data; }
-    std::string print(Representation* r, bool incremental) const override
-    { r->process(this); return r->str(); }
-};
-
-Term*   generalization  (const Terms* toGen, const Terms* x);
-class InfGen : public AbstrInf
-{
-private:
-    Terms* data;
-    friend class PrimaryNode;
-    InfGen(PrimaryNode* naming, Path pArg1, Path pArg2);
-    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
-public:
-    ~InfGen() override = default;
-    InfGen(const InfGen&) = delete;
-    InfGen& operator=(const InfGen&) = delete;
-
-    const Terms* get() const override { return data; }
-    std::string print(Representation* r, bool incremental) const override
-    { r->process(this); return r->str(); }
-};
+//Terms* application(const Terms* term, const Term* theorem);
+Term* generalization(const Terms* toGen, const Terms* x);
 
 #endif //TEST_BUILD_SIGNATURE_HPP

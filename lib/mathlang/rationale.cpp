@@ -4,6 +4,8 @@
 
 #include "rationale.hpp"
 
+#include <utility>
+
 MathType getType(const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
@@ -52,7 +54,7 @@ void PrimaryNode::defSym(
 void PrimaryNode::addTerm(const std::string& term)
 { new TermsBox(this, term); }
 void PrimaryNode::doMP  (const std::string& pPremise, const std::string& pImpl)
-{ new InfMP(this, mkPath(pPremise), mkPath(pImpl)); }
+{ new Inference(this, mkPath(pPremise), mkPath(pImpl), Inference::InfTy::MP); }
 void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& termVar)
 {
     Path pTerm = mkPath(termVar);
@@ -60,25 +62,25 @@ void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& termVar)
         addTerm(termVar);
         pTerm = backLabel();
     }
-    new InfSpec(this, mkPath(pToSpec), pTerm);
+    new Inference(this, mkPath(pToSpec), pTerm, Inference::InfTy::SPEC);
 }
 void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
-{ new InfGen(this, mkPath(pToGen), mkPath(pToVar)); }
+{ new Inference(this, mkPath(pToGen), mkPath(pToVar), Inference::InfTy::GEN); }
 
 
 TermsBox::TermsBox(PrimaryNode* parent, std::string source)
         : PrimaryNode(parent, new Hidden(parent), NamedNodeType::CLOSURE, ""),
-          data(parse(this, source)) {}
+          data(parse(this, std::move(source))) {}
 
-class AbstrInf::bad_inf : public std::invalid_argument
+class Inference::bad_inf : public std::invalid_argument
 {
 public:
     bad_inf(const std::string& args)
             : std::invalid_argument("Неподходящие аргументы " + args +
-                                            " для данного вывода.") {}
+                                    " для данного вывода.") {}
 };
 
-const Terms* AbstrInf::getTerms(Path pathToTerm) {
+const Terms* Inference::getTerms(Path pathToTerm) {
     Hierarchy* termItem = getParent()->getByPass(pathToTerm);
     if (auto t = dynamic_cast<Statement*>(termItem))
         return t->get();
@@ -87,13 +89,39 @@ const Terms* AbstrInf::getTerms(Path pathToTerm) {
     else
         return nullptr;
 }
-std::string AbstrInf::getTypeAsStr() const {
+const Terms* Inference::inference() {
+    const Terms* arg1 = getTerms(premises[0]);
+    const Terms* arg2 = getTerms(premises[1]);
+    switch (type) {
+        case Inference::InfTy::MP   :
+            return modusPonens   (arg1, arg2);
+        case Inference::InfTy::SPEC :
+            return specialization(arg1, arg2);
+        case Inference::InfTy::GEN  :
+            return generalization(arg1, arg2);
+    }
+}
+Inference::Inference(PrimaryNode* naming,
+                     Path pArg1, Path pArg2, Inference::InfTy _type)
+        : Item(naming), premises({std::move(pArg1), std::move(pArg2)}),
+          type(_type), data(inference())
+{ if (!data) throw bad_inf(pathToStr(pArg1) + ", " + pathToStr(pArg2)); }
+
+std::string Inference::getTypeAsStr() const {
     switch (type)
     {
         case InfTy::MP   : return "InfMP";
         case InfTy::GEN  : return "InfGen";
         case InfTy::SPEC : return "InfSpec";
     }
+}
+Inference::InfTy infTyFromStr(const std::string& type) {
+    if (type == "InfMP")
+        return Inference::InfTy::MP;
+    else if (type == "InfSpec")
+        return Inference::InfTy::SPEC;
+    else
+        return Inference::InfTy::GEN;
 }
 
 
@@ -110,10 +138,6 @@ Terms* modusPonens(const Terms* premise, const Terms* impl) {
     else
         return nullptr; //impl не является термом
 }
-InfMP::InfMP(PrimaryNode* naming, Path pPremise, Path pImpl)
-        : AbstrInf(naming, AbstrInf::InfTy::MP, pPremise, pImpl),
-          data(modusPonens(getTerms(pPremise), getTerms(pImpl)))
-{ if (!data) throw bad_inf(pathToStr(pPremise) + ", " + pathToStr(pImpl)); }
 
 Terms* specialization(const Terms* general, const Terms* t) {
     if (const auto* fT = dynamic_cast<const ForallTerm*>(general)) {
@@ -123,11 +147,6 @@ Terms* specialization(const Terms* general, const Terms* t) {
     else
         return nullptr;
 }
-InfSpec::InfSpec(PrimaryNode* naming, Path pGeneral, Path pCase)
-    : AbstrInf(naming, AbstrInf::InfTy::SPEC, pGeneral, pCase),
-      data(specialization(getTerms(pGeneral), getTerms(pCase))),
-      spec(getTerms(pCase))
-{ if (!data) throw bad_inf(pathToStr(pGeneral) + ", " + pathToStr(pCase)); }
 
 Term* generalization(const Terms* toGen, const Terms* x) {
     if (const auto* v = dynamic_cast<const Variable*>(x)) {
@@ -139,10 +158,6 @@ Term* generalization(const Terms* toGen, const Terms* x) {
     else
         return nullptr;
 }
-InfGen::InfGen(PrimaryNode* naming, Path pArg1, Path pArg2)
-        : AbstrInf(naming, AbstrInf::InfTy::GEN, pArg1, pArg2),
-          data(generalization(getTerms(pArg1), getTerms(pArg2)))
-{ if (!data) throw bad_inf(pathToStr(pArg1) + ", " + pathToStr(pArg2)); }
 
 
 PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
@@ -160,12 +175,8 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
             DefSym:: fromJson(data, pn);
         else if (type == "TermsBox")
             TermsBox::  fromJson(data, pn);
-        else if (type == "InfMP")
-            InfMP::  fromJson(data, pn);
-        else if (type == "InfSpec")
-            InfSpec::fromJson(data, pn);
-        else if (type == "InfGen")
-            InfGen:: fromJson(data, pn);
+        else if (type == "Inference")
+            Inference::fromJson(data, pn);
     }
     return pn;
 }
@@ -203,9 +214,7 @@ Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
 
 Hierarchy* TermsBox::fromJson(const json& j, PrimaryNode* parent)
 { return new TermsBox(parent, j.at("axiom")); }
-Hierarchy* InfMP::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfMP(parent, mkPath(j.at("premise")), mkPath(j.at("impl"))); }
-Hierarchy* InfSpec::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfSpec(parent, mkPath(j.at("general")), mkPath(j.at("case"))); }
-Hierarchy* InfGen::fromJson(const json& j, PrimaryNode* parent)
-{ return new InfGen(parent, mkPath(j.at("arg1")), mkPath(j.at("arg2"))); }
+
+Hierarchy* Inference::fromJson(const json& j, PrimaryNode* parent)
+{ return new Inference(parent, mkPath(j.at("premise1")),
+                       mkPath(j.at("premise2")), infTyFromStr(j.at("type"))); }
