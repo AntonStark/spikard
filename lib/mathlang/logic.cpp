@@ -215,20 +215,22 @@ bool Term::doCompare(const Terms* other) const
         return false;
 }
 
-Terms* Term::replace(const Terms* x, const Terms* t) const
-{
-    if (auto var = dynamic_cast<const Variable*>(x))
-    {
+Terms* Term::replace(const Terms* x, const Terms* t) const {
+    // если x переменная...
+    if (auto var = dynamic_cast<const Variable*>(x)) {
+        // ... а наш терм от неё не звисит
         if (free.find(*var) == free.end())
             return this->clone();
-        else
-        {
-            std::vector<Terms*> _args;
-            for (auto& arg : args)
-                _args.push_back(arg->replace(x, t));
-            return new Term(*this, _args);
-        }
     }
+    else {
+        if (doCompare(x))
+            return t->clone();
+    }
+
+    std::vector<Terms*> _args;
+    for (auto& arg : args)
+        _args.push_back(arg->replace(x, t));
+    return new Term(*this, _args);
 }
 
 Terms* Term::replace(Path where, const Terms* by) const
@@ -266,34 +268,38 @@ const Terms* Term::get(Path path) const
     }
 }
 
-Terms* ForallTerm::replace(const Terms* x, const Terms* t) const
-{
-    if (auto var = dynamic_cast<const Variable*>(x))
-    {
+Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
+    // если x переменная...
+    if (auto var = dynamic_cast<const Variable*>(x)) {
+        // ... а наш терм от неё не звисит
         if (free.find(*var) == free.end())
             return this->clone();
-        else
-        {
-            Terms* termReplaced = arg(2)->replace(x, t);
-            return new ForallTerm(
-                    *static_cast<Variable*>(arg(1)->clone()),
-                    termReplaced);
-        }
     }
+    else {
+        if (doCompare(x))
+            return t->clone();
+    }
+
+    Terms* termReplaced = arg(2)->replace(x, t);
+    return new ForallTerm(
+        *static_cast<Variable*>(arg(1)->clone()),
+        termReplaced);
 }
 
-Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const
-{
-    if (auto var = dynamic_cast<const Variable*>(x))
-    {
+Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const {
+    // если x переменная...
+    if (auto var = dynamic_cast<const Variable*>(x)) {
+        // ... а наш терм от неё не звисит
         if (free.find(*var) == free.end())
             return this->clone();
-        else
-        {
-            Terms* termReplaced = arg(2)->replace(x, t);
-            return new ExistsTerm(
-                    *static_cast<Variable*>(arg(1)->clone()),
-                    termReplaced);
-        }
     }
+    else {
+        if (doCompare(x))
+            return t->clone();
+    }
+
+    Terms* termReplaced = arg(2)->replace(x, t);
+    return new ExistsTerm(
+        *static_cast<Variable*>(arg(1)->clone()),
+        termReplaced);
 }

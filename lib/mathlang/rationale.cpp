@@ -64,6 +64,10 @@ void PrimaryNode::doSpec(const std::string& pToSpec, const std::string& termVar)
     }
     new Inference(this, mkPath(pToSpec), pTerm, Inference::InfTy::SPEC);
 }
+void PrimaryNode::doApply(const std::string& pTerm, const std::string& pTheorem)
+{ new Inference(this, mkPath(pTerm), mkPath(pTheorem), Inference::InfTy::APPL); }
+void PrimaryNode::doEqual(const std::string& pTerm, const std::string& pEquality)
+{ new Inference(this, mkPath(pTerm), mkPath(pEquality), Inference::InfTy::EQL); }
 void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
 { new Inference(this, mkPath(pToGen), mkPath(pToVar), Inference::InfTy::GEN); }
 
@@ -93,17 +97,21 @@ const Terms* Inference::inference() {
     const Terms* arg1 = getTerms(premises[0]);
     const Terms* arg2 = getTerms(premises[1]);
     switch (type) {
-        case Inference::InfTy::MP   :
+        case InfTy::MP   :
             return modusPonens   (arg1, arg2);
-        case Inference::InfTy::SPEC :
+        case InfTy::SPEC :
             return specialization(arg1, arg2);
-        case Inference::InfTy::GEN  :
+        case InfTy::APPL :
+            return application(arg1, arg2);
+        case InfTy::EQL :
+            return equalSubst(arg1, arg2);
+        case InfTy::GEN  :
             return generalization(arg1, arg2);
     }
 }
 Inference::Inference(PrimaryNode* naming,
                      Path pArg1, Path pArg2, Inference::InfTy _type)
-        : Item(naming), premises({std::move(pArg1), std::move(pArg2)}),
+        : Item(naming), premises({pArg1, pArg2}),
           type(_type), data(inference())
 { if (!data) throw bad_inf(pathToStr(pArg1) + ", " + pathToStr(pArg2)); }
 
@@ -111,17 +119,24 @@ std::string Inference::getTypeAsStr() const {
     switch (type)
     {
         case InfTy::MP   : return "InfMP";
-        case InfTy::GEN  : return "InfGen";
         case InfTy::SPEC : return "InfSpec";
+        case InfTy::APPL : return "InfAppl";
+        case InfTy::EQL  : return "InfEql";
+        case InfTy::GEN  : return "InfGen";
     }
 }
 Inference::InfTy infTyFromStr(const std::string& type) {
+    typedef Inference::InfTy InfTy;
     if (type == "InfMP")
-        return Inference::InfTy::MP;
+        return InfTy::MP;
     else if (type == "InfSpec")
-        return Inference::InfTy::SPEC;
+        return InfTy::SPEC;
+    else if (type == "InfAppl")
+        return InfTy::APPL;
+    else if (type == "InfEql")
+        return InfTy::EQL;
     else
-        return Inference::InfTy::GEN;
+        return InfTy::GEN;
 }
 
 
@@ -144,6 +159,81 @@ Terms* specialization(const Terms* general, const Terms* t) {
         if (fT->arg(1)->getType() == t->getType())
             return fT->arg(2)->replace(fT->arg(1), t);
     }
+    else
+        return nullptr;
+}
+
+const Terms* innerPremise(const ForallTerm* fT) {
+    const Terms* quantedterm = fT->arg(2);
+    while (auto innerForall = dynamic_cast<const ForallTerm*>(quantedterm))
+        quantedterm = innerForall->arg(2);
+    // теперь в quantedterm лежит самый первый терм без кванторов
+    if (auto notVar = dynamic_cast<const Term*>(quantedterm)) {
+        Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
+        if ((notVar->Symbol::operator==)(standardImpl))
+            return notVar->arg(1);
+    }
+    return nullptr;
+}
+Path findVarFirstUsage(Variable var, const Term* term) {
+    for (size_t i = 1; i <= term->getArity(); ++i) {
+        if (auto v = dynamic_cast<const Variable*>(term->arg(i)))
+        { if (var == *v) return {i}; }
+        else {
+            auto t = static_cast<const Term*>(term->arg(i));
+            if (t->free.find(var) != t->free.end()) {
+                Path inner = findVarFirstUsage(var, t);
+                inner.push_front(i);
+                return inner;
+            }
+        }
+    }
+    return {};
+}
+
+const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
+    Variable topQVar = *static_cast<const Variable*>(quantedImpl->arg(1));
+    const Terms* topQuanted = quantedImpl->arg(2);
+    Path toInnerConseq = {};
+    const Terms* innerConseq = topQuanted;
+    while (auto innerForall = dynamic_cast<const ForallTerm*>(innerConseq)) {
+        innerConseq = innerForall->arg(2);
+        toInnerConseq.push_back(2);
+    }
+    // quantedImpl должен содержать импликацию внутри
+    innerConseq = static_cast<const Term*>(innerConseq)->arg(2);
+    toInnerConseq.push_back(2);
+    const Terms* foralledConseq = new ForallTerm(topQVar, innerConseq->clone());
+    return topQuanted->replace(toInnerConseq, foralledConseq);
+}
+Terms* application(const Terms* term, const Terms* theorem) {
+    while (auto fT = dynamic_cast<const ForallTerm*>(theorem)) {
+        const Terms* foralledPremise = innerPremise(fT);
+        if (!foralledPremise) // theorem должна содержать импликацию внутри
+            return nullptr;
+        const Variable var = *static_cast<const Variable*>(fT->arg(1));
+        if (auto v = dynamic_cast<const Variable*>(foralledPremise)) {
+            if (*v == var)
+                theorem = specialization(theorem, term);
+        }
+        else { // в случае терма пустой путь будет означать ошибку
+            Path usageOfVar =
+                findVarFirstUsage(var,
+                                  static_cast<const Term*>(foralledPremise));
+            if (usageOfVar.empty())
+                theorem = moveQuantorIntoImpl(fT);
+            else {
+                const Terms* implement = term->get(usageOfVar);
+                theorem = specialization(theorem, implement);
+            }
+        }
+    }
+    return modusPonens(term, theorem);
+}
+
+Terms* equalSubst(const Terms* term, const Terms* equality) {
+    if (auto eq = dynamic_cast<const Term*>(equality))
+        return term->replace(eq->arg(1), eq->arg(2));
     else
         return nullptr;
 }

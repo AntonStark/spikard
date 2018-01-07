@@ -46,6 +46,8 @@ private:
 
     void deduceMP  (vector<string> cmdArgs);
     void deduceSpec(vector<string> cmdArgs);
+    void deduceApply(vector<string> cmdArgs);
+    void deduceEqual(vector<string> cmdArgs);
     void deduceGen (vector<string> cmdArgs);
 
     map<string, void (MathlangPlugin::*)(vector<string>)> methods;
@@ -471,7 +473,11 @@ void MathlangPlugin::deduceMP(vector<string> cmdArgs) {
     if (cmdArgs.size() < 2)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        pn->doMP(cmdArgs[0], cmdArgs[1]);
+        try { pn->doMP(cmdArgs[0], cmdArgs[1]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
         print();
     }
 }
@@ -483,7 +489,43 @@ void MathlangPlugin::deduceSpec(vector<string> cmdArgs) {
     if (cmdArgs.size() < 2)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        pn->doSpec(cmdArgs[0], cmdArgs[1]);
+        try { pn->doSpec(cmdArgs[0], cmdArgs[1]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
+        print();
+    }
+}
+
+void MathlangPlugin::deduceApply(vector<string> cmdArgs) {
+    CALL_INFO("apply",
+              "<apply [PathTerm] [PathTheorem]> - применить правило вывода Apply для Term и Theorem.")
+
+    if (cmdArgs.size() < 2)
+        return;
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
+        try { pn->doApply(cmdArgs[0], cmdArgs[1]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
+        print();
+    }
+}
+
+void MathlangPlugin::deduceEqual(vector<string> cmdArgs) {
+    CALL_INFO("equal",
+              "<equal [PathTerm] [PathEquality]> - применить правило вывода Equal для Term и Equality.")
+
+    if (cmdArgs.size() < 2)
+        return;
+    if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
+        try { pn->doEqual(cmdArgs[0], cmdArgs[1]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
         print();
     }
 }
@@ -495,7 +537,11 @@ void MathlangPlugin::deduceGen(vector<string> cmdArgs) {
     if (cmdArgs.size() < 2)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        pn->doGen(cmdArgs[0], cmdArgs[1]);
+        try { pn->doGen(cmdArgs[0], cmdArgs[1]); }
+        catch (std::invalid_argument& e) {
+            write(INFO_TYPE::ERR, e.what());
+            return;
+        }
         print();
     }
 }
@@ -533,9 +579,11 @@ void MathlangPlugin::methodsCfg() {
     methods.insert(make_pair("view_syms", &MathlangPlugin::viewSyms));
     methods.insert(make_pair("view_vars", &MathlangPlugin::viewVars));
 
-    methods.insert(make_pair("deduce_MP", &MathlangPlugin::deduceMP));
-    methods.insert(make_pair("deduce_Spec", &MathlangPlugin::deduceSpec));
-    methods.insert(make_pair("deduce_Gen", &MathlangPlugin::deduceGen));
+    methods.insert(make_pair("deduce_MP",    &MathlangPlugin::deduceMP));
+    methods.insert(make_pair("deduce_Spec",  &MathlangPlugin::deduceSpec));
+    methods.insert(make_pair("deduce_Apply", &MathlangPlugin::deduceApply));
+    methods.insert(make_pair("deduce_Equal", &MathlangPlugin::deduceEqual));
+    methods.insert(make_pair("deduce_Gen",   &MathlangPlugin::deduceGen));
 }
 
 void MathlangPlugin::ifaceCfg() {

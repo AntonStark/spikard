@@ -63,6 +63,8 @@ public:
     void addTerm(const std::string& term);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec,  const std::string& termVar);
+    void doApply(const std::string& pTerm,    const std::string& pTheorem);
+    void doEqual(const std::string& pTerm,    const std::string& pEquality);
     void doGen  (const std::string& pToGen,   const std::string& pToVar);
 };
 
@@ -197,7 +199,7 @@ class Inference : public Item, public Statement
 {
 public:
     class bad_inf;
-    enum class InfTy {MP, SPEC, GEN};
+    enum class InfTy {MP, SPEC, APPL, EQL, GEN};
 
     const std::vector<Path> premises;
     const InfTy type;
@@ -221,7 +223,8 @@ public:
 
 Terms* modusPonens(const Terms* premise, const Terms* impl);
 Terms* specialization(const Terms* general, const Terms* t);
-//Terms* application(const Terms* term, const Term* theorem);
+Terms* application(const Terms* term, const Terms* theorem);
+Terms* equalSubst(const Terms* term, const Terms* equality);
 Term* generalization(const Terms* toGen, const Terms* x);
 
 #endif //TEST_BUILD_SIGNATURE_HPP
