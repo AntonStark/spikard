@@ -391,7 +391,7 @@ void MathlangPlugin::addSym(vector<string> cmdArgs) {
     if (cmdArgs.size() < 2)
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
-        list<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
+        vector<string> argTypes(next(cmdArgs.begin()), prev(cmdArgs.end()));
         try {
             pn->defSym(cmdArgs.front(), argTypes, cmdArgs.back());
             print();

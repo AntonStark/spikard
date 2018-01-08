@@ -6,128 +6,109 @@
 
 bool Named::operator==(const Named& one) const
 { return (_name == one._name); }
-bool Label::operator==(const Label& one) const
-{ return (this->Named::operator==)(one); }
-bool Map::operator==(const Map& one) const
-{ return (/*(arity == one.arity) && */(argT == one.argT) && (retT == one.retT)); }
-bool Symbol::operator==(const Symbol& one) const
-{ return ( (this->Label::operator==)(one) && (this->Map::operator==)(one) ); }
-bool MathType::operator==(const MathType& one) const
-{
-    return (getName() == "any" || one.getName() == "any" ? true
-                                                         : (this->Named::operator==)(one));
+bool MathType::operator==(const MathType& one) const {
+    return (getName() == "any" || one.getName() == "any"
+            || (this->Named::operator==)(one));
 }
+bool Map::operator==(const Map& one) const
+{ return (_argT == one._argT && _retT == one._retT); }
+bool Symbol::operator==(const Symbol& one) const {
+    return ( (this->Named::operator==)(one)
+             && (this->Map::operator==)(one) ); }
 
 bool Named::operator<(const Named& other) const
 { return (_name < other._name); }
-bool Label::operator<(const Label& other) const
-{ return (this->Named::operator<)(other); }
 bool MathType::operator<(const MathType& other) const
 { return (this->Named::operator<)(other); }
-bool Map::operator<(const Map& other) const
-{
-    if (argT < other.argT) return true;
-    else if (other.argT < argT) return false;
-    else return (retT < other.retT);
+bool Map::operator<(const Map& other) const {
+    if (_argT < other._argT) return true;
+    else if (other._argT < _argT) return false;
+    else return (_retT < other._retT);
 }
-bool Symbol::operator<(const Symbol& other) const
-{
+bool Symbol::operator<(const Symbol& other) const {
     if ((this->Map::operator<)(other))
         return true;
     else if (other.Map::operator<(*this))
         return false;
     else
-        return (this->Label::operator<)(other);
+        return (this->Named::operator<)(other);
 }
 
 MathType logical_mt("Logical");
 
-std::ostream& operator<< (std::ostream& os, const Printable& pr)
-{
-    pr.print(os);
-    return os;
-}
-void Label::print(std::ostream &out) const
-{ out << getName(); }
-void ParenSymbol::print(std::ostream &out) const
-{
-    out << '(';
-    if (!args.empty())
-    {
-        auto lit = args.begin(), le = args.end();
-        (*lit)->print(out);
+std::string ParenSymbol::print() const {
+    std::stringstream buf;
+    buf << '(';
+    if (!_args.empty()) {
+        auto lit = _args.begin(), le = _args.end();
+        buf << (*lit)->print();
         while (++lit != le)
-        {
-            out << ", ";
-            (*lit)->print(out);
-        }
+            buf << ", " << (*lit)->print();
     }
-    out << ')';
+    buf << ')';
+    return buf.str();
 }
-void Term::print(std::ostream &out) const
-{
-    if (getArity() == 2) {
-        out << '(';
-        args[0]->print(out);
-        Symbol::print(out);
-        args[1]->print(out);
-        out << ')';
-    }
+std::string Variable::print() const
+{ return getName(); }
+std::string Term::print() const {
+    std::stringstream buf;
+    if (getArity() != 2)
+        buf << Symbol::print() << ParenSymbol::print();
     else {
-        Symbol::print(out);
-        ParenSymbol::print(out);
+        buf << '(' << arg(1)->print();
+        buf << Symbol::print();
+        buf << arg(2)->print() << ')';
     }
+    return buf.str();
 }
-void Term::printQ(std::ostream& out) const
-{
-    out << '(';
-    Symbol::print(out);
-    auto var = dynamic_cast<const Variable*>(arg(1)); //по пострению arg(1) типа Variable*
-    out << var->getName() << "\\in " << var->getType().getName();
-    arg(2)->print(out);
-    out << ')';
+std::string Term::printQ() const {
+    std::stringstream buf;
+    buf << '(' << Symbol::print();
+    // по пострению arg(1) действительно Variable
+    auto var = static_cast<const Variable*>(arg(1));
+    buf << var->getName() << "\\in " << var->getType().getName();
+    buf << arg(2)->print() << ')';
+    return buf.str();
 }
 
 
-class ParenSymbol::argN_argType_error : public std::invalid_argument
+class ParenSymbol::argN_argType_error: public std::invalid_argument
 {
 public:
     argN_argType_error()
-            : std::invalid_argument("Кол-во или тип аргументов не соответствует символу.\n") {}
+            : std::invalid_argument("Кол-во или тип аргументов не "
+                                        "соответствует символу.\n") {}
 };
 
-void ParenSymbol::checkArgs(Map f, std::vector<Terms*> _args) const
-{
-    std::list<MathType> _argsType;
-    for (auto a : _args)
-        _argsType.push_back(a->getType());
-    if (!f.matchArgType(_argsType))
+void ParenSymbol::checkArgs(const Map& f, TermsVector args) const {
+    Map::MTVector argsTypes;
+    for (const auto& a : args)
+        argsTypes.push_back(a->getType());
+    if (!f.matchArgType(argsTypes))
         throw argN_argType_error();
 }
 
+ParenSymbol::ParenSymbol(const TermsVector& args) {
+    for (auto& a : args)
+        _args.push_back(a->clone());
+}
+
 ParenSymbol::ParenSymbol(const ParenSymbol& one)
-        /*: vars(one.vars)*/
-{
-    for (const auto& a : one.args)
-        args.push_back(a->clone());
+        /*: vars(one.vars)*/ {
+    for (const auto& a : one._args)
+        _args.push_back(a->clone());
 }
 
-ParenSymbol::ParenSymbol(std::vector<Terms*> _args)
-{
+ParenSymbol::~ParenSymbol() {
     for (auto a : _args)
-        args.push_back(a->clone());
-}
-
-ParenSymbol::~ParenSymbol()
-{
-    for (auto a : args)
         delete a;
 }
 
-bool ParenSymbol::operator==(const ParenSymbol& other) const
-{
-    for (size_t i = 0; i < args.size(); ++i)
-        if (!args[i]->doCompare(other.args[i]))
+bool ParenSymbol::operator==(const ParenSymbol& other) const {
+    if (other._args.size() != _args.size())
+        return false;
+    for (size_t i = 0; i < _args.size(); ++i)
+        if (!_args[i]->doCompare(other._args[i]))
             return false;
     return true;
 }
@@ -135,7 +116,7 @@ bool ParenSymbol::operator==(const ParenSymbol& other) const
 bool Variable::doCompare(const Terms* other) const
 {
     if (const Variable* v = dynamic_cast<const Variable*>(other))
-        return (this->Label::operator==)(*v);
+        return (this->Named::operator==)(*v);
     else
         return false;
 }
@@ -164,12 +145,12 @@ const Terms* Variable::get(Path path) const
         return nullptr;
 }
 
-Term::Term(Symbol f, std::vector<Terms*> _args)
-        : Terms(f.getType()), Symbol(f), ParenSymbol(_args)
+Term::Term(Symbol f, std::vector<Terms*> args)
+        : Terms(f.getType()), Symbol(f), ParenSymbol(args)
 {
-    checkArgs(f, _args);
+    checkArgs(f, args);
 
-    for (auto& a : _args)
+    for (auto& a : args)
     {
         if (Variable* var = dynamic_cast<Variable*>(a))
             free.insert(*var);
@@ -179,13 +160,14 @@ Term::Term(Symbol f, std::vector<Terms*> _args)
     }
 }
 
-Symbol takeFirstMatchTypes(std::set<Symbol> syms, const std::vector<Terms*>& _args) {
-    std::list<MathType> _argsType;
-    for (auto a : _args)
-        _argsType.push_back(a->getType());
+Symbol takeFirstMatchTypes(std::set<Symbol> syms,
+                           const std::vector<Terms*>& args) {
+    std::vector<MathType> argsType;
+    for (const auto& a : args)
+        argsType.push_back(a->getType());
 
     for (const auto& s : syms)
-        if (s.matchArgType(_argsType))
+        if (s.matchArgType(argsType))
             return s;
     throw ParenSymbol::argN_argType_error();
 }
@@ -198,19 +180,23 @@ void Term::boundVar(Variable var)
     if (search != free.end())
         free.erase(search);
     else
-        throw std::invalid_argument("Попытка ограничения не свободной перменной.\n");
+        throw std::invalid_argument("Попытка ограничения не "
+                                        "свободной перменной.\n");
 }
 
 std::map<Term::QType, const std::string>
         Term::qword = { {Term::QType::FORALL,"\\forall "},
                         {Term::QType::EXISTS,"\\exists "} };
-Symbol forall(Term::qword[Term::QType::FORALL], {MathType("any"), logical_mt}, logical_mt);
-Symbol exists(Term::qword[Term::QType::EXISTS], {MathType("any"), logical_mt}, logical_mt);
+Symbol forall(Term::qword[Term::QType::FORALL],
+              {MathType("any"), logical_mt}, logical_mt);
+Symbol exists(Term::qword[Term::QType::EXISTS],
+              {MathType("any"), logical_mt}, logical_mt);
 
 bool Term::doCompare(const Terms* other) const
 {
     if (const Term* t = dynamic_cast<const Term*>(other))
-        return ((this->Symbol::operator==)(*t) && (this->ParenSymbol::operator==)(*t));
+        return ( (this->Symbol::operator==)(*t)
+                 && (this->ParenSymbol::operator==)(*t));
     else
         return false;
 }
@@ -227,10 +213,10 @@ Terms* Term::replace(const Terms* x, const Terms* t) const {
             return t->clone();
     }
 
-    std::vector<Terms*> _args;
-    for (auto& arg : args)
-        _args.push_back(arg->replace(x, t));
-    return new Term(*this, _args);
+    std::vector<Terms*> args;
+    for (auto& a : _args)
+        args.push_back(a->replace(x, t));
+    return new Term(*this, args);
 }
 
 Terms* Term::replace(Path where, const Terms* by) const
@@ -241,14 +227,14 @@ Terms* Term::replace(Path where, const Terms* by) const
     {
         auto n = where.front();
         where.pop_front();
-        if (n > args.size())
+        if (n > _args.size())
             return nullptr;
         std::vector<Terms*> _args;
-        for (unsigned i = 0; i < args.size(); ++i)
+        for (unsigned i = 0; i < _args.size(); ++i)
             if (i != n-1)
-                _args.push_back(args[i]->clone());
+                _args.push_back(_args[i]->clone());
             else
-                _args.push_back(args[i]->replace(where, by));
+                _args.push_back(_args[i]->replace(where, by));
         return (new Term(*this, _args));
     }
 }

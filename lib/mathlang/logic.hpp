@@ -6,58 +6,38 @@
 #define TEST_BUILD_LOGIC_HPP
 
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <list>
 #include <stdexcept>
 #include <set>
 #include <map>
 #include <functional>
+#include <utility>
 #include <vector>
-
-class Printable
-{
-public:
-    virtual ~Printable() {}
-
-    virtual void print(std::ostream& out = std::cout) const = 0;
-    friend std::ostream& operator<<(std::ostream& os, const Printable& pr);
-};
 
 class Named
 {
 private:
     std::string _name;
 public:
-    Named(const std::string& _name) : _name(_name) {}
-    virtual ~Named() {}
-    Named(const Named& one) : _name(one._name) {}
+    Named(std::string name) : _name(std::move(name)) {}
+    Named(const Named&) = default;
+    virtual ~Named() = default;
 
-    std::string getName() const { return _name; }
-    void setName(std::string name) {_name = name; }
     bool operator== (const Named& one) const;
     bool operator< (const Named& other) const;
-};
 
-class Label : public virtual Printable, public Named
-{
-public:
-    Label(const std::string& _name) : Named(_name) {}
-    virtual ~Label() {}
-    Label(const Label& one) : Named(one) {}
-
-    void print(std::ostream& out = std::cout) const override;
-    bool operator== (const Label& one) const;
-    bool operator< (const Label& other) const;
+    std::string getName() const { return _name; }
+    void setName(std::string name) { _name = std::move(name); }
 };
 
 class MathType : public Named
 {
 public:
-    MathType(std::string _type)
-            : Named(_type) {}
-    virtual ~MathType() {}
-    MathType(const MathType& one)
-            : Named(one) {}
+    MathType(std::string type) : Named(std::move(type)) {}
+    MathType(const MathType&) = default;
+    ~MathType() override = default;
 
     bool operator== (const MathType& other) const;
     bool operator!= (const MathType& other) const
@@ -72,71 +52,99 @@ extern MathType logical_mt;
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 class Map
 {
-private:
-    const std::list<MathType> argT;
-    const MathType retT;
 public:
-    Map(const std::list<MathType>& _argT, MathType _retT)
-            : argT(_argT), retT(_retT) {}
-    virtual ~Map() {}
-    Map(const Map& one) : argT(one.argT), retT(one.retT) {}
+    typedef std::vector<MathType> MTVector;
+    typedef std::pair<MTVector, MathType> Signature;
+private:
+    const MTVector _argT;
+    const MathType _retT;
+public:
+    Map(MTVector argT, const MathType& retT)
+            : _argT(std::move(argT)), _retT(retT) {}
+    Map(const Map&) = default;
+    virtual ~Map() = default;
 
-    unsigned getArity() const { return argT.size(); }
     bool operator== (const Map& one) const;
-    MathType getArgType() const { return argT.front(); }
-    bool matchArgType(const std::list<MathType>& otherArgT) const
-    { return (otherArgT == argT); }
-    MathType getType() const { return retT; }
     bool operator< (const Map& other) const;
 
-    typedef std::pair<std::vector<MathType>, MathType> Signature;
-    Signature getSign() const { return {{argT.begin(), argT.end()}, retT}; }
+    size_t   getArity() const { return _argT.size(); }
+    MathType  getType() const { return _retT; }
+    Signature getSign() const { return {{_argT.begin(), _argT.end()}, _retT}; }
+    bool matchArgType(const MTVector& otherArgT) const
+    { return (otherArgT == _argT); }
 };
 
 /*=====================================================*/
 /*=====================================================*/
 /*=====================================================*/
 
-class Symbol : public Label, public Map
+class Symbol : public Named, public Map
 {
 public:
-    Symbol(const std::string& _name,
-           const std::list<MathType>& _argT, MathType _retT)
-            : Label(_name), Map(_argT, _retT) {}
+    Symbol(std::string name, MTVector argT, const MathType& retT)
+            : Named(std::move(name)), Map(std::move(argT), retT) {}
+    Symbol(const Symbol&) = default;
+    ~Symbol() override = default;
 
-    virtual ~Symbol() {}
-    Symbol(const Symbol& one)
-            : Label(one), Map(one) {}
     bool operator== (const Symbol& one) const;
     bool operator<(const Symbol& other) const;
+
+    std::string print() const { return getName(); }
+};
+
+class Terms;
+class ParenSymbol
+{
+public:
+    typedef std::vector<Terms*> TermsVector;
+    class argN_argType_error;
+protected:
+    // Внимание! ParenSymbol владеет своими аргументами,
+    // к передаваемым указателям применяется глубокое копирование
+    TermsVector _args;
+    /*std::set<Variable> vars;*/
+    void checkArgs(const Map& f, TermsVector args) const;
+public:
+    // В обоих случаях применяется глубокое копирование
+    ParenSymbol(const TermsVector& args);
+    ParenSymbol(const ParenSymbol& one);
+    virtual ~ParenSymbol();
+
+    bool operator==(const ParenSymbol& other) const;
+
+    const Terms* arg(size_t oneTwoThree) const
+    { return _args.at(oneTwoThree-1); }
+    std::string print() const;
 };
 
 typedef std::list<size_t> Path;
-class Terms : public virtual Printable
+class Terms
 {
 private:
-    MathType type;
+    MathType _type;
 public:
-    Terms(MathType _type) : type(_type) {}
-    Terms(const Terms& one) : type(one.type) {}
-    virtual ~Terms() {}
+    Terms(const MathType& type) : _type(type) {}
+    Terms(const Terms& one) = default;
+    virtual ~Terms() = default;
+
     virtual bool isVariable() const { return false; }
     virtual Terms* clone() const = 0;
-    MathType getType() const { return type; }
+    MathType getType() const { return _type; }
     virtual bool doCompare(const Terms* other) const = 0;
     virtual Terms* replace(const Terms* x, const Terms* t) const = 0;
     virtual Terms* replace(Path where, const Terms* by) const = 0;
     virtual const Terms* get(Path path) const = 0;
+    virtual std::string print() const = 0;
 };
 
-class Variable : public Terms, public Label
+class Variable : public Terms, public Named
 {
 public:
     Variable(const std::string& _name, MathType _type)
-            : Terms(_type), Label(_name) {}
+            : Terms(_type), Named(_name) {}
     virtual ~Variable() {}
     Variable(const Variable& one) :
-            Terms(one), Label(one) {}
+            Terms(one), Named(one) {}
     virtual bool isVariable() const override { return true; }
     virtual Variable* clone() const override { return (new Variable(*this)); }
 
@@ -144,37 +152,14 @@ public:
     virtual Terms* replace(const Terms* x, const Terms* t) const override;
     virtual Terms* replace(Path where, const Terms* by) const override;
     virtual const Terms* get(Path path) const override;
-};
-
-class ParenSymbol : public virtual Printable
-{
-public:
-    class argN_argType_error;
-
-protected:
-    // Внимание! ParenSymbol владеет своими аргументами,
-    // к передаваемым указателям применяется глубокое копирование
-    std::vector<Terms*> args;
-    /*std::set<Variable> vars;*/
-    void checkArgs(Map f, std::vector<Terms*> _args) const;
-public:
-    ParenSymbol(const ParenSymbol& one);
-    // Применяется глубокое копирование
-    ParenSymbol(std::vector<Terms*> _args);
-    virtual ~ParenSymbol();
-
-    virtual void print(std::ostream& out = std::cout) const override;
-
-    const Terms* arg(size_t oneTwoThree) const
-    { return args.at(oneTwoThree-1); }
-    bool operator==(const ParenSymbol& other) const;
+    std::string print() const override;
 };
 
 class Term : public Terms, public Symbol, public ParenSymbol
 {
 protected:
     void boundVar(Variable var);
-    void printQ(std::ostream& out = std::cout) const;
+    std::string printQ() const;
 public:
     typedef std::set<Variable> VarSet;
     VarSet free;
@@ -186,7 +171,7 @@ public:
 
     using Terms::getType;
     virtual Term* clone() const override { return (new Term(*this)); }
-    virtual void print(std::ostream& out = std::cout) const override;
+    std::string print() const override;
 
     virtual bool doCompare(const Terms* other) const override;
 
@@ -199,7 +184,7 @@ public:
 };
 
 extern Symbol forall, exists;
-class ForallTerm : virtual public Printable, public Term
+class ForallTerm : public Term
 {
 public:
     ForallTerm(Variable var, Terms* term)
@@ -209,12 +194,11 @@ public:
     virtual ForallTerm* clone() const override
     { return (new ForallTerm(*this)); }
     virtual ~ForallTerm() {}
-    virtual void print(std::ostream& out = std::cout) const override
-    { printQ(out); }
+    std::string print() const { return printQ(); }
     virtual Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
-class ExistsTerm : virtual public Printable, public Term
+class ExistsTerm : public Term
 {
 public:
     ExistsTerm(Variable var, Terms* term)
@@ -224,8 +208,7 @@ public:
     virtual ExistsTerm* clone() const override
     { return (new ExistsTerm(*this)); }
     virtual ~ExistsTerm() {}
-    virtual void print(std::ostream& out = std::cout) const override
-    { printQ(out); }
+    std::string print() const { return printQ(); }
     virtual Terms* replace(const Terms* x, const Terms* t) const override;
 };
 

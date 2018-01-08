@@ -59,7 +59,7 @@ public:
     void defType(const std::string& typeName);
     void defVar (const std::string& varName, const std::string& typeName);
     void defSym (const std::string& symName,
-                 const std::list<std::string>& argT, const std::string& retT);
+                 const std::vector<std::string>& argT, const std::string& retT);
     void addTerm(const std::string& term);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec,  const std::string& termVar);
@@ -153,7 +153,7 @@ class DefSym : public AbstrDef, public Symbol
 private:
     friend class PrimaryNode;
     DefSym(PrimaryNode* naming, const std::string& symName,
-           const std::list<MathType>& argT, MathType retT)
+           const std::vector<MathType>& argT, MathType retT)
             : AbstrDef(naming, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:

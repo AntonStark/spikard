@@ -56,8 +56,7 @@ void PlainText::process(const DefSym* ds) {
 
 void PlainText::process(const TermsBox* ax) {
     std::stringstream buf;
-    buf << "Пусть ";
-    ax->get()->print(buf);
+    buf << "Пусть " << ax->get()->print();
     value = buf.str();
 }
 
@@ -78,7 +77,7 @@ void PlainText::process(const Inference* inf) {
             break;
         }
     }
-    inf->get()->print(buf);
+    buf << inf->get()->print();
     value = buf.str();
 }
 
@@ -130,10 +129,8 @@ void AsJson::process(const DefSym* ds) {
 }
 
 void AsJson::process(const TermsBox* ax) {
-    std::stringstream ss;
-    ax->get()->print(ss);
     value.push_back({"TermsBox",
-                    {{"axiom", ss.str()}}
+                    {{"axiom", ax->get()->print()}}
                    });
 }
 
@@ -194,19 +191,15 @@ void AsMlObj::process(const DefSym* ds) {
 }
 
 void AsMlObj::process(const TermsBox* ax) {
-    std::stringstream formula;
-    ax->get()->print(formula);
     buffer.push_back(
-        MlObj("term", ax->getNumber(), formula.str()).toJson()
+        MlObj("term", ax->getNumber(), ax->get()->print()).toJson()
     );
 }
 
 void AsMlObj::process(const Inference* inf) {
-    std::stringstream data;
-    inf->get()->print(data);
     buffer.push_back(MlObj(inf->getTypeAsStr(),
                            inf->getNumber(),
-                           data.str(),
+                           inf->get()->print(),
                            inf->premises)
                          .toJson());
 }

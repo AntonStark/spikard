@@ -43,9 +43,9 @@ void PrimaryNode::defType(const std::string& typeName)
 void PrimaryNode::defVar(const std::string& varName, const std::string& typeName)
 { new DefVar(this, varName, getType(index(), typeName)); }
 void PrimaryNode::defSym(
-        const std::string& symName, const std::list<std::string>& argT,
+        const std::string& symName, const std::vector<std::string>& argT,
         const std::string& retT) {
-    std::list<MathType> argMT;
+    std::vector<MathType> argMT;
     for (auto& a : argT)
         argMT.push_back(getType(index(), a));
     new DefSym(this, symName, argMT, getType(index(), retT));
@@ -294,7 +294,7 @@ Hierarchy* DefVar::fromJson(const json& j, PrimaryNode* parent) {
 }
 
 Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
-    std::list<MathType> argT;
+    std::vector<MathType> argT;
     auto index = parent->index();
     for (const auto& t : j.at("argT"))
         argT.push_back(::getType(index, t));
