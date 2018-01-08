@@ -146,7 +146,7 @@ Terms* modusPonens(const Terms* premise, const Terms* impl) {
         if (!(tI->Symbol::operator==)(standardImpl))
             return nullptr; //терм impl не является импликацией
 
-        if (!tI->arg(1)->doCompare(premise))
+        if (!tI->arg(1)->comp(premise))
             return nullptr; //посылка импликации impl не совпадает с premise
         return tI->arg(2)->clone();
     }
@@ -178,12 +178,12 @@ const Terms* innerPremise(const ForallTerm* fT) {
 Path findVarFirstUsage(Variable var, const Term* term) {
     for (size_t i = 1; i <= term->getArity(); ++i) {
         if (auto v = dynamic_cast<const Variable*>(term->arg(i)))
-        { if (var == *v) return {i}; }
+        { if (var == *v) return Path({i}); }
         else {
             auto t = static_cast<const Term*>(term->arg(i));
             if (t->free.find(var) != t->free.end()) {
                 Path inner = findVarFirstUsage(var, t);
-                inner.push_front(i);
+                inner.push(i);
                 return inner;
             }
         }
@@ -198,11 +198,11 @@ const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
     const Terms* innerConseq = topQuanted;
     while (auto innerForall = dynamic_cast<const ForallTerm*>(innerConseq)) {
         innerConseq = innerForall->arg(2);
-        toInnerConseq.push_back(2);
+        toInnerConseq.push(2);
     }
     // quantedImpl должен содержать импликацию внутри
     innerConseq = static_cast<const Term*>(innerConseq)->arg(2);
-    toInnerConseq.push_back(2);
+    toInnerConseq.push(2);
     const Terms* foralledConseq = new ForallTerm(topQVar, innerConseq->clone());
     return topQuanted->replace(toInnerConseq, foralledConseq);
 }

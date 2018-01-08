@@ -5,6 +5,8 @@
 #ifndef TEST_BUILD_STRUCTURE_HPP
 #define TEST_BUILD_STRUCTURE_HPP
 
+#include <list>
+
 #include "../../json.hpp"
 
 #include "logic.hpp"
@@ -89,7 +91,7 @@ public:
     std::string print(Representation* r, bool incremental) const;
     HiList_cIter start() const { return newInfo.second; }
     HiList_cIter end() const { return  subs.end(); }
-    Path backLabel() const { return {subs.size()}; }
+    Path backLabel() const { return Path({subs.size()}); }
 };
 
 class Node : public Hierarchy, public ListStorage
@@ -189,6 +191,6 @@ public:
 };
 
 Path mkPath(std::string source);
-std::string pathToStr(Path path);
+std::string pathToStr(Path reversed);
 
 #endif //TEST_BUILD_STRUCTURE_HPP

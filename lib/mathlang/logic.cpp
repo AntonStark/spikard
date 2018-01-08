@@ -4,6 +4,8 @@
 
 #include "logic.hpp"
 
+#include <utility>
+
 bool Named::operator==(const Named& one) const
 { return (_name == one._name); }
 bool MathType::operator==(const MathType& one) const {
@@ -108,74 +110,88 @@ bool ParenSymbol::operator==(const ParenSymbol& other) const {
     if (other._args.size() != _args.size())
         return false;
     for (size_t i = 0; i < _args.size(); ++i)
-        if (!_args[i]->doCompare(other._args[i]))
+        if (!_args[i]->comp(other._args[i]))
             return false;
     return true;
 }
 
-bool Variable::doCompare(const Terms* other) const
-{
-    if (const Variable* v = dynamic_cast<const Variable*>(other))
+bool Variable::comp(const Terms* other) const {
+    if (auto v = dynamic_cast<const Variable*>(other))
         return (this->Named::operator==)(*v);
     else
         return false;
 }
-
-Terms* Variable::replace(const Terms* x, const Terms* t) const
-{
-    if (doCompare(x))
-        return t->clone();
+bool Term::comp(const Terms* other) const {
+    if (auto t = dynamic_cast<const Term*>(other))
+        return ( Symbol::operator==(*t)
+                 && ParenSymbol::operator==(*t));
     else
-        return this->clone();
-}
-
-Terms* Variable::replace(Path where, const Terms* by) const
-{
-    if (where.size() == 0)
-        return by->clone();
-    else
-        return nullptr;
+        return false;
 }
 
 const Terms* Variable::get(Path path) const
-{
-    if (path.size() == 0)
+{ return (path.empty() ? this : nullptr); }
+const Terms* Term::get(Path path) const {
+    if (path.empty())
         return this;
-    else
-        return nullptr;
-}
-
-Term::Term(Symbol f, std::vector<Terms*> args)
-        : Terms(f.getType()), Symbol(f), ParenSymbol(args)
-{
-    checkArgs(f, args);
-
-    for (auto& a : args)
-    {
-        if (Variable* var = dynamic_cast<Variable*>(a))
-            free.insert(*var);
-        else if (Term* term = dynamic_cast<Term*>(a))
-            for (auto& v : term->free)
-                free.insert(v);
+    else {
+        auto p = path.top(); path.pop();
+        return (p > getArity() ? nullptr : arg(p)->get(path));
     }
 }
 
-Symbol takeFirstMatchTypes(std::set<Symbol> syms,
-                           const std::vector<Terms*>& args) {
+Terms* Variable::replace(Path path, const Terms* by) const
+{ return (path.empty() ? by->clone() : nullptr); }
+const ParenSymbol::TermsVector&
+ParenSymbol::replace(Path path, const Terms* by) const {
+    TermsVector updated;
+    auto p = path.top();
+    path.pop();
+    for (unsigned i = 0; i < _args.size(); ++i)
+        if (i == p-1)
+            updated.push_back(_args[i]->replace(path, by));
+        else
+            updated.push_back(_args[i]->clone());
+    return updated;
+}
+Terms* Term::replace(Path path, const Terms* by) const {
+    if (path.empty())
+        return by->clone();
+    if (path.top() > getArity())
+        return nullptr;
+    return new Term(*this, ParenSymbol::replace(path, by));
+}
+
+Term::Term(Symbol f, ParenSymbol::TermsVector args)
+        : Symbol(f), ParenSymbol(args) {
+    checkArgs(f, args);
+
+    for (const auto& a : args) {
+        if (auto var = dynamic_cast<const Variable*>(a))
+            free.insert(*var);
+        else {
+            auto term = static_cast<const Term*>(a);
+            for (const auto& v : term->free)
+                free.insert(v);
+        }
+    }
+}
+
+Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
+                           const ParenSymbol::TermsVector& args) {
     std::vector<MathType> argsType;
     for (const auto& a : args)
         argsType.push_back(a->getType());
 
-    for (const auto& s : syms)
+    for (const auto& s : symSet)
         if (s.matchArgType(argsType))
             return s;
     throw ParenSymbol::argN_argType_error();
 }
-Term::Term(std::set<Symbol> fset, std::vector<Terms*> _args)
-    : Term(takeFirstMatchTypes(fset, _args), _args) {}
+Term::Term(std::set<Symbol> symSet, TermsVector args)
+    : Term(takeFirstMatchTypes(std::move(symSet), args), args) {}
 
-void Term::boundVar(Variable var)
-{
+void Term::boundVar(Variable var) {
     auto search = free.find(var);
     if (search != free.end())
         free.erase(search);
@@ -192,14 +208,8 @@ Symbol forall(Term::qword[Term::QType::FORALL],
 Symbol exists(Term::qword[Term::QType::EXISTS],
               {MathType("any"), logical_mt}, logical_mt);
 
-bool Term::doCompare(const Terms* other) const
-{
-    if (const Term* t = dynamic_cast<const Term*>(other))
-        return ( (this->Symbol::operator==)(*t)
-                 && (this->ParenSymbol::operator==)(*t));
-    else
-        return false;
-}
+Terms* Variable::replace(const Terms* x, const Terms* t) const
+{ return (comp(x) ? t->clone() : this->clone()); }
 
 Terms* Term::replace(const Terms* x, const Terms* t) const {
     // если x переменная...
@@ -208,50 +218,13 @@ Terms* Term::replace(const Terms* x, const Terms* t) const {
         if (free.find(*var) == free.end())
             return this->clone();
     }
-    else {
-        if (doCompare(x))
-            return t->clone();
-    }
+    else if (comp(x))
+        return t->clone();
 
-    std::vector<Terms*> args;
+    TermsVector args;
     for (auto& a : _args)
         args.push_back(a->replace(x, t));
     return new Term(*this, args);
-}
-
-Terms* Term::replace(Path where, const Terms* by) const
-{
-    if (where.size() == 0)
-        return by->clone();
-    else
-    {
-        auto n = where.front();
-        where.pop_front();
-        if (n > _args.size())
-            return nullptr;
-        std::vector<Terms*> _args;
-        for (unsigned i = 0; i < _args.size(); ++i)
-            if (i != n-1)
-                _args.push_back(_args[i]->clone());
-            else
-                _args.push_back(_args[i]->replace(where, by));
-        return (new Term(*this, _args));
-    }
-}
-
-const Terms* Term::get(Path path) const
-{
-    if (path.size() == 0)
-        return this;
-    else
-    {
-        auto n = path.front();
-        path.pop_front();
-        if (n > getArity())
-            return nullptr;
-        else
-            return arg(n)->get(path);
-    }
 }
 
 Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
@@ -261,10 +234,9 @@ Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
         if (free.find(*var) == free.end())
             return this->clone();
     }
-    else {
-        if (doCompare(x))
-            return t->clone();
-    }
+    else if (comp(x))
+        return t->clone();
+
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ForallTerm(
@@ -279,10 +251,9 @@ Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const {
         if (free.find(*var) == free.end())
             return this->clone();
     }
-    else {
-        if (doCompare(x))
-            return t->clone();
-    }
+    else if (comp(x))
+        return t->clone();
+
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ExistsTerm(

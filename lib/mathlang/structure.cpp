@@ -109,8 +109,7 @@ std::string ListStorage::print(Representation* r, bool incremental) const {
 Hierarchy* Node::getByPass(Path path) {
     // теперь используются относительные пути
     if (!path.empty()) {
-        auto n = path.front();
-        path.pop_front();
+        auto n = path.top(); path.pop();
         if (n < 1)
             return getParent()->getByPass(path);
         else
@@ -129,9 +128,9 @@ NameStoringStrategy* nssFromStr(std::string str, Node* parent) {
 
 Path mkPath(std::string source)
 {
-    // string  ->  list<size_t>
-    // (1.2.2) }-> {1,2,2}
-    Path target;
+    // string  ->  stack<size_t>
+    // (1.2.7) }-> {7,2,1}
+    Path straight;
     std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
                                        {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
                                        {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
@@ -147,23 +146,35 @@ Path mkPath(std::string source)
             buf += search->second;
         }
         else if (source[i] == '.') {
-            target.push_back(buf);
+            straight.push(buf);
             buf = 0;
         }
         else
-            return {};
+            return Path();
     }
-    target.push_back(buf);
-    return target;
+    straight.push(buf);
+    Path reversed;
+    while (!straight.empty()) {
+        reversed.push(straight.top());
+        straight.pop();
+    }
+    return reversed;
 }
-std::string pathToStr(Path path)
+std::string pathToStr(Path reversed)
 {
+    Path straight;
+    while (!reversed.empty()) {
+        straight.push(reversed.top());
+        reversed.pop();
+    }
     std::stringstream ss; ss << "(";
-    if (!path.empty()) {
-        ss << path.front();
-        auto e = path.end();
-        for (auto it = std::next(path.begin()); it != e; ++it)
-            ss << "." << *it;
+    if (!straight.empty()) {
+        ss << straight.top();
+        straight.pop();
+        while (!straight.empty()) {
+            ss << "." << straight.top();
+            straight.pop();
+        }
     }
     ss << ")";
     return ss.str();

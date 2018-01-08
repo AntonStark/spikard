@@ -8,13 +8,13 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <list>
 #include <stdexcept>
 #include <set>
 #include <map>
 #include <functional>
 #include <utility>
 #include <vector>
+#include <stack>
 
 class Named
 {
@@ -93,6 +93,7 @@ public:
 };
 
 class Terms;
+typedef std::stack<size_t> Path;
 class ParenSymbol
 {
 public:
@@ -104,6 +105,7 @@ protected:
     TermsVector _args;
     /*std::set<Variable> vars;*/
     void checkArgs(const Map& f, TermsVector args) const;
+    const TermsVector& replace(Path path, const Terms* by) const;
 public:
     // В обоих случаях применяется глубокое копирование
     ParenSymbol(const TermsVector& args);
@@ -117,41 +119,38 @@ public:
     std::string print() const;
 };
 
-typedef std::list<size_t> Path;
 class Terms
 {
-private:
-    MathType _type;
 public:
-    Terms(const MathType& type) : _type(type) {}
-    Terms(const Terms& one) = default;
-    virtual ~Terms() = default;
+    virtual MathType getType() const = 0;
+    virtual bool comp(const Terms* other) const = 0;
 
-    virtual bool isVariable() const { return false; }
     virtual Terms* clone() const = 0;
-    MathType getType() const { return _type; }
-    virtual bool doCompare(const Terms* other) const = 0;
-    virtual Terms* replace(const Terms* x, const Terms* t) const = 0;
-    virtual Terms* replace(Path where, const Terms* by) const = 0;
     virtual const Terms* get(Path path) const = 0;
+    virtual Terms* replace(Path path, const Terms* by) const = 0;
+    virtual Terms* replace(const Terms* x, const Terms* t) const = 0;
+
     virtual std::string print() const = 0;
 };
 
 class Variable : public Terms, public Named
 {
+private:
+    MathType _type;
 public:
-    Variable(const std::string& _name, MathType _type)
-            : Terms(_type), Named(_name) {}
-    virtual ~Variable() {}
-    Variable(const Variable& one) :
-            Terms(one), Named(one) {}
-    virtual bool isVariable() const override { return true; }
-    virtual Variable* clone() const override { return (new Variable(*this)); }
+    Variable(std::string name, const MathType& type)
+            : Named(std::move(name)), _type(type) {}
+    Variable(const Variable& one) = default;
+    ~Variable() override = default;
 
-    virtual bool doCompare(const Terms* other) const override;
-    virtual Terms* replace(const Terms* x, const Terms* t) const override;
-    virtual Terms* replace(Path where, const Terms* by) const override;
-    virtual const Terms* get(Path path) const override;
+    MathType getType() const override { return _type; }
+    bool comp(const Terms* other) const override;
+
+    Variable* clone() const override { return new Variable(*this); }
+    const Terms* get(Path path) const override;
+    Terms* replace(Path path, const Terms* by) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
+
     std::string print() const override;
 };
 
@@ -162,25 +161,24 @@ protected:
     std::string printQ() const;
 public:
     typedef std::set<Variable> VarSet;
-    VarSet free;
-    Term(Symbol f, std::vector<Terms*> _args);
-    Term(std::set<Symbol> fset, std::vector<Terms*> _args);
-    Term(const Term& one)
-            : Terms(one), Symbol(one), ParenSymbol(one), free(one.free) {}
-    virtual ~Term() {}
-
-    using Terms::getType;
-    virtual Term* clone() const override { return (new Term(*this)); }
-    std::string print() const override;
-
-    virtual bool doCompare(const Terms* other) const override;
-
     enum class QType {FORALL, EXISTS};
     static std::map<QType, const std::string> qword;
 
-    virtual Terms* replace(const Terms* x, const Terms* t) const override;
-    virtual Terms* replace(Path where, const Terms* by) const override;
-    virtual const Terms* get(Path path) const override;
+    VarSet free;
+    Term(Symbol f, TermsVector _args);
+    Term(std::set<Symbol> symSet, TermsVector args);
+    Term(const Term& one) = default;
+    ~Term() override = default;
+
+    MathType getType() const override { return Symbol::getType(); }
+    bool comp(const Terms* other) const override;
+
+    Term* clone() const override { return new Term(*this); }
+    const Terms* get(Path path) const override;
+    Terms* replace(Path path, const Terms* by) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
+
+    std::string print() const override;
 };
 
 extern Symbol forall, exists;
@@ -188,28 +186,28 @@ class ForallTerm : public Term
 {
 public:
     ForallTerm(Variable var, Terms* term)
-            : Term(forall, {&var, term})
-    { Term::boundVar(var); }
-    ForallTerm(const ForallTerm& one) : Term(one) {}
-    virtual ForallTerm* clone() const override
+        : Term(forall, {&var, term}) { Term::boundVar(var); }
+    ForallTerm(const ForallTerm& one) = default;
+    ~ForallTerm() override = default;
+
+    ForallTerm* clone() const override
     { return (new ForallTerm(*this)); }
-    virtual ~ForallTerm() {}
-    std::string print() const { return printQ(); }
-    virtual Terms* replace(const Terms* x, const Terms* t) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
+    std::string print() const override { return printQ(); }
 };
 
 class ExistsTerm : public Term
 {
 public:
     ExistsTerm(Variable var, Terms* term)
-            : Term(exists, {&var, term})
-    { boundVar(var); }
-    ExistsTerm(const ExistsTerm& one) : Term(one) {}
-    virtual ExistsTerm* clone() const override
+        : Term(exists, {&var, term}) { boundVar(var); }
+    ExistsTerm(const ExistsTerm& one) = default;
+    ~ExistsTerm() override = default;
+
+    ExistsTerm* clone() const override
     { return (new ExistsTerm(*this)); }
-    virtual ~ExistsTerm() {}
-    std::string print() const { return printQ(); }
-    virtual Terms* replace(const Terms* x, const Terms* t) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
+    std::string print() const override { return printQ(); }
 };
 
 #endif //TEST_BUILD_LOGIC_HPP

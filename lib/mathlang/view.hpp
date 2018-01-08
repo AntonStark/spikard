@@ -51,19 +51,30 @@ public:
         std::string mlType;
         size_t label;
         std::string body;
-        std::vector<Path> premises;
+        std::vector<std::vector<size_t> > rPremises;
 
-        MlObj(std::string _mlType, size_t _label,
-              std::string _body, std::vector<Path> _premises = {}) :
-            mlType(std::move(_mlType)), label(_label),
-            body(std::move(_body)), premises(std::move(_premises)) {}
-
-        json toJson()
+        MlObj(std::string _mlType, size_t _label, std::string _body,
+              std::vector<Path> _premises = {})
+            : mlType(std::move(_mlType)), label(_label),
+              body(std::move(_body))
         {
+            auto reverse = [](Path straight) -> std::vector<size_t> {
+                std::vector<size_t> reversed;
+                while (!straight.empty()) {
+                    reversed.push_back(straight.top());
+                    straight.pop();
+                }
+                return reversed;
+            };
+            for (const auto& p : _premises)
+                rPremises.push_back(reverse(p));
+        }
+
+        json toJson() {
             return json({ {"mlType", mlType},
                           {"label", {label}},
                           {"body", body},
-                          {"premises", premises} });
+                          {"premises", rPremises} });
         }
     };
 
