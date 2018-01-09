@@ -191,6 +191,6 @@ public:
 };
 
 Path mkPath(std::string source);
-std::string pathToStr(Path reversed);
+std::string pathToStr(Path path);
 
 #endif //TEST_BUILD_STRUCTURE_HPP

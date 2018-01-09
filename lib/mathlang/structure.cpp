@@ -160,20 +160,16 @@ Path mkPath(std::string source)
     }
     return reversed;
 }
-std::string pathToStr(Path reversed)
+std::string pathToStr(Path path)
 {
-    Path straight;
-    while (!reversed.empty()) {
-        straight.push(reversed.top());
-        reversed.pop();
-    }
-    std::stringstream ss; ss << "(";
-    if (!straight.empty()) {
-        ss << straight.top();
-        straight.pop();
-        while (!straight.empty()) {
-            ss << "." << straight.top();
-            straight.pop();
+    std::stringstream ss;
+    ss << "(";
+    if (!path.empty()) {
+        ss << path.top();
+        path.pop();
+        while (!path.empty()) {
+            ss << "." << path.top();
+            path.pop();
         }
     }
     ss << ")";

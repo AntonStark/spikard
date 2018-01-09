@@ -154,7 +154,7 @@ public:
     std::string print() const override;
 };
 
-class Term : public Terms, public Symbol, public ParenSymbol
+class Term : public Terms, public ParenSymbol
 {
 protected:
     void boundVar(Variable var);
@@ -164,13 +164,16 @@ public:
     enum class QType {FORALL, EXISTS};
     static std::map<QType, const std::string> qword;
 
+    Symbol _f;
     VarSet free;
     Term(Symbol f, TermsVector _args);
     Term(std::set<Symbol> symSet, TermsVector args);
     Term(const Term& one) = default;
     ~Term() override = default;
 
-    MathType getType() const override { return Symbol::getType(); }
+    size_t getArity() const { return  _f.getArity(); }
+    MathType getType() const override { return _f.getType(); }
+    Symbol getSym() const { return _f; }
     bool comp(const Terms* other) const override;
 
     Term* clone() const override { return new Term(*this); }

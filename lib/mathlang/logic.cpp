@@ -55,17 +55,17 @@ std::string Variable::print() const
 std::string Term::print() const {
     std::stringstream buf;
     if (getArity() != 2)
-        buf << Symbol::print() << ParenSymbol::print();
+        buf << _f.print() << ParenSymbol::print();
     else {
         buf << '(' << arg(1)->print();
-        buf << Symbol::print();
+        buf << _f.print();
         buf << arg(2)->print() << ')';
     }
     return buf.str();
 }
 std::string Term::printQ() const {
     std::stringstream buf;
-    buf << '(' << Symbol::print();
+    buf << '(' << _f.print();
     // по пострению arg(1) действительно Variable
     auto var = static_cast<const Variable*>(arg(1));
     buf << var->getName() << "\\in " << var->getType().getName();
@@ -123,8 +123,7 @@ bool Variable::comp(const Terms* other) const {
 }
 bool Term::comp(const Terms* other) const {
     if (auto t = dynamic_cast<const Term*>(other))
-        return ( Symbol::operator==(*t)
-                 && ParenSymbol::operator==(*t));
+        return (_f == t->_f && ParenSymbol::operator==(*t));
     else
         return false;
 }
@@ -159,11 +158,11 @@ Terms* Term::replace(Path path, const Terms* by) const {
         return by->clone();
     if (path.top() > getArity())
         return nullptr;
-    return new Term(*this, ParenSymbol::replace(path, by));
+    return new Term(_f, ParenSymbol::replace(path, by));
 }
 
 Term::Term(Symbol f, ParenSymbol::TermsVector args)
-        : Symbol(f), ParenSymbol(args) {
+        : ParenSymbol(args), _f(f) {
     checkArgs(f, args);
 
     for (const auto& a : args) {
@@ -224,7 +223,7 @@ Terms* Term::replace(const Terms* x, const Terms* t) const {
     TermsVector args;
     for (auto& a : _args)
         args.push_back(a->replace(x, t));
-    return new Term(*this, args);
+    return new Term(_f, args);
 }
 
 Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
@@ -236,7 +235,6 @@ Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
     }
     else if (comp(x))
         return t->clone();
-
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ForallTerm(
@@ -253,7 +251,6 @@ Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const {
     }
     else if (comp(x))
         return t->clone();
-
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ExistsTerm(

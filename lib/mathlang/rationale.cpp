@@ -141,26 +141,18 @@ Inference::InfTy infTyFromStr(const std::string& type) {
 
 
 Terms* modusPonens(const Terms* premise, const Terms* impl) {
-    if (const auto* tI = dynamic_cast<const Term*>(impl)) {
-        Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
-        if (!(tI->Symbol::operator==)(standardImpl))
-            return nullptr; //терм impl не является импликацией
-
-        if (!tI->arg(1)->comp(premise))
-            return nullptr; //посылка импликации impl не совпадает с premise
-        return tI->arg(2)->clone();
-    }
-    else
-        return nullptr; //impl не является термом
+    Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
+    if (const auto* tI = dynamic_cast<const Term*>(impl))
+        if ((tI->getSym() == standardImpl) && tI->arg(1)->comp(premise))
+            return tI->arg(2)->clone();
+    return nullptr;
 }
 
 Terms* specialization(const Terms* general, const Terms* t) {
-    if (const auto* fT = dynamic_cast<const ForallTerm*>(general)) {
+    if (const auto* fT = dynamic_cast<const ForallTerm*>(general))
         if (fT->arg(1)->getType() == t->getType())
             return fT->arg(2)->replace(fT->arg(1), t);
-    }
-    else
-        return nullptr;
+    return nullptr;
 }
 
 const Terms* innerPremise(const ForallTerm* fT) {
@@ -170,7 +162,7 @@ const Terms* innerPremise(const ForallTerm* fT) {
     // теперь в quantedterm лежит самый первый терм без кванторов
     if (auto notVar = dynamic_cast<const Term*>(quantedterm)) {
         Symbol standardImpl("\\Rightarrow ", {2, logical_mt}, logical_mt);
-        if ((notVar->Symbol::operator==)(standardImpl))
+        if (notVar->getSym() == standardImpl)
             return notVar->arg(1);
     }
     return nullptr;
@@ -188,13 +180,13 @@ Path findVarFirstUsage(Variable var, const Term* term) {
             }
         }
     }
-    return {};
+    return Path();
 }
 
 const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
     Variable topQVar = *static_cast<const Variable*>(quantedImpl->arg(1));
     const Terms* topQuanted = quantedImpl->arg(2);
-    Path toInnerConseq = {};
+    Path toInnerConseq;
     const Terms* innerConseq = topQuanted;
     while (auto innerForall = dynamic_cast<const ForallTerm*>(innerConseq)) {
         innerConseq = innerForall->arg(2);
