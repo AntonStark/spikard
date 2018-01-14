@@ -430,11 +430,11 @@ void Core::plugIn(vector<string> cmdArgs)
     map<string, SharedObject*>::iterator it = SO_inWork.find(pluginFullName);
     try
     {
-        if (it == SO_inWork.end())
+        if (it == SO_inWork.end()) {
             SO_inWork.insert(
-                make_pair(pluginFullName, new SharedObject(pluginFullName, RTLD_LAZY))
-                );
-        registerModule(SO_inWork[pluginFullName]->create(this));
+                make_pair(pluginFullName, new SharedObject(pluginFullName, RTLD_LAZY)));
+            registerModule(SO_inWork[pluginFullName]->create(this));
+        }
     }
     catch (sh_obj_err ex)
     {

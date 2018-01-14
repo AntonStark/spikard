@@ -82,6 +82,8 @@ void MathlangPlugin::print(bool incr = true) {
     if (!incr) {
         current->print(&asMlObj);
         asMlObj.buffer.front()["label"] = {0};
+        auto primary = dynamic_cast<PrimaryNode*>(current);
+        asMlObj.buffer.front()["is_primary_node"] = (primary != nullptr);
     }
     current->Node::print(&asMlObj, incr);
     for (const auto& l : asMlObj.buffer)
@@ -97,6 +99,7 @@ void MathlangPlugin::startCourse(vector<string> cmdArgs) {
         else
             bn->startCourse(cmdArgs[0]);
         write(INFO_TYPE::TXT, "Курс создан.");
+        print();
     }
     else
         write(INFO_TYPE::ERR,
@@ -112,6 +115,7 @@ void MathlangPlugin::startSection(vector<string> cmdArgs) {
         else
             bn->startSection(cmdArgs[0]);
         write(INFO_TYPE::TXT, "Раздел создан.");
+        print();
     }
     else
         write(INFO_TYPE::ERR,
@@ -127,6 +131,7 @@ void MathlangPlugin::startLecture(vector<string> cmdArgs) {
         else
             bn->startLecture(cmdArgs[0]);
         write(INFO_TYPE::TXT, "Лекция создана.");
+        print();
     }
     else
         write(INFO_TYPE::ERR,

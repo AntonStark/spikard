@@ -197,9 +197,10 @@ void AsMlObj::process(const TermsBox* ax) {
 }
 
 void AsMlObj::process(const Inference* inf) {
-    buffer.push_back(MlObj(inf->getTypeAsStr(),
+    buffer.push_back(MlObj("inference",
                            inf->getNumber(),
                            inf->get()->print(),
                            inf->premises)
                          .toJson());
+    buffer.back()["type"] = inf->getTypeAsStr();
 }
