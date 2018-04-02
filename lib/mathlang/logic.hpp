@@ -46,79 +46,7 @@ public:
 };
 extern MathType logical_mt;
 
-// Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
-// Важно, что с априорной информацией о типах упрощается парсер.
-// Это реализация неоднородного символа.
-// Подходит для символов малой арности, но не каких-нубудь R^n->R^m
-class Map
-{
-public:
-    typedef std::vector<MathType> MTVector;
-    typedef std::pair<MTVector, MathType> Signature;
-private:
-    const MTVector _argT;
-    const MathType _retT;
-public:
-    Map(MTVector argT, const MathType& retT)
-            : _argT(std::move(argT)), _retT(retT) {}
-    Map(const Map&) = default;
-    virtual ~Map() = default;
-
-    bool operator== (const Map& one) const;
-    bool operator< (const Map& other) const;
-
-    size_t   getArity() const { return _argT.size(); }
-    MathType  getType() const { return _retT; }
-    Signature getSign() const { return {{_argT.begin(), _argT.end()}, _retT}; }
-    bool matchArgType(const MTVector& otherArgT) const
-    { return (otherArgT == _argT); }
-};
-
-/*=====================================================*/
-/*=====================================================*/
-/*=====================================================*/
-
-class Symbol : public Named, public Map
-{
-public:
-    Symbol(std::string name, MTVector argT, const MathType& retT)
-            : Named(std::move(name)), Map(std::move(argT), retT) {}
-    Symbol(const Symbol&) = default;
-    ~Symbol() override = default;
-
-    bool operator== (const Symbol& one) const;
-    bool operator<(const Symbol& other) const;
-
-    std::string print() const { return getName(); }
-};
-
-class Terms;
 typedef std::stack<size_t> Path;
-class ParenSymbol
-{
-public:
-    typedef std::vector<Terms*> TermsVector;
-    class argN_argType_error;
-protected:
-    // Внимание! ParenSymbol владеет своими аргументами,
-    // к передаваемым указателям применяется глубокое копирование
-    TermsVector _args;
-    /*std::set<Variable> vars;*/
-    void checkArgs(const Map& f, TermsVector args) const;
-    const TermsVector& replace(Path path, const Terms* by) const;
-public:
-    // В обоих случаях применяется глубокое копирование
-    ParenSymbol(const TermsVector& args);
-    ParenSymbol(const ParenSymbol& one);
-    virtual ~ParenSymbol();
-
-    bool operator==(const ParenSymbol& other) const;
-
-    const Terms* arg(size_t oneTwoThree) const
-    { return _args.at(oneTwoThree-1); }
-    std::string print() const;
-};
-
 class Terms
 {
 public:
@@ -154,6 +82,71 @@ public:
     std::string print() const override;
 };
 
+// Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
+// Важно, что с априорной информацией о типах упрощается парсер.
+// Это реализация неоднородного символа.
+// Подходит для символов малой арности, но не каких-нубудь R^n->R^m
+class Map
+{
+public:
+    typedef std::vector<MathType> MTVector;
+    typedef std::pair<MTVector, MathType> Signature;
+private:
+    const MTVector _argT;
+    const MathType _retT;
+public:
+    Map(MTVector argT, const MathType& retT)
+        : _argT(std::move(argT)), _retT(retT) {}
+    Map(const Map&) = default;
+    virtual ~Map() = default;
+
+    bool operator== (const Map& one) const;
+    bool operator< (const Map& other) const;
+
+    size_t   getArity() const { return _argT.size(); }
+    MathType  getType() const { return _retT; }
+    Signature getSign() const { return {{_argT.begin(), _argT.end()}, _retT}; }
+    bool matchArgType(const MTVector& otherArgT) const
+    { return (otherArgT == _argT); }
+};
+class Symbol : public Named, public Map
+{
+public:
+    Symbol(std::string name, MTVector argT, const MathType& retT)
+        : Named(std::move(name)), Map(std::move(argT), retT) {}
+    Symbol(const Symbol&) = default;
+    ~Symbol() override = default;
+
+    bool operator== (const Symbol& one) const;
+    bool operator<(const Symbol& other) const;
+
+    std::string print() const { return getName(); }
+};
+
+class ParenSymbol
+{
+public:
+    typedef std::vector<Terms*> TermsVector;
+    class argN_argType_error;
+protected:
+    // Внимание! ParenSymbol владеет своими аргументами,
+    // к передаваемым указателям применяется глубокое копирование
+    TermsVector _args;
+    /*std::set<Variable> vars;*/
+    void checkArgs(const Map& f, TermsVector args) const;
+    const TermsVector& replace(Path path, const Terms* by) const;
+public:
+    // В обоих случаях применяется глубокое копирование
+    ParenSymbol(const TermsVector& args);
+    ParenSymbol(const ParenSymbol& one);
+    virtual ~ParenSymbol();
+
+    bool operator==(const ParenSymbol& other) const;
+
+    const Terms* arg(size_t oneTwoThree) const
+    { return _args.at(oneTwoThree-1); }
+    std::string print() const;
+};
 class Term : public Terms, public ParenSymbol
 {
 protected:
