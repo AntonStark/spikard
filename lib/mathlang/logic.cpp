@@ -4,13 +4,32 @@
 
 #include "logic.hpp"
 
-#include <utility>
-
 bool Named::operator==(const Named& one) const
 { return (_name == one._name); }
-bool MathType::operator==(const MathType& one) const {
-    return (getName() == "any" || one.getName() == "any"
-            || (this->Named::operator==)(one));
+bool PrimaryMT::operator==(const MathType& one) const {
+    if (getName() == "any")
+        return true;
+    if (one.isPrimary()) {
+        auto& pmt = dynamic_cast<const PrimaryMT&>(one);
+        return (pmt.getName() == "any" || (this->Named::operator==)(pmt));
+    }
+    else
+        return false;
+}
+bool ComplexMT::operator==(const MathType& one) const {
+    if (one.isPrimary()) {
+        auto& pmt = dynamic_cast<const PrimaryMT&>(one);
+        return (pmt.getName() == "any");
+    }
+    else {
+        auto& cmt = dynamic_cast<const ComplexMT&>(one);
+        if (_subTypes.size() != cmt._subTypes.size())
+            return false;
+        for (size_t i = 0; i < _subTypes.size(); ++i)
+            if (*_subTypes[i] != *cmt._subTypes[i])
+                return false;
+        return true;
+    }
 }
 bool Map::operator==(const Map& one) const
 { return (_argT == one._argT && _retT == one._retT); }
@@ -20,8 +39,29 @@ bool Symbol::operator==(const Symbol& one) const {
 
 bool Named::operator<(const Named& other) const
 { return (_name < other._name); }
-bool MathType::operator<(const MathType& other) const
-{ return (this->Named::operator<)(other); }
+bool PrimaryMT::operator<(const MathType& other) const {
+    if (other.isPrimary()) {
+        auto& pmt = dynamic_cast<const PrimaryMT&>(other);
+        return (this->Named::operator<)(pmt);
+    }
+    else
+        return true;
+}
+bool ComplexMT::operator<(const MathType& other) const {
+    if (other.isPrimary())
+        return false;
+    else {
+        auto& cmt = dynamic_cast<const ComplexMT&>(other);
+        if (_subTypes.size() != cmt._subTypes.size())
+            return (_subTypes.size() < cmt._subTypes.size());
+        else {
+            for (size_t i = 0; i < _subTypes.size(); ++i)
+                if (*_subTypes[i] < *cmt._subTypes[i])
+                    return true;
+            return false;
+        }
+    }
+}
 bool Map::operator<(const Map& other) const {
     if (_argT < other._argT) return true;
     else if (other._argT < _argT) return false;
@@ -36,7 +76,7 @@ bool Symbol::operator<(const Symbol& other) const {
         return (this->Named::operator<)(other);
 }
 
-MathType logical_mt("Logical");
+PrimaryMT logical_mt("Logical");
 
 std::string ParenSymbol::print() const {
     std::stringstream buf;
@@ -178,7 +218,7 @@ Term::Term(Symbol f, ParenSymbol::TermsVector args)
 
 Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
                            const ParenSymbol::TermsVector& args) {
-    std::vector<MathType> argsType;
+    std::vector<PrimaryMT> argsType;
     for (const auto& a : args)
         argsType.push_back(a->getType());
 
@@ -203,9 +243,9 @@ std::map<Term::QType, const std::string>
         Term::qword = { {Term::QType::FORALL,"\\forall "},
                         {Term::QType::EXISTS,"\\exists "} };
 Symbol forall(Term::qword[Term::QType::FORALL],
-              {MathType("any"), logical_mt}, logical_mt);
+              {PrimaryMT("any"), logical_mt}, logical_mt);
 Symbol exists(Term::qword[Term::QType::EXISTS],
-              {MathType("any"), logical_mt}, logical_mt);
+              {PrimaryMT("any"), logical_mt}, logical_mt);
 
 Terms* Variable::replace(const Terms* x, const Terms* t) const
 { return (comp(x) ? t->clone() : this->clone()); }

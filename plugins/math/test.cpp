@@ -13,16 +13,16 @@ using namespace std;
 
 int main(void)
 {
-    MathType natural("Natural");
-    MathType set("Set");
+    PrimaryMT natural("Natural");
+    PrimaryMT set("Set");
 
     Symbol n("\\lnot ", {logical_mt}, logical_mt); //можно и без {скобок}
     Symbol o({"\\lor ", {2, logical_mt}, logical_mt});
     Symbol a({"\\land ", {2, logical_mt}, logical_mt});
     Symbol r({"\\Rightarrow ", {2, logical_mt}, logical_mt});
 
-    MathType group("Group");
-    MathType real("Real");
+    PrimaryMT group("Group");
+    PrimaryMT real("Real");
     Variable x("x", real);
     Variable one("1", real);
 

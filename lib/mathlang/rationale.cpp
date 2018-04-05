@@ -6,7 +6,7 @@
 
 #include <utility>
 
-MathType getType(const NameSpaceIndex& index, const std::string& name)
+PrimaryMT getType(const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
@@ -45,7 +45,7 @@ void PrimaryNode::defVar(const std::string& varName, const std::string& typeName
 void PrimaryNode::defSym(
         const std::string& symName, const std::vector<std::string>& argT,
         const std::string& retT) {
-    std::vector<MathType> argMT;
+    std::vector<PrimaryMT> argMT;
     for (auto& a : argT)
         argMT.push_back(getType(index(), a));
     new DefSym(this, symName, argMT, getType(index(), retT));
@@ -286,11 +286,11 @@ Hierarchy* DefVar::fromJson(const json& j, PrimaryNode* parent) {
 }
 
 Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
-    std::vector<MathType> argT;
+    std::vector<PrimaryMT> argT;
     auto index = parent->index();
     for (const auto& t : j.at("argT"))
         argT.push_back(::getType(index, t));
-    MathType retT = ::getType(parent->index(), j.at("retT"));
+    PrimaryMT retT = ::getType(parent->index(), j.at("retT"));
     return new DefSym(parent, j.at("name"), argT, retT);
 }
 

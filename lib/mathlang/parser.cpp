@@ -41,7 +41,7 @@ Lexer::Lexer(PrimaryNode* _where) : where(_where)
     words["("] = Token::lb; words[")"] = Token::rb;
 }
 
-MathType parseType(const NameSpaceIndex& names, const std::string& source, unsigned& len)
+PrimaryMT parseType(const NameSpaceIndex& names, const std::string& source, unsigned& len)
 {
     unsigned typeNameLen = 1;
     while (!names.isThatType(source.substr(0, typeNameLen), NameTy::MT))
@@ -64,7 +64,7 @@ void Lexer::registerVar(std::string& source, unsigned indent)
             ++nameLen;
     std::string name = source.substr(indent, nameLen);
     unsigned typeNameLen;
-    MathType type = parseType(where->index(), source.substr(indent + nameLen + 4), typeNameLen);
+    PrimaryMT type = parseType(where->index(), source.substr(indent + nameLen + 4), typeNameLen);
     where->defVar(name, type.getName());
     source.erase(indent + nameLen, 4+typeNameLen);
 }
