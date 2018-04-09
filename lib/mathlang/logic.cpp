@@ -76,6 +76,7 @@ bool Symbol::operator<(const Symbol& other) const {
         return (this->Named::operator<)(other);
 }
 
+PrimaryMT any_mt("any");
 PrimaryMT logical_mt("Logical");
 
 std::string ParenSymbol::print() const {
@@ -108,7 +109,7 @@ std::string Term::printQ() const {
     buf << '(' << _f.print();
     // по пострению arg(1) действительно Variable
     auto var = static_cast<const Variable*>(arg(1));
-    buf << var->getName() << "\\in " << var->getType().getName();
+    buf << var->getName() << "\\in " << var->getType()->getName();
     buf << arg(2)->print() << ')';
     return buf.str();
 }
@@ -218,7 +219,7 @@ Term::Term(Symbol f, ParenSymbol::TermsVector args)
 
 Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
                            const ParenSymbol::TermsVector& args) {
-    std::vector<PrimaryMT> argsType;
+    std::vector<const PrimaryMT*> argsType;
     for (const auto& a : args)
         argsType.push_back(a->getType());
 
@@ -243,9 +244,9 @@ std::map<Term::QType, const std::string>
         Term::qword = { {Term::QType::FORALL,"\\forall "},
                         {Term::QType::EXISTS,"\\exists "} };
 Symbol forall(Term::qword[Term::QType::FORALL],
-              {PrimaryMT("any"), logical_mt}, logical_mt);
+              {&any_mt, &logical_mt}, &logical_mt);
 Symbol exists(Term::qword[Term::QType::EXISTS],
-              {PrimaryMT("any"), logical_mt}, logical_mt);
+              {&any_mt, &logical_mt}, &logical_mt);
 
 Terms* Variable::replace(const Terms* x, const Terms* t) const
 { return (comp(x) ? t->clone() : this->clone()); }

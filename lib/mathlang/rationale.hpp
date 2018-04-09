@@ -17,7 +17,7 @@
 
 using json = nlohmann::json;
 
-PrimaryMT getType(const NameSpaceIndex& index, const std::string& name);
+PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name);
 Variable getVar (const NameSpaceIndex& index, const std::string& name);
 std::set<Symbol> getSym(const NameSpaceIndex& index, const std::string& name);
 
@@ -136,7 +136,7 @@ class DefVar : public AbstrDef, public Variable
 {
 private:
     friend class PrimaryNode;
-    DefVar(PrimaryNode* naming, const std::string& varName, PrimaryMT mathType)
+    DefVar(PrimaryNode* naming, const std::string& varName, const PrimaryMT* mathType)
             : AbstrDef(naming, NameTy::VAR, varName), Variable(varName, mathType) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
@@ -153,7 +153,7 @@ class DefSym : public AbstrDef, public Symbol
 private:
     friend class PrimaryNode;
     DefSym(PrimaryNode* naming, const std::string& symName,
-           const std::vector<PrimaryMT>& argT, PrimaryMT retT)
+           const std::vector<const PrimaryMT*>& argT, const PrimaryMT* retT)
             : AbstrDef(naming, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:

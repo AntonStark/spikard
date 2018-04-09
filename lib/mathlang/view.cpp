@@ -37,7 +37,7 @@ void PlainText::process(const DefType* dt)
 
 void PlainText::process(const DefVar* dv)
 { value = ("Добавлена переменная " + dv->getName() +
-          " типа " + dv->getType().getName() + "."); }
+          " типа " + dv->getType()->getName() + "."); }
 
 void PlainText::process(const DefSym* ds) {
     std::stringstream buf;
@@ -45,12 +45,12 @@ void PlainText::process(const DefSym* ds) {
     auto argTypes = ds->getSign().first;
     if (!argTypes.empty())
     {
-        buf << argTypes.front().getName();
+        buf << argTypes.front()->getName();
         auto e = argTypes.end();
         for (auto it = std::next(argTypes.begin()); it != e; ++it)
-            buf << " x " << it->getName();
+            buf << " x " << (*it)->getName();
     }
-    buf << " -> " << ds->getType().getName() << ".";
+    buf << " -> " << ds->getType()->getName() << ".";
     value = buf.str();
 }
 
@@ -110,7 +110,7 @@ void AsJson::process(const DefVar* dv) {
     value.push_back({"DefVar",
                     {
                         {"name", dv->getName()},
-                        {"type", dv->getType().getName()}
+                        {"type", dv->getType()->getName()}
                     } });
 }
 
@@ -118,13 +118,13 @@ void AsJson::process(const DefSym* ds) {
     auto symInfo = ds->getSign();
     std::vector<std::string> argT;
     for (const auto& a : symInfo.first)
-        argT.push_back(a.getName());
+        argT.push_back(a->getName());
 
     value.push_back({"DefSym",
                     {
                         {"name", ds->getName()},
                         {"argT", argT},
-                        {"retT", symInfo.second.getName()}
+                        {"retT", symInfo.second->getName()}
                     } });
 }
 
@@ -167,7 +167,7 @@ void AsMlObj::process(const DefType* dt) {
 
 void AsMlObj::process(const DefVar* dv) {
     std::stringstream body;
-    body << dv->getName() << "\\in " << dv->getType().getName();
+    body << dv->getName() << "\\in " << dv->getType()->getName();
     buffer.push_back(
         MlObj("def_var", dv->getNumber(), body.str()).toJson()
     );
@@ -179,12 +179,12 @@ void AsMlObj::process(const DefSym* ds) {
     auto argTypes = ds->getSign().first;
     if (!argTypes.empty())
     {
-        out << argTypes.front().getName();
+        out << argTypes.front()->getName();
         auto e = argTypes.end();
         for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << "\\times " << it->getName();
+            out << "\\times " << (*it)->getName();
     }
-    out << "\\rightarrow " << ds->getType().getName();
+    out << "\\rightarrow " << ds->getType()->getName();
     buffer.push_back(
         MlObj("def_sym", ds->getNumber(), out.str()).toJson()
     );

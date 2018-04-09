@@ -415,7 +415,7 @@ void MathlangPlugin::addVar(vector<string> cmdArgs) {
         return;
     if (auto* pn = dynamic_cast<PrimaryNode*>(current)) {
         try {
-            pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1]).getName());
+            pn->defVar(cmdArgs[0], getType(pn->index(), cmdArgs[1])->getName());
             print();
         }
         catch (std::exception& e) { write(INFO_TYPE::ERR, e.what()); }

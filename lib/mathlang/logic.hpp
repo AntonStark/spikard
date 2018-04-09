@@ -54,6 +54,7 @@ public:
     bool operator== (const MathType& other) const override;
     bool operator<(const MathType& other) const;
 };
+extern PrimaryMT any_mt;
 extern PrimaryMT logical_mt;
 
 class ComplexMT : public MathType
@@ -77,7 +78,7 @@ typedef std::stack<size_t> Path;
 class Terms
 {
 public:
-    virtual PrimaryMT getType() const = 0;
+    virtual const PrimaryMT* getType() const = 0;
     virtual bool comp(const Terms* other) const = 0;
 
     virtual Terms* clone() const = 0;
@@ -91,14 +92,14 @@ public:
 class Variable : public Terms, public Named
 {
 private:
-    PrimaryMT _type;
+    const PrimaryMT* _type;
 public:
-    Variable(std::string name, const PrimaryMT& type)
+    Variable(std::string name, const PrimaryMT* type)
             : Named(std::move(name)), _type(type) {}
     Variable(const Variable& one) = default;
     ~Variable() override = default;
 
-    PrimaryMT getType() const override { return _type; }
+    const PrimaryMT* getType() const override { return _type; }
     bool comp(const Terms* other) const override;
 
     Variable* clone() const override { return new Variable(*this); }
@@ -119,13 +120,13 @@ public:
 class Map/* : public Terms*/
 {
 public:
-    typedef std::vector<PrimaryMT> MTVector;
-    typedef std::pair<MTVector, PrimaryMT> Signature;
+    typedef std::vector<const PrimaryMT*> MTVector;
+    typedef std::pair<MTVector, const PrimaryMT*> Signature;
 private:
     const MTVector _argT;
-    const PrimaryMT _retT;
+    const PrimaryMT* _retT;
 public:
-    Map(MTVector argT, const PrimaryMT& retT)
+    Map(MTVector argT, const PrimaryMT* retT)
         : _argT(std::move(argT)), _retT(retT) {}
     Map(const Map&) = default;
     virtual ~Map() = default;
@@ -134,7 +135,7 @@ public:
     bool operator< (const Map& other) const;
 
     size_t   getArity() const { return _argT.size(); }
-    PrimaryMT  getType() const { return _retT; }
+    const PrimaryMT* getType() const { return _retT; }
     Signature getSign() const { return {_argT, _retT}; }
     bool matchArgType(const MTVector& otherArgT) const
     { return (otherArgT == _argT); }
@@ -142,7 +143,7 @@ public:
 class Symbol : public Named, public Map
 {
 public:
-    Symbol(std::string name, MTVector argT, const PrimaryMT& retT)
+    Symbol(std::string name, MTVector argT, const PrimaryMT* retT)
         : Named(std::move(name)), Map(std::move(argT), retT) {}
     Symbol(const Symbol&) = default;
     ~Symbol() override = default;
@@ -195,7 +196,7 @@ public:
     ~Term() override = default;
 
     size_t getArity() const { return  _f.getArity(); }
-    PrimaryMT getType() const override { return _f.getType(); }
+    const PrimaryMT* getType() const override { return _f.getType(); }
     Symbol getSym() const { return _f; }
     bool comp(const Terms* other) const override;
 
