@@ -45,7 +45,7 @@ void PrimaryNode::defVar(const std::string& varName, const std::string& typeName
 void PrimaryNode::defSym(
         const std::string& symName, const std::vector<std::string>& argT,
         const std::string& retT) {
-    std::vector<const PrimaryMT*> argMT;
+    std::vector<const MathType*> argMT;
     for (auto& a : argT)
         argMT.push_back(getType(index(), a));
     new DefSym(this, symName, argMT, getType(index(), retT));
@@ -286,11 +286,11 @@ Hierarchy* DefVar::fromJson(const json& j, PrimaryNode* parent) {
 }
 
 Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {
-    std::vector<const PrimaryMT*> argT;
+    std::vector<const MathType*> argT;
     auto index = parent->index();
     for (const auto& t : j.at("argT"))
         argT.push_back(::getType(index, t));
-    PrimaryMT* retT = ::getType(parent->index(), j.at("retT"));
+    MathType* retT = ::getType(parent->index(), j.at("retT"));
     return new DefSym(parent, j.at("name"), argT, retT);
 }
 

@@ -11,7 +11,7 @@ bool PrimaryMT::operator==(const MathType& one) const {
         return true;
     if (one.isPrimary()) {
         auto& pmt = dynamic_cast<const PrimaryMT&>(one);
-        return (pmt.getName() == "any" || (this->Named::operator==)(pmt));
+        return (pmt.getName() == "any" || getName() == pmt.getName());
     }
     else
         return false;
@@ -42,7 +42,7 @@ bool Named::operator<(const Named& other) const
 bool PrimaryMT::operator<(const MathType& other) const {
     if (other.isPrimary()) {
         auto& pmt = dynamic_cast<const PrimaryMT&>(other);
-        return (this->Named::operator<)(pmt);
+        return (getName() < pmt.getName());
     }
     else
         return true;
@@ -74,6 +74,23 @@ bool Symbol::operator<(const Symbol& other) const {
         return false;
     else
         return (this->Named::operator<)(other);
+}
+
+std::string PrimaryMT::getName() const { return _type; }
+
+std::string ComplexMT::getName() const {
+    std::stringstream buf;
+    auto it = _subTypes.begin(), e = _subTypes.end();
+    while (it != e) {
+        if ((*it)->isPrimary())
+            buf << (*it)->getName();
+        else
+            buf << '(' << (*it)->getName() << ')';
+        ++it;
+        if (it != e)
+            buf << 'x';
+    }
+    return buf.str();
 }
 
 PrimaryMT any_mt("any");
@@ -219,7 +236,7 @@ Term::Term(Symbol f, ParenSymbol::TermsVector args)
 
 Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
                            const ParenSymbol::TermsVector& args) {
-    std::vector<const PrimaryMT*> argsType;
+    std::vector<const MathType*> argsType;
     for (const auto& a : args)
         argsType.push_back(a->getType());
 

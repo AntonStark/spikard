@@ -136,7 +136,7 @@ class DefVar : public AbstrDef, public Variable
 {
 private:
     friend class PrimaryNode;
-    DefVar(PrimaryNode* naming, const std::string& varName, const PrimaryMT* mathType)
+    DefVar(PrimaryNode* naming, const std::string& varName, const MathType* mathType)
             : AbstrDef(naming, NameTy::VAR, varName), Variable(varName, mathType) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
@@ -153,7 +153,7 @@ class DefSym : public AbstrDef, public Symbol
 private:
     friend class PrimaryNode;
     DefSym(PrimaryNode* naming, const std::string& symName,
-           const std::vector<const PrimaryMT*>& argT, const PrimaryMT* retT)
+           const std::vector<const MathType*>& argT, const MathType* retT)
             : AbstrDef(naming, NameTy::SYM, symName), Symbol(symName, argT, retT) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
