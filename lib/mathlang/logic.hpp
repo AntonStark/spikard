@@ -66,12 +66,24 @@ class ComplexMT : public MathType
 {
 public:
     typedef std::vector<const MathType*> MTVector;
+    enum class SORT {PRODUCT, MAP};
 private:
+    SORT _sort;
     MTVector _subTypes;
 public:
-    ComplexMT(MTVector subTypes) : _subTypes(subTypes) {};
+    ComplexMT(MTVector subTypes) : _sort(SORT::PRODUCT), _subTypes(subTypes) {};
+    ComplexMT(MTVector args, MTVector rets) : _sort(SORT::MAP) {
+        ComplexMT* argMT = new ComplexMT(args);
+        ComplexMT* retMT = new ComplexMT(rets);
+        _subTypes = {argMT, retMT};
+    }
     ComplexMT(const ComplexMT&) = default;
-    ~ComplexMT() override = default;
+    ~ComplexMT() {
+        if (_sort == SORT::MAP) {
+            delete _subTypes[0];
+            delete _subTypes[1];
+        }
+    }
 
     bool operator==(const MathType& one) const override;
     bool operator<(const MathType& other) const override;
@@ -122,7 +134,7 @@ public:
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
 // todo Понятие производного типа. Ведь Тип отображения это новый Тип, производный тип, а не просто его Сигнатура
-class Map/* : public Terms*/
+class Map : public Terms
 {
 public:
     typedef std::vector<const MathType*> MTVector;
@@ -130,9 +142,10 @@ public:
 private:
     const MTVector _argT;
     const MathType* _retT;
+    ComplexMT _type;
 public:
     Map(MTVector argT, const MathType* retT)
-        : _argT(std::move(argT)), _retT(retT) {}
+        : _argT(std::move(argT)), _retT(retT), _type(argT, {retT}) {}
     Map(const Map&) = default;
     virtual ~Map() = default;
 
