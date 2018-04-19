@@ -42,13 +42,13 @@ void PlainText::process(const DefVar* dv)
 void PlainText::process(const DefSym* ds) {
     std::stringstream buf;
     buf << "Введен символ " << ds->getName() << " : ";
-    auto argTypes = ds->getSign().first;
+    auto argTypes = ds->getArgs()->getNames();
     if (!argTypes.empty())
     {
-        buf << argTypes.front()->getName();
+        buf << argTypes.front();
         auto e = argTypes.end();
         for (auto it = std::next(argTypes.begin()); it != e; ++it)
-            buf << " x " << (*it)->getName();
+            buf << " x " << *it;
     }
     buf << " -> " << ds->getType()->getName() << ".";
     value = buf.str();
@@ -115,16 +115,11 @@ void AsJson::process(const DefVar* dv) {
 }
 
 void AsJson::process(const DefSym* ds) {
-    auto symInfo = ds->getSign();
-    std::vector<std::string> argT;
-    for (const auto& a : symInfo.first)
-        argT.push_back(a->getName());
-
     value.push_back({"DefSym",
                     {
                         {"name", ds->getName()},
-                        {"argT", argT},
-                        {"retT", symInfo.second->getName()}
+                        {"argT", ds->getArgs()->getNames()},
+                        {"retT", ds->getType()->getName()}
                     } });
 }
 
@@ -176,13 +171,13 @@ void AsMlObj::process(const DefVar* dv) {
 void AsMlObj::process(const DefSym* ds) {
     std::stringstream out;
     out << ds->getName() << " : ";
-    auto argTypes = ds->getSign().first;
+    auto argTypes = ds->getArgs()->getNames();
     if (!argTypes.empty())
     {
-        out << argTypes.front()->getName();
+        out << argTypes.front();
         auto e = argTypes.end();
         for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << "\\times " << (*it)->getName();
+            out << "\\times " << *it;
     }
     out << "\\rightarrow " << ds->getType()->getName();
     buffer.push_back(

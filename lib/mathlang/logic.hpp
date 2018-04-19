@@ -43,6 +43,7 @@ public:
     virtual bool operator< (const MathType& other) const = 0;
 
     virtual std::string getName() const = 0;
+    typedef std::vector<const MathType*> MTVector;
 };
 
 class PrimaryMT : public MathType
@@ -62,33 +63,44 @@ public:
 extern PrimaryMT any_mt;
 extern PrimaryMT logical_mt;
 
-class ComplexMT : public MathType
+class ProductMT : public MathType
 {
-public:
-    typedef std::vector<const MathType*> MTVector;
-    enum class SORT {PRODUCT, MAP};
 private:
-    SORT _sort;
     MTVector _subTypes;
 public:
-    ComplexMT(MTVector subTypes) : _sort(SORT::PRODUCT), _subTypes(subTypes) {};
-    ComplexMT(MTVector args, MTVector rets) : _sort(SORT::MAP) {
-        ComplexMT* argMT = new ComplexMT(args);
-        ComplexMT* retMT = new ComplexMT(rets);
-        _subTypes = {argMT, retMT};
-    }
-    ComplexMT(const ComplexMT&) = default;
-    ~ComplexMT() {
-        if (_sort == SORT::MAP) {
-            delete _subTypes[0];
-            delete _subTypes[1];
-        }
-    }
+    ProductMT(MTVector subTypes) : _subTypes(subTypes) {};
+    ProductMT(const ProductMT&) = default; // todo глубокое копирование _subTypes
+    ~ProductMT() override = default;
 
     bool operator==(const MathType& one) const override;
     bool operator<(const MathType& other) const override;
     bool isPrimary() const override { return false; }
     std::string getName() const override;
+    std::vector<std::string> getNames() const;
+    size_t getArity() const { return _subTypes.size(); }
+    bool matchArgType(const MTVector& otherMTV) const
+    { return (_subTypes == otherMTV); }
+};
+
+class MapMT : public MathType
+{
+private:
+    const ProductMT* _argsT;
+    const MathType* _retT;
+public:
+    MapMT(MTVector argsT, const MathType* retT) : _retT(retT)
+    { _argsT = new ProductMT(argsT); }
+    MapMT(const MapMT&) = default; // todo глубокое копирование _argsT
+    ~MapMT() { delete _argsT; }
+
+    bool operator==(const MathType& one) const override;
+    bool operator<(const MathType& other) const override;
+    bool isPrimary() const override { return false; }
+
+    std::string getName() const override;
+    size_t getArity() const { return _argsT->getArity(); }
+    const ProductMT* getArgs() const { return _argsT; }
+    const MathType* getRet() const { return _retT; }
 };
 
 typedef std::stack<size_t> Path;
@@ -106,7 +118,14 @@ public:
     virtual std::string print() const = 0;
 };
 
-class Variable : public Terms, public Named
+class PrimaryTerm : public Terms {
+public:
+    const Terms* get(Path path) const override;
+    Terms* replace(Path path, const Terms* by) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
+};
+
+class Variable : public PrimaryTerm, public Named
 {
 private:
     const MathType* _type;
@@ -120,9 +139,6 @@ public:
     bool comp(const Terms* other) const override;
 
     Variable* clone() const override { return new Variable(*this); }
-    const Terms* get(Path path) const override;
-    Terms* replace(Path path, const Terms* by) const override;
-    Terms* replace(const Terms* x, const Terms* t) const override;
 
     std::string print() const override;
 };
@@ -133,30 +149,25 @@ public:
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
-// todo Понятие производного типа. Ведь Тип отображения это новый Тип, производный тип, а не просто его Сигнатура
-class Map : public Terms
+class Map : public PrimaryTerm
 {
 public:
-    typedef std::vector<const MathType*> MTVector;
-    typedef std::pair<MTVector, const MathType*> Signature;
+    typedef MathType::MTVector MTVector;
 private:
-    const MTVector _argT;
-    const MathType* _retT;
-    ComplexMT _type;
+    MapMT _type;
 public:
-    Map(MTVector argT, const MathType* retT)
-        : _argT(std::move(argT)), _retT(retT), _type(argT, {retT}) {}
+    Map(MTVector argT, const MathType* retT) : _type(argT, retT) {}
     Map(const Map&) = default;
     virtual ~Map() = default;
 
     bool operator== (const Map& one) const;
     bool operator< (const Map& other) const;
 
-    size_t   getArity() const { return _argT.size(); }
-    const MathType* getType() const { return _retT; }
-    Signature getSign() const { return {_argT, _retT}; }
+    size_t getArity() const { return _type.getArity(); }
+    const MathType* getType() const { return _type.getRet(); }
+    const ProductMT* getArgs() const { return _type.getArgs(); }
     bool matchArgType(const MTVector& otherArgT) const
-    { return (otherArgT == _argT); }
+    { return _type.getArgs()->matchArgType(otherArgT); }
 };
 class Symbol : public Named, public Map
 {
@@ -166,9 +177,11 @@ public:
     Symbol(const Symbol&) = default;
     ~Symbol() override = default;
 
+    bool comp(const Terms* other) const override;
     bool operator== (const Symbol& one) const;
     bool operator<(const Symbol& other) const;
 
+    Terms* clone() const override { return new Symbol(*this); }
     std::string print() const { return getName(); }
 };
 

@@ -16,23 +16,42 @@ bool PrimaryMT::operator==(const MathType& one) const {
     else
         return false;
 }
-bool ComplexMT::operator==(const MathType& one) const {
+bool ProductMT::operator==(const MathType& one) const {
     if (one.isPrimary()) {
         auto& pmt = dynamic_cast<const PrimaryMT&>(one);
         return (pmt.getName() == "any");
     }
     else {
-        auto& cmt = dynamic_cast<const ComplexMT&>(one);
-        if (_subTypes.size() != cmt._subTypes.size())
-            return false;
-        for (size_t i = 0; i < _subTypes.size(); ++i)
-            if (*_subTypes[i] != *cmt._subTypes[i])
+        // todo избавиться от try-catch
+        try
+        {
+            auto& pmt = dynamic_cast<const ProductMT&>(one);
+            if (_subTypes.size() != pmt._subTypes.size())
                 return false;
-        return true;
+            for (size_t i = 0; i < _subTypes.size(); ++i)
+                if (*_subTypes[i] != *pmt._subTypes[i])
+                    return false;
+            return true;
+        } catch (std::bad_cast& e)
+        { return false; }
+    }
+}
+bool MapMT::operator==(const MathType& one) const {
+    if (one.isPrimary()) {
+        auto& pmt = dynamic_cast<const PrimaryMT&>(one);
+        return (pmt.getName() == "any");
+    }
+    else {
+        try
+        {
+            auto& mmt = dynamic_cast<const MapMT&>(one);
+            return (*_argsT == *mmt._argsT && *_retT == *mmt._retT);
+        } catch (std::bad_cast& e)
+        { return false; }
     }
 }
 bool Map::operator==(const Map& one) const
-{ return (_argT == one._argT && _retT == one._retT); }
+{ return (_type == one._type); }
 bool Symbol::operator==(const Symbol& one) const {
     return ( (this->Named::operator==)(one)
              && (this->Map::operator==)(one) ); }
@@ -47,26 +66,40 @@ bool PrimaryMT::operator<(const MathType& other) const {
     else
         return true;
 }
-bool ComplexMT::operator<(const MathType& other) const {
+bool ProductMT::operator<(const MathType& other) const {
     if (other.isPrimary())
         return false;
     else {
-        auto& cmt = dynamic_cast<const ComplexMT&>(other);
-        if (_subTypes.size() != cmt._subTypes.size())
-            return (_subTypes.size() < cmt._subTypes.size());
-        else {
-            for (size_t i = 0; i < _subTypes.size(); ++i)
-                if (*_subTypes[i] < *cmt._subTypes[i])
-                    return true;
-            return false;
-        }
+        try {
+            auto& cmt = dynamic_cast<const ProductMT&>(other);
+            if (_subTypes.size() != cmt._subTypes.size())
+                return (_subTypes.size() < cmt._subTypes.size());
+            else {
+                for (size_t i = 0; i < _subTypes.size(); ++i)
+                    if (*_subTypes[i] < *cmt._subTypes[i])
+                        return true;
+                return false;
+            }
+        } catch (std::bad_cast& e)
+        { return true; }
     }
 }
-bool Map::operator<(const Map& other) const {
-    if (_argT < other._argT) return true;
-    else if (other._argT < _argT) return false;
-    else return (_retT < other._retT);
+bool MapMT::operator<(const MathType& other) const {
+    if (other.isPrimary())
+        return false;
+    else {
+        try {
+            auto& mmt = dynamic_cast<const MapMT&>(other);
+            if (*_argsT != *mmt._argsT)
+                return (*_argsT < *mmt._argsT);
+            else
+                return (*_retT < *mmt._retT);
+        } catch (std::bad_cast& e)
+        { return false; }
+    }
 }
+bool Map::operator<(const Map& other) const
+{ return (_type < other._type); }
 bool Symbol::operator<(const Symbol& other) const {
     if ((this->Map::operator<)(other))
         return true;
@@ -78,7 +111,7 @@ bool Symbol::operator<(const Symbol& other) const {
 
 std::string PrimaryMT::getName() const { return _type; }
 
-std::string ComplexMT::getName() const {
+std::string ProductMT::getName() const {
     std::stringstream buf;
     auto it = _subTypes.begin(), e = _subTypes.end();
     while (it != e) {
@@ -90,6 +123,19 @@ std::string ComplexMT::getName() const {
         if (it != e)
             buf << 'x';
     }
+    return buf.str();
+}
+
+std::vector<std::string> ProductMT::getNames() const {
+    std::vector<std::string> buf;
+    for (auto* t : _subTypes)
+        buf.push_back(t->getName());
+    return buf;
+}
+
+std::string MapMT::getName() const {
+    std::stringstream buf;
+    buf << _argsT->getName() << " -> " << _retT->getName();
     return buf.str();
 }
 
@@ -179,6 +225,12 @@ bool Variable::comp(const Terms* other) const {
     else
         return false;
 }
+bool Symbol::comp(const Terms* other) const {
+    if (auto s = dynamic_cast<const Symbol*>(other))
+        return (*this == *s);
+    else
+        return false;
+}
 bool Term::comp(const Terms* other) const {
     if (auto t = dynamic_cast<const Term*>(other))
         return (_f == t->_f && ParenSymbol::operator==(*t));
@@ -186,7 +238,7 @@ bool Term::comp(const Terms* other) const {
         return false;
 }
 
-const Terms* Variable::get(Path path) const
+const Terms* PrimaryTerm::get(Path path) const
 { return (path.empty() ? this : nullptr); }
 const Terms* Term::get(Path path) const {
     if (path.empty())
@@ -197,7 +249,7 @@ const Terms* Term::get(Path path) const {
     }
 }
 
-Terms* Variable::replace(Path path, const Terms* by) const
+Terms* PrimaryTerm::replace(Path path, const Terms* by) const
 { return (path.empty() ? by->clone() : nullptr); }
 const ParenSymbol::TermsVector&
 ParenSymbol::replace(Path path, const Terms* by) const {
@@ -265,7 +317,7 @@ Symbol forall(Term::qword[Term::QType::FORALL],
 Symbol exists(Term::qword[Term::QType::EXISTS],
               {&any_mt, &logical_mt}, &logical_mt);
 
-Terms* Variable::replace(const Terms* x, const Terms* t) const
+Terms* PrimaryTerm::replace(const Terms* x, const Terms* t) const
 { return (comp(x) ? t->clone() : this->clone()); }
 
 Terms* Term::replace(const Terms* x, const Terms* t) const {
