@@ -16,10 +16,10 @@ int main(void)
     PrimaryMT natural("Natural");
     PrimaryMT set("Set");
 
-    Symbol n("\\lnot ", {&logical_mt}, &logical_mt); //можно и без {скобок}
-    Symbol o({"\\lor ", {2, &logical_mt}, &logical_mt});
-    Symbol a({"\\land ", {2, &logical_mt}, &logical_mt});
-    Symbol r({"\\Rightarrow ", {2, &logical_mt}, &logical_mt});
+    Map n("\\lnot ", {&logical_mt}, &logical_mt); //можно и без {скобок}
+    Map o({"\\lor ", {2, &logical_mt}, &logical_mt});
+    Map a({"\\land ", {2, &logical_mt}, &logical_mt});
+    Map r({"\\Rightarrow ", {2, &logical_mt}, &logical_mt});
 
     PrimaryMT group("Group");
     PrimaryMT real("Real");
@@ -29,13 +29,13 @@ int main(void)
     //todo  2) при обрыве работы происходит сохранение с именем autosave?
 
 
-    Symbol gr({">", {&real, &real}, &logical_mt});
+    Map gr({">", {&real, &real}, &logical_mt});
     Term t(gr, {&x, &one});
     const Terms* sdf = new ForallTerm(x, &t);
 //    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;
 
-    Symbol ze({"0", {}, &real});
-    Symbol ne({"!=", {2, &real}, &logical_mt});
+    Map ze({"0", {}, &real});
+    Map ne({"!=", {2, &real}, &logical_mt});
     //todo меньше new/delete в термах, потом
 
     BranchNode entry("global");

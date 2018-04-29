@@ -10,8 +10,8 @@ PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name)
 { return dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
-std::set<Symbol> getSym(const NameSpaceIndex& index, const std::string& name) {
-    std::set<Symbol> buf;
+std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name) {
+    std::set<Map> buf;
     for (const auto& def : index.get(NameTy::SYM, name))
         buf.insert(*dynamic_cast<DefSym*>(def));
     return buf;
@@ -141,7 +141,7 @@ Inference::InfTy infTyFromStr(const std::string& type) {
 
 
 Terms* modusPonens(const Terms* premise, const Terms* impl) {
-    Symbol standardImpl("\\Rightarrow ", {2, &logical_mt}, &logical_mt);
+    Map standardImpl("\\Rightarrow ", {2, &logical_mt}, &logical_mt);
     if (const auto* tI = dynamic_cast<const Term*>(impl))
         if ((tI->getSym() == standardImpl) && tI->arg(1)->comp(premise))
             return tI->arg(2)->clone();
@@ -161,7 +161,7 @@ const Terms* innerPremise(const ForallTerm* fT) {
         quantedterm = innerForall->arg(2);
     // теперь в quantedterm лежит самый первый терм без кванторов
     if (auto notVar = dynamic_cast<const Term*>(quantedterm)) {
-        Symbol standardImpl("\\Rightarrow ", {2, &logical_mt}, &logical_mt);
+        Map standardImpl("\\Rightarrow ", {2, &logical_mt}, &logical_mt);
         if (notVar->getSym() == standardImpl)
             return notVar->arg(1);
     }

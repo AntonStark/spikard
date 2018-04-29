@@ -218,7 +218,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list)
 Term* Lexer::parseTerm(Lexer::LexList& list)
 {
     typedef Lexer::Token Token;
-    std::set<Symbol> syms = getSym(where->index(), list.front().val);
+    std::set<Map> syms = getSym(where->index(), list.front().val);
     list.pop_front();
 
     if (list.front().tok != Token::lb)
@@ -279,7 +279,7 @@ Terms* Lexer::parseTerms(Lexer::LexList& list)
             return nullptr;
     }
     if (!list.empty() && list.begin()->tok == Token::S) {    // случай инфиксной записи бинарного терма
-        std::set<Symbol> syms = getSym(where->index(), list.front().val);
+        std::set<Map> syms = getSym(where->index(), list.front().val);
         list.pop_front();
         Terms* secondOp = parseTerms(list);
         try { parsed = new Term(syms, {parsed, secondOp}); }

@@ -125,21 +125,28 @@ public:
     Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
-class Variable : public PrimaryTerm, public Named
+class NamedTerm : public PrimaryTerm, public Named
+{
+public:
+    NamedTerm(std::string name) : Named(std::move(name)) {}
+    NamedTerm(const NamedTerm& one) = default;
+    ~NamedTerm() override = default;
+
+    virtual bool comp(const Terms* other) const override;
+};
+
+class Variable : public NamedTerm
 {
 private:
     const MathType* _type;
 public:
     Variable(std::string name, const MathType* type)
-            : Named(std::move(name)), _type(type) {}
+            : NamedTerm(name), _type(type) {}
     Variable(const Variable& one) = default;
     ~Variable() override = default;
 
     const MathType* getType() const override { return _type; }
-    bool comp(const Terms* other) const override;
-
     Variable* clone() const override { return new Variable(*this); }
-
     std::string print() const override;
 };
 
@@ -149,39 +156,39 @@ public:
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
-class Map : public PrimaryTerm
+
+/*class UnaryOperation : public Named, public Map
+{
+public:
+    enum class Form {PRE, POST, TOP, BOTTOM};
+private:
+    Form _form;
+    UnaryOperation(std::string name, Form form,
+                   const MathType* argT, const MathType* retT)
+        : Named(std::move(name)), Map({argT}, retT), _form(form) {}
+};*/
+
+class Map : public NamedTerm
 {
 public:
     typedef MathType::MTVector MTVector;
 private:
     MapMT _type;
 public:
-    Map(MTVector argT, const MathType* retT) : _type(argT, retT) {}
+    Map(std::string name, MTVector argT, const MathType* retT)
+        : NamedTerm(std::move(name)), _type(argT, retT) {}
     Map(const Map&) = default;
-    virtual ~Map() = default;
+    ~Map() override = default;
 
-    bool operator== (const Map& one) const;
-    bool operator< (const Map& other) const;
+    bool operator<(const Map& other) const;
 
     size_t getArity() const { return _type.getArity(); }
-    const MathType* getType() const { return _type.getRet(); }
+    const MathType* getType() const override { return _type.getRet(); }
     const ProductMT* getArgs() const { return _type.getArgs(); }
     bool matchArgType(const MTVector& otherArgT) const
     { return _type.getArgs()->matchArgType(otherArgT); }
-};
-class Symbol : public Named, public Map
-{
-public:
-    Symbol(std::string name, MTVector argT, const MathType* retT)
-        : Named(std::move(name)), Map(std::move(argT), retT) {}
-    Symbol(const Symbol&) = default;
-    ~Symbol() override = default;
 
-    bool comp(const Terms* other) const override;
-    bool operator== (const Symbol& one) const;
-    bool operator<(const Symbol& other) const;
-
-    Terms* clone() const override { return new Symbol(*this); }
+    Terms* clone() const override { return new Map(*this); }
     std::string print() const { return getName(); }
 };
 
@@ -219,16 +226,16 @@ public:
     enum class QType {FORALL, EXISTS};
     static std::map<QType, const std::string> qword;
 
-    Symbol _f;
+    Map _f;
     VarSet free;
-    Term(Symbol f, TermsVector _args);
-    Term(std::set<Symbol> symSet, TermsVector args);
+    Term(Map f, TermsVector _args);
+    Term(std::set<Map> symSet, TermsVector args);
     Term(const Term& one) = default;
     ~Term() override = default;
 
     size_t getArity() const { return  _f.getArity(); }
     const MathType* getType() const override { return _f.getType(); }
-    Symbol getSym() const { return _f; }
+    Map getSym() const { return _f; }
     bool comp(const Terms* other) const override;
 
     Term* clone() const override { return new Term(*this); }
@@ -239,7 +246,7 @@ public:
     std::string print() const override;
 };
 
-extern Symbol forall, exists;
+extern Map forall, exists;
 class ForallTerm : public Term
 {
 public:

@@ -50,11 +50,6 @@ bool MapMT::operator==(const MathType& one) const {
         { return false; }
     }
 }
-bool Map::operator==(const Map& one) const
-{ return (_type == one._type); }
-bool Symbol::operator==(const Symbol& one) const {
-    return ( (this->Named::operator==)(one)
-             && (this->Map::operator==)(one) ); }
 
 bool Named::operator<(const Named& other) const
 { return (_name < other._name); }
@@ -98,13 +93,9 @@ bool MapMT::operator<(const MathType& other) const {
         { return false; }
     }
 }
-bool Map::operator<(const Map& other) const
-{ return (_type < other._type); }
-bool Symbol::operator<(const Symbol& other) const {
-    if ((this->Map::operator<)(other))
-        return true;
-    else if (other.Map::operator<(*this))
-        return false;
+bool Map::operator<(const Map& other) const {
+    if (_type != other._type)
+        return (_type < other._type);
     else
         return (this->Named::operator<)(other);
 }
@@ -219,15 +210,10 @@ bool ParenSymbol::operator==(const ParenSymbol& other) const {
     return true;
 }
 
-bool Variable::comp(const Terms* other) const {
-    if (auto v = dynamic_cast<const Variable*>(other))
-        return (this->Named::operator==)(*v);
-    else
-        return false;
-}
-bool Symbol::comp(const Terms* other) const {
-    if (auto s = dynamic_cast<const Symbol*>(other))
-        return (*this == *s);
+bool NamedTerm::comp(const Terms* other) const {
+    if (auto namedOther = dynamic_cast<const NamedTerm*>(other))
+        return (getType() == namedOther->getType()
+                && getName() == namedOther->getName());
     else
         return false;
 }
@@ -271,7 +257,7 @@ Terms* Term::replace(Path path, const Terms* by) const {
     return new Term(_f, ParenSymbol::replace(path, by));
 }
 
-Term::Term(Symbol f, ParenSymbol::TermsVector args)
+Term::Term(Map f, ParenSymbol::TermsVector args)
         : ParenSymbol(args), _f(f) {
     checkArgs(f, args);
 
@@ -286,7 +272,7 @@ Term::Term(Symbol f, ParenSymbol::TermsVector args)
     }
 }
 
-Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
+Map takeFirstMatchTypes(std::set<Map> symSet,
                            const ParenSymbol::TermsVector& args) {
     std::vector<const MathType*> argsType;
     for (const auto& a : args)
@@ -297,7 +283,7 @@ Symbol takeFirstMatchTypes(std::set<Symbol> symSet,
             return s;
     throw ParenSymbol::argN_argType_error();
 }
-Term::Term(std::set<Symbol> symSet, TermsVector args)
+Term::Term(std::set<Map> symSet, TermsVector args)
     : Term(takeFirstMatchTypes(std::move(symSet), args), args) {}
 
 void Term::boundVar(Variable var) {
@@ -312,9 +298,9 @@ void Term::boundVar(Variable var) {
 std::map<Term::QType, const std::string>
         Term::qword = { {Term::QType::FORALL,"\\forall "},
                         {Term::QType::EXISTS,"\\exists "} };
-Symbol forall(Term::qword[Term::QType::FORALL],
+Map forall(Term::qword[Term::QType::FORALL],
               {&any_mt, &logical_mt}, &logical_mt);
-Symbol exists(Term::qword[Term::QType::EXISTS],
+Map exists(Term::qword[Term::QType::EXISTS],
               {&any_mt, &logical_mt}, &logical_mt);
 
 Terms* PrimaryTerm::replace(const Terms* x, const Terms* t) const
