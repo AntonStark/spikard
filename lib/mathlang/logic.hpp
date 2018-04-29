@@ -157,17 +157,6 @@ public:
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
 
-/*class UnaryOperation : public Named, public Map
-{
-public:
-    enum class Form {PRE, POST, TOP, BOTTOM};
-private:
-    Form _form;
-    UnaryOperation(std::string name, Form form,
-                   const MathType* argT, const MathType* retT)
-        : Named(std::move(name)), Map({argT}, retT), _form(form) {}
-};*/
-
 class Map : public NamedTerm
 {
 public:
@@ -177,6 +166,8 @@ private:
 public:
     Map(std::string name, MTVector argT, const MathType* retT)
         : NamedTerm(std::move(name)), _type(argT, retT) {}
+    Map(std::string name, size_t arity, const MathType* argT, const MathType* retT)
+        : NamedTerm(std::move(name)), _type({arity, argT}, retT) {}
     Map(const Map&) = default;
     ~Map() override = default;
 
@@ -190,6 +181,41 @@ public:
 
     Terms* clone() const override { return new Map(*this); }
     std::string print() const { return getName(); }
+};
+
+class UnaryOperation : public Map
+{
+public:
+    enum class Form {PRE, POST, TOP, BOT};
+private:
+    Form _form;
+public:
+    UnaryOperation(std::string name, Form form,
+                   const MathType* argT, const MathType* retT)
+        : Map(name, {argT}, retT), _form(form) {}
+    Terms* clone() const override { return new UnaryOperation(*this); }
+};
+
+class BinaryOperation : public Map
+{
+public:
+    enum class Form {BOT_TOP, BOT_MID, TOP_MID, INFIX};
+private:
+    Form _form;
+public:
+    BinaryOperation(std::string name, Form form,
+                    const MathType* arg1, const MathType* arg2, const MathType* ret)
+        : Map(name, {arg1, arg2}, ret), _form(form) {}
+    Terms* clone() const override { return new BinaryOperation(*this); }
+};
+
+class TernaryOperation : public Map
+{
+public:
+    TernaryOperation(std::string name, const MathType* arg1,
+                     const MathType* arg2, const MathType* arg3, const MathType* ret)
+        : Map(name, {arg1, arg2, arg3}, ret) {}
+    Terms* clone() const override { return new TernaryOperation(*this); }
 };
 
 class ParenSymbol
