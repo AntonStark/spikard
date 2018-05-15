@@ -4,8 +4,6 @@
 
 #include "logic.hpp"
 
-bool Named::operator==(const Named& one) const
-{ return (_name == one._name); }
 bool PrimaryMT::operator==(const MathType& one) const {
     if (getName() == "any")
         return true;
@@ -51,8 +49,6 @@ bool MapMT::operator==(const MathType& one) const {
     }
 }
 
-bool Named::operator<(const Named& other) const
-{ return (_name < other._name); }
 bool PrimaryMT::operator<(const MathType& other) const {
     if (other.isPrimary()) {
         auto& pmt = dynamic_cast<const PrimaryMT&>(other);
@@ -100,8 +96,6 @@ bool Map::operator<(const Map& other) const {
         return (this->Named::operator<)(other);
 }
 
-std::string PrimaryMT::getName() const { return _type; }
-
 std::string ProductMT::getName() const {
     std::stringstream buf;
     auto it = _subTypes.begin(), e = _subTypes.end();
@@ -145,8 +139,6 @@ std::string ParenSymbol::print() const {
     buf << ')';
     return buf.str();
 }
-std::string Variable::print() const
-{ return getName(); }
 std::string Term::print() const {
     std::stringstream buf;
     if (getArity() != 2)

@@ -25,8 +25,10 @@ public:
     Named(const Named&) = default;
     virtual ~Named() = default;
 
-    bool operator== (const Named& one) const;
-    bool operator< (const Named& other) const;
+    bool operator== (const Named& one) const
+    { return (_name == one._name); }
+    bool operator< (const Named& other) const
+    { return (_name < other._name); }
 
     std::string getName() const { return _name; }
     void setName(std::string name) { _name = std::move(name); }
@@ -58,7 +60,7 @@ public:
     bool operator== (const MathType& other) const override;
     bool operator<(const MathType& other) const;
     bool isPrimary() const override { return true; }
-    std::string getName() const override;
+    std::string getName() const override { return _type; }
 };
 extern PrimaryMT any_mt;
 extern PrimaryMT logical_mt;
@@ -118,7 +120,8 @@ public:
     virtual std::string print() const = 0;
 };
 
-class PrimaryTerm : public Terms {
+class PrimaryTerm : public Terms
+{
 public:
     const Terms* get(Path path) const override;
     Terms* replace(Path path, const Terms* by) const override;
@@ -135,6 +138,21 @@ public:
     virtual bool comp(const Terms* other) const override;
 };
 
+class Constant : public NamedTerm
+{
+private:
+    const MathType* _type;
+public:
+    Constant(std::string name, const MathType* type)
+        : NamedTerm(name), _type(type) {}
+    Constant(const Constant& one) = default;
+    ~Constant() override = default;
+
+    const MathType* getType() const override { return _type; }
+    Constant* clone() const override { return new Constant(*this); }
+    std::string print() const override { return getName(); }
+};
+
 class Variable : public NamedTerm
 {
 private:
@@ -147,7 +165,7 @@ public:
 
     const MathType* getType() const override { return _type; }
     Variable* clone() const override { return new Variable(*this); }
-    std::string print() const override;
+    std::string print() const override { return getName(); }
 };
 
 // Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
