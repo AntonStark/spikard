@@ -1,6 +1,8 @@
 #include <sstream>
 #include <fstream>
-#include "../../lib/mathlang/logic.hpp"
+
+#include "../../lib/mathlang/mathtype.hpp"
+#include "../../lib/mathlang/terms.hpp"
 #include "../../lib/mathlang/rationale.hpp"
 #include "../../lib/mathlang/parser.hpp"
 #include "../../lib/mathlang/view.hpp"

@@ -54,11 +54,11 @@ public:
         std::vector<std::vector<size_t> > rPremises;
 
         MlObj(std::string _mlType, size_t _label, std::string _body,
-              std::vector<Path> _premises = {})
+              std::vector<Hierarchy::Path> _premises = {})
             : mlType(std::move(_mlType)), label(_label),
               body(std::move(_body))
         {
-            auto reverse = [](Path straight) -> std::vector<size_t> {
+            auto reverse = [](Hierarchy::Path straight) -> std::vector<size_t> {
                 std::vector<size_t> reversed;
                 while (!straight.empty()) {
                     reversed.push_back(straight.top());

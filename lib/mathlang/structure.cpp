@@ -126,11 +126,11 @@ NameStoringStrategy* nssFromStr(std::string str, Node* parent) {
         return new Appending(parent);
 }
 
-Path mkPath(std::string source)
+Hierarchy::Path mkPath(std::string source)
 {
     // string  ->  stack<size_t>
     // (1.2.7) }-> {7,2,1}
-    Path straight;
+    Hierarchy::Path straight;
     std::map<char, unsigned> digits = {{'0', 0}, {'1', 1},
                                        {'2', 2}, {'3', 3}, {'4', 4}, {'5', 5},
                                        {'6', 6}, {'7', 7}, {'8', 8}, {'9', 9}};
@@ -150,17 +150,17 @@ Path mkPath(std::string source)
             buf = 0;
         }
         else
-            return Path();
+            return Hierarchy::Path();
     }
     straight.push(buf);
-    Path reversed;
+    Hierarchy::Path reversed;
     while (!straight.empty()) {
         reversed.push(straight.top());
         straight.pop();
     }
     return reversed;
 }
-std::string pathToStr(Path path)
+std::string pathToStr(Hierarchy::Path path)
 {
     std::stringstream ss;
     ss << "(";

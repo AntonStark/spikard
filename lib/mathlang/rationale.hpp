@@ -13,6 +13,8 @@
 #include <sstream>
 #include "../../json.hpp"
 
+#include "mathtype.hpp"
+#include "terms.hpp"
 #include "structure.hpp"
 
 using json = nlohmann::json;

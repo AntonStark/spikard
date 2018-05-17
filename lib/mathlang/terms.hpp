@@ -16,6 +16,8 @@
 #include <vector>
 #include <stack>
 
+#include "mathtype.hpp"
+
 class Named
 {
 private:
@@ -34,81 +36,11 @@ public:
     void setName(std::string name) { _name = std::move(name); }
 };
 
-class MathType
-{
-public:
-    virtual ~MathType() {};
-    virtual bool isPrimary() const = 0;
-    virtual bool operator== (const MathType& other) const = 0;
-    bool operator!= (const MathType& other) const
-    { return !(*this == other); }
-    virtual bool operator< (const MathType& other) const = 0;
-
-    virtual std::string getName() const = 0;
-    typedef std::vector<const MathType*> MTVector;
-};
-
-class PrimaryMT : public MathType
-{
-private:
-    std::string _type;
-public:
-    PrimaryMT(std::string type) : _type(std::move(type)) {}
-    PrimaryMT(const PrimaryMT&) = default;
-    ~PrimaryMT() override = default;
-
-    bool operator== (const MathType& other) const override;
-    bool operator<(const MathType& other) const;
-    bool isPrimary() const override { return true; }
-    std::string getName() const override { return _type; }
-};
-extern PrimaryMT any_mt;
-extern PrimaryMT logical_mt;
-
-class ProductMT : public MathType
-{
-private:
-    MTVector _subTypes;
-public:
-    ProductMT(MTVector subTypes) : _subTypes(subTypes) {};
-    ProductMT(const ProductMT&) = default; // todo глубокое копирование _subTypes
-    ~ProductMT() override = default;
-
-    bool operator==(const MathType& one) const override;
-    bool operator<(const MathType& other) const override;
-    bool isPrimary() const override { return false; }
-    std::string getName() const override;
-    std::vector<std::string> getNames() const;
-    size_t getArity() const { return _subTypes.size(); }
-    bool matchArgType(const MTVector& otherMTV) const
-    { return (_subTypes == otherMTV); }
-};
-
-class MapMT : public MathType
-{
-private:
-    const ProductMT* _argsT;
-    const MathType* _retT;
-public:
-    MapMT(MTVector argsT, const MathType* retT) : _retT(retT)
-    { _argsT = new ProductMT(argsT); }
-    MapMT(const MapMT&) = default; // todo глубокое копирование _argsT
-    ~MapMT() { delete _argsT; }
-
-    bool operator==(const MathType& one) const override;
-    bool operator<(const MathType& other) const override;
-    bool isPrimary() const override { return false; }
-
-    std::string getName() const override;
-    size_t getArity() const { return _argsT->getArity(); }
-    const ProductMT* getArgs() const { return _argsT; }
-    const MathType* getRet() const { return _retT; }
-};
-
-typedef std::stack<size_t> Path;
 class Terms
 {
 public:
+    typedef std::stack<size_t> Path;
+
     virtual const MathType* getType() const = 0;
     virtual bool comp(const Terms* other) const = 0;
 
@@ -120,15 +52,7 @@ public:
     virtual std::string print() const = 0;
 };
 
-class PrimaryTerm : public Terms
-{
-public:
-    const Terms* get(Path path) const override;
-    Terms* replace(Path path, const Terms* by) const override;
-    Terms* replace(const Terms* x, const Terms* t) const override;
-};
-
-class NamedTerm : public PrimaryTerm, public Named
+class NamedTerm : public Terms, public Named
 {
 public:
     NamedTerm(std::string name) : Named(std::move(name)) {}
@@ -136,6 +60,10 @@ public:
     ~NamedTerm() override = default;
 
     virtual bool comp(const Terms* other) const override;
+
+    const Terms* get(Path path) const override;
+    Terms* replace(Path path, const Terms* by) const override;
+    Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
 class Constant : public NamedTerm
@@ -247,7 +175,7 @@ protected:
     TermsVector _args;
     /*std::set<Variable> vars;*/
     void checkArgs(const Map& f, TermsVector args) const;
-    const TermsVector& replace(Path path, const Terms* by) const;
+    const TermsVector& replace(Terms::Path path, const Terms* by) const;
 public:
     // В обоих случаях применяется глубокое копирование
     ParenSymbol(const TermsVector& args);

@@ -6,10 +6,11 @@
 #define TEST_BUILD_STRUCTURE_HPP
 
 #include <list>
+#include <set>
+#include <stack>
 
 #include "../../json.hpp"
 
-#include "logic.hpp"
 
 using json = nlohmann::json;
 
@@ -49,6 +50,7 @@ public:
     Hierarchy(const Hierarchy&) = delete;
     Hierarchy& operator=(const Hierarchy&) = delete;
 
+    typedef std::stack<size_t> Path;
     Node* getParent() const { return _parent; }
     virtual Hierarchy* getByPass(Path path) = 0;
     size_t getNumber() const;
@@ -91,7 +93,7 @@ public:
     std::string print(Representation* r, bool incremental) const;
     HiList_cIter start() const { return newInfo.second; }
     HiList_cIter end() const { return  subs.end(); }
-    Path backLabel() const { return Path({subs.size()}); }
+    Hierarchy::Path backLabel() const { return Hierarchy::Path({subs.size()}); }
 };
 
 class Node : public Hierarchy, public ListStorage
@@ -190,7 +192,7 @@ public:
     virtual void process(const Inference*) = 0;
 };
 
-Path mkPath(std::string source);
-std::string pathToStr(Path path);
+Hierarchy::Path mkPath(std::string source);
+std::string pathToStr(Hierarchy::Path path);
 
 #endif //TEST_BUILD_STRUCTURE_HPP

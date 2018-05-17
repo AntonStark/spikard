@@ -4,8 +4,6 @@
 
 #include "rationale.hpp"
 
-#include <utility>
-
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name)
 { return dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
@@ -167,26 +165,26 @@ const Terms* innerPremise(const ForallTerm* fT) {
     }
     return nullptr;
 }
-Path findVarFirstUsage(Variable var, const Term* term) {
+Terms::Path findVarFirstUsage(Variable var, const Term* term) {
     for (size_t i = 1; i <= term->getArity(); ++i) {
         if (auto v = dynamic_cast<const Variable*>(term->arg(i)))
-        { if (var == *v) return Path({i}); }
+        { if (var == *v) return Terms::Path({i}); }
         else {
             auto t = static_cast<const Term*>(term->arg(i));
             if (t->free.find(var) != t->free.end()) {
-                Path inner = findVarFirstUsage(var, t);
+                Terms::Path inner = findVarFirstUsage(var, t);
                 inner.push(i);
                 return inner;
             }
         }
     }
-    return Path();
+    return Terms::Path();
 }
 
 const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
     Variable topQVar = *static_cast<const Variable*>(quantedImpl->arg(1));
     const Terms* topQuanted = quantedImpl->arg(2);
-    Path toInnerConseq;
+    Terms::Path toInnerConseq;
     const Terms* innerConseq = topQuanted;
     while (auto innerForall = dynamic_cast<const ForallTerm*>(innerConseq)) {
         innerConseq = innerForall->arg(2);
@@ -209,9 +207,8 @@ Terms* application(const Terms* term, const Terms* theorem) {
                 theorem = specialization(theorem, term);
         }
         else { // в случае терма пустой путь будет означать ошибку
-            Path usageOfVar =
-                findVarFirstUsage(var,
-                                  static_cast<const Term*>(foralledPremise));
+            Terms::Path usageOfVar = findVarFirstUsage(var,
+                                                       static_cast<const Term*>(foralledPremise));
             if (usageOfVar.empty())
                 theorem = moveQuantorIntoImpl(fT);
             else {
