@@ -23,17 +23,26 @@ PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name);
 Variable getVar (const NameSpaceIndex& index, const std::string& name);
 std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name);
 
-enum class NamedNodeType {COURSE, SECTION, LECTURE, CLOSURE};
-std::string toStr(NamedNodeType nnt);
-class NamedNode : public Node, public Named
+class NamedNode : public Node
 {
 public:
-    const NamedNodeType _type;
+    enum class NNType {COURSE, SECTION, LECTURE, CLOSURE};
+    const NNType _type;
+    std::string _title;
+
     ~NamedNode() override = default;
     NamedNode(Node* parent, NameStoringStrategy* nss,
-              NamedNodeType type, const std::string& title)
-            : Node(parent, nss), Named(title), _type(type) {}
+              NNType type, const std::string& title)
+        : Node(parent, nss), _type(type), _title(title) {}
+    NamedNode(Node* parent, NameStoringStrategy* nss,
+              std::string type, const std::string& title)
+        : NamedNode(parent, nss, nntFromStr(type), title) {}
 
+    static std::string typeToStr(NNType nnt);
+    static NNType nntFromStr(std::string str);
+
+    std::string getName() const { return _title; }
+    void setName(std::string name) { _title = std::move(name); }
     std::string print(Representation* r, bool incremental = true) const override
     { r->process(this); return r->str(); }
 };
@@ -46,8 +55,11 @@ protected:
     friend class BranchNode;
     friend class TermsBox;
     PrimaryNode(Node* parent, NameStoringStrategy* nss,
-                NamedNodeType type, const std::string& title)
-            : NamedNode(parent, nss, type, title) {}
+                std::string type, const std::string& title)
+        : NamedNode(parent, nss, type, title) {}
+    PrimaryNode(Node* parent, NameStoringStrategy* nss,
+                NamedNode::NNType type, const std::string& title)
+        : NamedNode(parent, nss, type, title) {}
     static PrimaryNode* fromJson(const json& j, BranchNode* parent = nullptr);
 public:
     ~PrimaryNode() override = default;
@@ -75,21 +87,24 @@ class BranchNode : public NamedNode
 {
 protected:
     BranchNode(BranchNode* parent, NameStoringStrategy* nss,
-               NamedNodeType type, const std::string& title)
+               std::string type, const std::string& title)
             : NamedNode(parent, nss, type, title) {}
+    BranchNode(BranchNode* parent, NameStoringStrategy* nss,
+               NamedNode::NNType type, const std::string& title)
+        : NamedNode(parent, nss, type, title) {}
     static BranchNode* fromJson(const json& j, BranchNode* parent);
 public:
     BranchNode(const std::string& title)
-            : BranchNode(nullptr, new Hidden(), NamedNodeType::COURSE, title) {}
+            : BranchNode(nullptr, new Hidden(), NNType::COURSE, title) {}
     static BranchNode* fromJson(const json& j) { return fromJson(j, nullptr); }
     ~BranchNode() override = default;
 
     void startCourse (const std::string& title = "")
-    { new BranchNode(this, new Hidden(this), NamedNodeType::COURSE, title); }
+    { new BranchNode(this, new Hidden(this), NNType::COURSE, title); }
     void startSection(const std::string& title = "")
-    { new BranchNode(this, new Appending(this), NamedNodeType::SECTION, title); }
+    { new BranchNode(this, new Appending(this), NNType::SECTION, title); }
     void startLecture(const std::string& title = "")
-    { new PrimaryNode(this, new Appending(this), NamedNodeType::LECTURE, title); }
+    { new PrimaryNode(this, new Appending(this), NNType::LECTURE, title); }
 
     PrimaryNode* getSub(size_t number)
     { return static_cast<PrimaryNode*>(getByNumber(number)); }

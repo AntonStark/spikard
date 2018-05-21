@@ -18,24 +18,6 @@
 
 #include "mathtype.hpp"
 
-class Named
-{
-private:
-    std::string _name;
-public:
-    Named(std::string name) : _name(std::move(name)) {}
-    Named(const Named&) = default;
-    virtual ~Named() = default;
-
-    bool operator== (const Named& one) const
-    { return (_name == one._name); }
-    bool operator< (const Named& other) const
-    { return (_name < other._name); }
-
-    std::string getName() const { return _name; }
-    void setName(std::string name) { _name = std::move(name); }
-};
-
 class Terms
 {
 public:
@@ -52,13 +34,22 @@ public:
     virtual std::string print() const = 0;
 };
 
-class NamedTerm : public Terms, public Named
+class NamedTerm : public Terms
 {
+private:
+    std::string _name;
 public:
-    NamedTerm(std::string name) : Named(std::move(name)) {}
+    NamedTerm(std::string name) : _name(std::move(name)) {}
     NamedTerm(const NamedTerm& one) = default;
-    ~NamedTerm() override = default;
+    virtual ~NamedTerm() = default;
 
+    bool operator== (const NamedTerm& one) const
+    { return (_name == one._name); }
+    bool operator< (const NamedTerm& other) const
+    { return (_name < other._name); }
+
+    std::string getName() const { return _name; }
+    void setName(std::string name) { _name = std::move(name); }
     virtual bool comp(const Terms* other) const override;
 
     const Terms* get(Path path) const override;
@@ -73,7 +64,8 @@ private:
 public:
     Constant(std::string name, const MathType* type)
         : NamedTerm(name), _type(type) {}
-    Constant(const Constant& one) = default;
+    Constant(const Constant& one)
+        : NamedTerm(one.getName()) { _type = one.getType()->clone(); }
     ~Constant() override = default;
 
     const MathType* getType() const override { return _type; }
@@ -88,7 +80,8 @@ private:
 public:
     Variable(std::string name, const MathType* type)
             : NamedTerm(name), _type(type) {}
-    Variable(const Variable& one) = default;
+    Variable(const Variable& one)
+        : NamedTerm(one.getName()) { _type = one.getType()->clone(); }
     ~Variable() override = default;
 
     const MathType* getType() const override { return _type; }
@@ -145,12 +138,13 @@ public:
 class BinaryOperation : public Map
 {
 public:
-    enum class Form {BOT_TOP, BOT_MID, TOP_MID, INFIX};
+    enum class Form {BOT_TOP, BOT_MID, TOP_MID, INFIX, FOLLOW};
 private:
     Form _form;
 public:
     BinaryOperation(std::string name, Form form,
-                    const MathType* arg1, const MathType* arg2, const MathType* ret)
+                    const MathType* arg1, const MathType* arg2,
+                    const MathType* ret)
         : Map(name, {arg1, arg2}, ret), _form(form) {}
     Terms* clone() const override { return new BinaryOperation(*this); }
 };
@@ -159,7 +153,8 @@ class TernaryOperation : public Map
 {
 public:
     TernaryOperation(std::string name, const MathType* arg1,
-                     const MathType* arg2, const MathType* arg3, const MathType* ret)
+                     const MathType* arg2, const MathType* arg3,
+                     const MathType* ret)
         : Map(name, {arg1, arg2, arg3}, ret) {}
     Terms* clone() const override { return new TernaryOperation(*this); }
 };

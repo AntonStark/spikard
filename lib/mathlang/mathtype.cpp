@@ -67,6 +67,13 @@ bool ProductMT::operator<(const MathType& other) const {
     }
 }
 
+MathType* ProductMT::clone() const {
+    MTVector newSubTypes;
+    for (const auto& t : _subTypes)
+        newSubTypes.push_back(t->clone());
+    return new ProductMT(newSubTypes);
+}
+
 std::string ProductMT::getName() const {
     std::stringstream buf;
     auto it = _subTypes.begin(), e = _subTypes.end();
@@ -87,6 +94,15 @@ std::vector<std::string> ProductMT::getNames() const {
     for (auto* t : _subTypes)
         buf.push_back(t->getName());
     return buf;
+}
+
+bool ProductMT::matchArgType(const MTVector& otherMTV) const {
+    if (otherMTV.size() != _subTypes.size())
+        return false;
+    for (size_t i = 0; i < _subTypes.size(); ++i)
+        if (*otherMTV[i] != *_subTypes[i])
+            return false;
+    return true;
 }
 
 bool MapMT::operator==(const MathType& one) const {

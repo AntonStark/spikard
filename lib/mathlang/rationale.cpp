@@ -16,23 +16,26 @@ std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name) {
 }
 
 
-std::string toStr(NamedNodeType nnt) {
+std::string NamedNode::typeToStr(NNType nnt) {
     switch (nnt) {
-        case NamedNodeType::COURSE  : return "Курс" ;
-        case NamedNodeType::SECTION : return "Раздел";
-        case NamedNodeType::LECTURE : return "Лекция";
-        case NamedNodeType::CLOSURE : return "Замыкание";
+        case NNType::COURSE  : return "Курс" ;
+        case NNType::SECTION : return "Раздел";
+        case NNType::LECTURE : return "Лекция";
+        case NNType::CLOSURE : return "Замыкание";
     }
 }
-NamedNodeType nntFromStr(std::string str) {
+NamedNode::NNType NamedNode::nntFromStr(std::string str) {
     if (str == "Курс")
-        return NamedNodeType::COURSE;
+        return NNType::COURSE;
     else if (str == "Раздел")
-        return NamedNodeType::SECTION;
+        return NNType::SECTION;
     else if (str == "Лекция")
-        return NamedNodeType::LECTURE;
+        return NNType::LECTURE;
+    else if (str == "Замыкание")
+        return NNType::CLOSURE;
     else
-        return NamedNodeType::CLOSURE;
+        throw std::invalid_argument(str + " - не название типа NamedNode."
+                                              "Допустимые строки: Курс, Раздел, Лекция, Замыкание.");
 }
 
 
@@ -71,7 +74,7 @@ void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
 
 
 TermsBox::TermsBox(PrimaryNode* parent, std::string source)
-        : PrimaryNode(parent, new Hidden(parent), NamedNodeType::CLOSURE, ""),
+        : PrimaryNode(parent, new Hidden(parent), NNType::CLOSURE, ""),
           data(parse(this, std::move(source))) {}
 
 class Inference::bad_inf : public std::invalid_argument
@@ -148,7 +151,7 @@ Terms* modusPonens(const Terms* premise, const Terms* impl) {
 
 Terms* specialization(const Terms* general, const Terms* t) {
     if (const auto* fT = dynamic_cast<const ForallTerm*>(general))
-        if (fT->arg(1)->getType() == t->getType())
+        if (*fT->arg(1)->getType() == *t->getType())
             return fT->arg(2)->replace(fT->arg(1), t);
     return nullptr;
 }
@@ -241,7 +244,7 @@ Term* generalization(const Terms* toGen, const Terms* x) {
 
 PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
     auto* pn = new PrimaryNode(parent, nssFromStr(j.at("storing_strategy"), parent),
-                              nntFromStr(j.at("type")), j.at("title"));
+                              j.at("type").get<std::string>(), j.at("title"));
     json jsubs = j.at("subs");
     for (const auto& s : jsubs) {
         auto type = s.at(0);
@@ -262,7 +265,7 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
 
 BranchNode* BranchNode::fromJson(const json& j, BranchNode* parent) {
     auto* bn = new BranchNode(parent, nssFromStr(j.at("storing_strategy"), parent),
-                              nntFromStr(j.at("type")), j.at("title"));
+                              j.at("type").get<std::string>(), j.at("title"));
     json jsubs = j.at("subs");
     for (const auto& s : jsubs) {
         auto o = s.at(1);

@@ -18,17 +18,17 @@ void PlainText::process(const ListStorage* ls) {
 void PlainText::process(const NamedNode* nn)
 {
     switch (nn->_type) {
-        case NamedNodeType::COURSE  :
+        case NamedNode::NNType::COURSE  :
             value = ("Курс \"" + nn->getName() + "\"."); break;
-        case NamedNodeType::SECTION : {
+        case NamedNode::NNType::SECTION : {
             std::stringstream ss;
             ss << "Раздел " << nn->getNumber() <<
             ": " << nn->getName() << ".";
             value = ss.str(); break;
         }
-        case NamedNodeType::LECTURE :
+        case NamedNode::NNType::LECTURE :
             value = ("Лекция \"" + nn->getName() + "\"."); break;
-        case NamedNodeType::CLOSURE :
+        case NamedNode::NNType::CLOSURE :
             value = ""; break;
     }
 }
@@ -94,7 +94,7 @@ void AsJson::process(const NamedNode* nn) {
     value.push_back({"NamedNode",
                     {
                         {"storing_strategy", nn->nssType()},
-                        {"type", toStr(nn->_type)},
+                        {"type", NamedNode::typeToStr(nn->_type)},
                         {"title", nn->getName()},
                         {"subs", listRep->value}
                     } });
@@ -147,7 +147,7 @@ void AsMlObj::process(const ListStorage* ls) {
 
 void AsMlObj::process(const NamedNode* nn) {
     std::stringstream body;
-    body << nn->getNumber() << ". " << toStr(nn->_type)
+    body << nn->getNumber() << ". " << NamedNode::typeToStr(nn->_type)
          << " \"" << nn->getName() << "\".";
     buffer.push_back(
         MlObj("named_node", nn->getNumber(), body.str()).toJson()

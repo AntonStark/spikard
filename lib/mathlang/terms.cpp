@@ -8,7 +8,7 @@ bool Map::operator<(const Map& other) const {
     if (_type != other._type)
         return (_type < other._type);
     else
-        return (this->Named::operator<)(other);
+        return (this->NamedTerm::operator<)(other);
 }
 
 std::string ParenSymbol::print() const {
@@ -88,7 +88,7 @@ bool ParenSymbol::operator==(const ParenSymbol& other) const {
 
 bool NamedTerm::comp(const Terms* other) const {
     if (auto namedOther = dynamic_cast<const NamedTerm*>(other))
-        return (getType() == namedOther->getType()
+        return (*getType() == *namedOther->getType()
                 && getName() == namedOther->getName());
     else
         return false;
