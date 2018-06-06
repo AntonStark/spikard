@@ -14,24 +14,24 @@
 
 using json = nlohmann::json;
 
-class AbstrDef;
+class Definition;
 class NameSpaceIndex
 /// Инкапсулирует работу с именами: имя-сущность, уникальность, доступ
 {
 public:
     enum class NameTy {SYM, VAR, MT};
 private:
-    std::map<std::string, std::pair<NameTy, std::set<AbstrDef*> > > data;
+    std::map<std::string, std::pair<NameTy, std::set<Definition*> > > data;
 
     class name_doubling;
     class no_name;
 public:
-    void add(NameTy type, const std::string& name, AbstrDef* where);
+    void add(NameTy type, const std::string& name, Definition* where);
     bool isThatType(const std::string& name, const NameTy& type) const;
     bool isSomeType(const std::string& name) const;
 
     std::set<std::string> getNames(NameTy type) const;
-    std::set<AbstrDef*> get(NameTy type, const std::string& name) const;
+    std::set<Definition*> get(NameTy type, const std::string& name) const;
 };
 typedef NameSpaceIndex::NameTy NameTy;
 
@@ -64,9 +64,9 @@ class NameStoringStrategy
 {
 public:
     virtual const NameSpaceIndex& index() const = 0;
-    friend class AbstrDef;
+    friend class Definition;
     virtual void registerName(
-            NameTy type, const std::string& name, AbstrDef* where) = 0;
+            NameTy type, const std::string& name, Definition* where) = 0;
 
     virtual std::string printType() const = 0;
 };
@@ -112,7 +112,7 @@ public:
 
     virtual const NameSpaceIndex& index() const
     { return _naming->index(); }
-    virtual void registerName(NameTy type, const std::string& name, AbstrDef* where)
+    virtual void registerName(NameTy type, const std::string& name, Definition* where)
     { _naming->registerName(type, name, where); }
 
     virtual std::string print(Representation* r, bool incremental = true) const override
@@ -137,7 +137,7 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string &name, AbstrDef* where) override
+    void registerName(NameTy type, const std::string &name, Definition* where) override
     { atTheEnd.add(type, name, where); }
     std::string printType() const override { return "Hidden"; }
 };
@@ -158,7 +158,7 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string& name, AbstrDef* where) override {
+    void registerName(NameTy type, const std::string& name, Definition* where) override {
         _parent->registerName(type, name, where);
         atTheEnd.add(type, name, where);
     }

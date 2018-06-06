@@ -96,10 +96,19 @@ public:
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
 
+struct ArgForm
+{
+    bool prefix;
+    bool top;
+    bool bottom;
+    size_t tail;
+};
+
 class Map : public NamedTerm
 {
 public:
     typedef MathType::MTVector MTVector;
+    class argN_oper_error;
 private:
     MapMT _type;
 public:
@@ -120,6 +129,10 @@ public:
 
     Terms* clone() const override { return new Map(*this); }
     std::string print() const { return getName(); }
+
+    static std::string extractName(std::string symDefStr);
+    static ArgForm parseForm(std::string symDefStr);
+    static Map* create(std::string symForm, MTVector argT, const MathType* retT);
 };
 
 class UnaryOperation : public Map
@@ -130,32 +143,26 @@ private:
     Form _form;
 public:
     UnaryOperation(std::string name, Form form,
-                   const MathType* argT, const MathType* retT)
-        : Map(name, {argT}, retT), _form(form) {}
+                   MTVector argT, const MathType* retT);
     Terms* clone() const override { return new UnaryOperation(*this); }
 };
 
 class BinaryOperation : public Map
 {
 public:
-    enum class Form {BOT_TOP, BOT_MID, TOP_MID, INFIX, FOLLOW};
+    enum class Form {PREF_TOP, PREF_BOT, BOT_TOP, BOT_MID, TOP_MID, INFIX, FOLLOW};
 private:
     Form _form;
 public:
     BinaryOperation(std::string name, Form form,
-                    const MathType* arg1, const MathType* arg2,
-                    const MathType* ret)
-        : Map(name, {arg1, arg2}, ret), _form(form) {}
+                    MTVector argT, const MathType* ret);
     Terms* clone() const override { return new BinaryOperation(*this); }
 };
 
 class TernaryOperation : public Map
 {
 public:
-    TernaryOperation(std::string name, const MathType* arg1,
-                     const MathType* arg2, const MathType* arg3,
-                     const MathType* ret)
-        : Map(name, {arg1, arg2, arg3}, ret) {}
+    TernaryOperation(std::string name, MTVector argT, const MathType* ret);
     Terms* clone() const override { return new TernaryOperation(*this); }
 };
 

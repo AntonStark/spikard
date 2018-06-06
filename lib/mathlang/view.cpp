@@ -41,8 +41,8 @@ void PlainText::process(const DefVar* dv)
 
 void PlainText::process(const DefSym* ds) {
     std::stringstream buf;
-    buf << "Введен символ " << ds->getName() << " : ";
-    auto argTypes = ds->getArgs()->getNames();
+    buf << "Введен символ " << ds->get().getName() << " : ";
+    auto argTypes = ds->get().getArgs()->getNames();
     if (!argTypes.empty())
     {
         buf << argTypes.front();
@@ -50,7 +50,7 @@ void PlainText::process(const DefSym* ds) {
         for (auto it = std::next(argTypes.begin()); it != e; ++it)
             buf << " x " << *it;
     }
-    buf << " -> " << ds->getType()->getName() << ".";
+    buf << " -> " << ds->get().getType()->getName() << ".";
     value = buf.str();
 }
 
@@ -115,11 +115,12 @@ void AsJson::process(const DefVar* dv) {
 }
 
 void AsJson::process(const DefSym* ds) {
+    auto map = ds->get();
     value.push_back({"DefSym",
                     {
-                        {"name", ds->getName()},
-                        {"argT", ds->getArgs()->getNames()},
-                        {"retT", ds->getType()->getName()}
+                        {"name", map.getName()},
+                        {"argT", map.getArgs()->getNames()},
+                        {"retT", map.getType()->getName()}
                     } });
 }
 
@@ -170,8 +171,9 @@ void AsMlObj::process(const DefVar* dv) {
 
 void AsMlObj::process(const DefSym* ds) {
     std::stringstream out;
-    out << ds->getName() << " : ";
-    auto argTypes = ds->getArgs()->getNames();
+    auto map = ds->get();
+    out << map.getName() << " : ";
+    auto argTypes = map.getArgs()->getNames();
     if (!argTypes.empty())
     {
         out << argTypes.front();
@@ -179,7 +181,7 @@ void AsMlObj::process(const DefSym* ds) {
         for (auto it = next(argTypes.begin()); it != e; ++it)
             out << "\\times " << *it;
     }
-    out << "\\rightarrow " << ds->getType()->getName();
+    out << "\\rightarrow " << map.getType()->getName();
     buffer.push_back(
         MlObj("def_sym", ds->getNumber(), out.str()).toJson()
     );

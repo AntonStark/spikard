@@ -72,7 +72,7 @@ public:
     //  перегружает интерфейс , но пусть так
     void defType(const std::string& typeName);
     void defVar (const std::string& varName, const std::string& typeName);
-    void defSym (const std::string& symName,
+    void defSym (const std::string& symForm,
                  const std::vector<std::string>& argT, const std::string& retT);
     void addTerm(const std::string& term);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
@@ -121,24 +121,24 @@ public:
     { return (path.empty() ? this : nullptr); }
 };
 
-class AbstrDef : public Item
-/// Это базовый класс определений, отвечает за регистрацию (тип, имя) в Namespace.
+class Definition : public Item
+/// Это базовый класс определений, отвечает за регистрацию (тип, имя, опр-е) в Namespace.
 {
 public:
-    ~AbstrDef() override = default;
-    AbstrDef(const AbstrDef&) = delete;
-    AbstrDef& operator=(const AbstrDef&) = delete;
+    ~Definition() override = default;
+    Definition(const Definition&) = delete;
+    Definition& operator=(const Definition&) = delete;
 
-    AbstrDef(Node* parent, NameTy type, const std::string& name)
+    Definition(Node* parent, NameTy type, const std::string& name)
             : Item(parent) { parent->registerName(type, name, this); }
 };
 
-class DefType : public AbstrDef, public PrimaryMT
+class DefType : public Definition, public PrimaryMT
 {
 private:
     friend class PrimaryNode;
     DefType(PrimaryNode* naming, const std::string& typeName)
-            : AbstrDef(naming, NameTy::MT, typeName), PrimaryMT(typeName) {}
+            : Definition(naming, NameTy::MT, typeName), PrimaryMT(typeName) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefType() override = default;
@@ -149,12 +149,12 @@ public:
     { r->process(this); return r->str(); }
 };
 
-class DefVar : public AbstrDef, public Variable
+class DefVar : public Definition, public Variable
 {
 private:
     friend class PrimaryNode;
     DefVar(PrimaryNode* naming, const std::string& varName, const MathType* mathType)
-            : AbstrDef(naming, NameTy::VAR, varName), Variable(varName, mathType) {}
+            : Definition(naming, NameTy::VAR, varName), Variable(varName, mathType) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefVar() override = default;
@@ -165,19 +165,43 @@ public:
     { r->process(this); return r->str(); }
 };
 
-class DefSym : public AbstrDef, public Map
+/*
+class DefConst : public Definition, public Constant
 {
 private:
     friend class PrimaryNode;
-    DefSym(PrimaryNode* naming, const std::string& symName,
-           const std::vector<const MathType*>& argT, const MathType* retT)
-            : AbstrDef(naming, NameTy::SYM, symName), Map(symName, argT, retT) {}
+    DefConst(PrimaryNode* naming, const std::string& name, const MathType* mathType)
+        : Definition(naming, NameTy::VAR, name), Constant(name, mathType) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
-    ~DefSym() override = default;
+    ~DefConst() override = default;
+    DefConst(const DefConst&) = delete;
+    DefConst& operator=(const DefConst&) = delete;
+
+    std::string print(Representation* r, bool incremental) const override
+    { r->process(this); return r->str(); }
+};
+*/
+
+class DefSym : public Definition
+{
+private:
+    Map* map;
+    friend class PrimaryNode;
+    // вместо symName (напр. \Rightarrow ) теперь symForm (напр. {}\Rightarrow{} или другое обозначение инфиксности)
+    // ещё примеры \sum_^{} \frac{}{} {}+{} A_{} (как  A_i v)
+    // пустой формат (symForm = f) соответствует функциональной форме записи аргументов (арность брать из описания сигнатуры)
+    DefSym(PrimaryNode* naming, const std::string& symForm,
+           const std::vector<const MathType*>& argT, const MathType* retT)
+            : Definition(naming, NameTy::SYM, Map::extractName(symForm)),
+              map(Map::create(symForm, argT, retT)) {}
+    static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
+public:
+    ~DefSym() { delete map; }
     DefSym(const DefSym&) = delete;
     DefSym& operator=(const DefSym&) = delete;
 
+    const Map& get() const { return *map; }
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
 };

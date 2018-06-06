@@ -18,7 +18,7 @@ public:
 };
 
 void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
-                         const std::string& name, AbstrDef* where) {
+                         const std::string& name, Definition* where) {
     if (isSomeType(name)) {
         if (data.at(name).first == type)
             data.at(name).second.insert(where);
@@ -26,7 +26,7 @@ void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
             throw name_doubling(name);
     }
     else
-        data[name] = std::make_pair(type, std::set<AbstrDef*>({where}));
+        data[name] = std::make_pair(type, std::set<Definition*>({where}));
 }
 
 bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const {
@@ -44,7 +44,7 @@ std::set<std::string> NameSpaceIndex::getNames(NameTy type) const {
     return buf;
 }
 
-std::set<AbstrDef*> NameSpaceIndex::get(NameTy type, const std::string& name) const {
+std::set<Definition*> NameSpaceIndex::get(NameTy type, const std::string& name) const {
     if (isThatType(name, type))
         return data.at(name).second;
     throw no_name(name);
