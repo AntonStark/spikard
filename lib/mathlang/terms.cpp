@@ -4,6 +4,12 @@
 
 #include "terms.hpp"
 
+Map::Map(std::string name, MTVector argT, const MathType* retT)
+    : NamedTerm(std::move(name)), _type(argT, retT) {
+    if (argT.size() == 0)
+        throw std::invalid_argument("Нуль-арные отображения запрещены. Используйте константы.");
+}
+
 bool Map::operator<(const Map& other) const {
     if (_type != other._type)
         return (_type < other._type);
@@ -108,8 +114,6 @@ Map* Map::create(std::string symForm, MTVector argT, const MathType* retT) {
     ArgForm af = parseForm(symForm);
     size_t totalArgs = af.prefix + af.top + af.bottom + af.tail;
     switch (totalArgs) {
-        case 0 :
-            throw std::invalid_argument("Нуль-арные отображения запрещены. Используйте константы.");
         case 1 : {
             UnaryOperation::Form uForm;
             if (af.prefix)
@@ -285,11 +289,11 @@ Term::Term(Map f, ParenSymbol::TermsVector args)
     for (const auto& a : args) {
         if (auto var = dynamic_cast<const Variable*>(a))
             free.insert(*var);
-        else {
-            auto term = static_cast<const Term*>(a);
+        else if (auto term = dynamic_cast<const Term*>(a)) {
             for (const auto& v : term->free)
                 free.insert(v);
         }
+        // else a  - это Constant - пропускаем
     }
 }
 

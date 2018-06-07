@@ -19,7 +19,7 @@ class NameSpaceIndex
 /// Инкапсулирует работу с именами: имя-сущность, уникальность, доступ
 {
 public:
-    enum class NameTy {SYM, VAR, MT};
+    enum class NameTy {SYM, CONST, VAR, MT};
 private:
     std::map<std::string, std::pair<NameTy, std::set<Definition*> > > data;
 
@@ -171,6 +171,7 @@ NameStoringStrategy* nssFromStr(std::string str, Node* parent);
 class NamedNode;
 class DefType;
 class DefVar;
+class DefConst;
 class DefSym;
 class TermsBox;
 class Inference;
@@ -187,6 +188,7 @@ public:
     virtual void process(const NamedNode*) = 0;
     virtual void process(const DefType*) = 0;
     virtual void process(const DefVar*) = 0;
+    virtual void process(const DefConst*) = 0;
     virtual void process(const DefSym*) = 0;
     virtual void process(const TermsBox*) = 0;
     virtual void process(const Inference*) = 0;

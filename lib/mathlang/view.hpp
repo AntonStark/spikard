@@ -22,6 +22,7 @@ public:
     void process(const NamedNode* nn) override;
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
+    void process(const DefConst* dc) override;
     void process(const DefSym* ds) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
@@ -38,6 +39,7 @@ public:
     void process(const NamedNode* nn) override;
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
+    void process(const DefConst* dc) override;
     void process(const DefSym* ds) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
@@ -85,6 +87,7 @@ public:
     void process(const NamedNode* nn) override;
     void process(const DefType* dt) override;
     void process(const DefVar* dv) override;
+    void process(const DefConst* dc) override;
     void process(const DefSym* ds) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;

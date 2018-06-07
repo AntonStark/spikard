@@ -16,7 +16,7 @@ Terms* parse(PrimaryNode* where, std::string source);
 class Lexer
 {
 public:
-    enum class Token {S, V, Q, /*T, to,*/
+    enum class Token {S, V, C, Q, /*T, to,*/
                 c, s, lb, rb};
     static std::string tokToStr(const Token& tok);
     Lexer(PrimaryNode* _where);
@@ -37,6 +37,7 @@ public:
         }
     };
     typedef std::list<Lexeme> LexList;
+    static std::string recoverLexList(const LexList& list);
     typedef std::pair<size_t, LexList> PartialResolved;
 private:
     PrimaryNode* where;

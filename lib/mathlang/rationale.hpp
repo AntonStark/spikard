@@ -20,7 +20,8 @@
 using json = nlohmann::json;
 
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name);
-Variable getVar (const NameSpaceIndex& index, const std::string& name);
+Variable getVar  (const NameSpaceIndex& index, const std::string& name);
+Constant getConst(const NameSpaceIndex& index, const std::string& name);
 std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name);
 
 class NamedNode : public Node
@@ -165,13 +166,12 @@ public:
     { r->process(this); return r->str(); }
 };
 
-/*
 class DefConst : public Definition, public Constant
 {
 private:
     friend class PrimaryNode;
     DefConst(PrimaryNode* naming, const std::string& name, const MathType* mathType)
-        : Definition(naming, NameTy::VAR, name), Constant(name, mathType) {}
+        : Definition(naming, NameTy::CONST, name), Constant(name, mathType) {}
     static Hierarchy* fromJson(const json& j, PrimaryNode* parent = nullptr);
 public:
     ~DefConst() override = default;
@@ -181,7 +181,6 @@ public:
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
 };
-*/
 
 class DefSym : public Definition
 {

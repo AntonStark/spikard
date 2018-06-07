@@ -8,6 +8,8 @@ PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name)
 { return dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
 Variable getVar (const NameSpaceIndex& index, const std::string& name)
 { return *dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
+Constant getConst(const NameSpaceIndex& index, const std::string& name)
+{ return *dynamic_cast<DefConst*>(*index.get(NameTy::CONST, name).begin()); }
 std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name) {
     std::set<Map> buf;
     for (const auto& def : index.get(NameTy::SYM, name))
@@ -253,6 +255,8 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, BranchNode* parent) {
             DefType::fromJson(data, pn);
         else if (type == "DefVar")
             DefVar:: fromJson(data, pn);
+        else if (type == "DefConst")
+            DefConst::fromJson(data, pn);
         else if (type == "DefSym")
             DefSym:: fromJson(data, pn);
         else if (type == "TermsBox")
@@ -283,6 +287,11 @@ Hierarchy* DefType::fromJson(const json& j, PrimaryNode* parent)
 Hierarchy* DefVar::fromJson(const json& j, PrimaryNode* parent) {
     auto type = ::getType(parent->index(), j.at("type"));
     return new DefVar(parent, j.at("name"), type);
+}
+
+Hierarchy* DefConst::fromJson(const json& j, PrimaryNode* parent) {
+    auto type = ::getType(parent->index(), j.at("type"));
+    return new DefConst(parent, j.at("name"), type);
 }
 
 Hierarchy* DefSym::fromJson(const json& j, PrimaryNode* parent) {

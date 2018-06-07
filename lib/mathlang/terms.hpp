@@ -40,7 +40,7 @@ private:
     std::string _name;
 public:
     NamedTerm(std::string name) : _name(std::move(name)) {}
-    NamedTerm(const NamedTerm& one) = default;
+    NamedTerm(const NamedTerm& one): _name(one._name) {}
     virtual ~NamedTerm() = default;
 
     bool operator== (const NamedTerm& one) const
@@ -112,10 +112,9 @@ public:
 private:
     MapMT _type;
 public:
-    Map(std::string name, MTVector argT, const MathType* retT)
-        : NamedTerm(std::move(name)), _type(argT, retT) {}
+    Map(std::string name, MTVector argT, const MathType* retT);
     Map(std::string name, size_t arity, const MathType* argT, const MathType* retT)
-        : NamedTerm(std::move(name)), _type({arity, argT}, retT) {}
+        : Map(name, {arity, argT}, retT) {}
     Map(const Map&) = default;
     ~Map() override = default;
 

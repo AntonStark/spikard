@@ -39,6 +39,10 @@ void PlainText::process(const DefVar* dv)
 { value = ("Добавлена переменная " + dv->getName() +
           " типа " + dv->getType()->getName() + "."); }
 
+void PlainText::process(const DefConst* dc)
+{ value = ("Введена константа " + dc->getName() +
+           " типа " + dc->getType()->getName() + "."); }
+
 void PlainText::process(const DefSym* ds) {
     std::stringstream buf;
     buf << "Введен символ " << ds->get().getName() << " : ";
@@ -114,6 +118,14 @@ void AsJson::process(const DefVar* dv) {
                     } });
 }
 
+void AsJson::process(const DefConst* dc) {
+    value.push_back({"DefConst",
+                     {
+                         {"name", dc->getName()},
+                         {"type", dc->getType()->getName()}
+                     } });
+}
+
 void AsJson::process(const DefSym* ds) {
     auto map = ds->get();
     value.push_back({"DefSym",
@@ -166,6 +178,14 @@ void AsMlObj::process(const DefVar* dv) {
     body << dv->getName() << "\\in " << dv->getType()->getName();
     buffer.push_back(
         MlObj("def_var", dv->getNumber(), body.str()).toJson()
+    );
+}
+
+void AsMlObj::process(const DefConst* dc) {
+    std::stringstream body;
+    body << dc->getName() << "\\in " << dc->getType()->getName();
+    buffer.push_back(
+        MlObj("def_const", dc->getNumber(), body.str()).toJson()
     );
 }
 
