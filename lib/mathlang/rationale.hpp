@@ -54,7 +54,6 @@ class PrimaryNode : public NamedNode
 {
 protected:
     friend class BranchNode;
-    friend class TermsBox;
     PrimaryNode(Node* parent, NameStoringStrategy* nss,
                 std::string type, const std::string& title)
         : NamedNode(parent, nss, type, title) {}
@@ -212,8 +211,9 @@ public:
 };
 
 class TermsBox : public PrimaryNode, public Statement
-/// Этот класс представляет аксиомы. Наследование от PrimaryNode из-за
-/// необходиомости хранить имена при кванторах
+/// Этот класс представляет аксиомы.
+/// Наследование от PrimaryNode из-за необходиомости хранить имена при кванторах
+// fixme наследование от PrimaryNode здесь избыточно, ведь от последнего нужен только метод defVar()
 {
 private:
     const Terms* data;
