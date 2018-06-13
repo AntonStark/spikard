@@ -1,0 +1,6 @@
+add_executable(sum sum.cpp)
+target_link_libraries(sum LINK_PUBLIC mathlang)
+add_executable(int int.cpp)
+target_link_libraries(int LINK_PUBLIC mathlang)
+add_executable(lim lim.cpp)
+target_link_libraries(lim LINK_PUBLIC mathlang)
