@@ -16,6 +16,13 @@ int main() {
     lex.input = integ;
     lex.splitToCmds();
     auto res = lex.inputAsCmds;
-
+    std::vector<Parser2::TeXCommand> expected = {"\\int", "_", "a", "^", "b", " ", "\\!", " ",
+                                                 "f", "(", "x", ")", " ", "\\,", " ",
+                                                 "\\mathrm", "{", "d", "}", "x"};
+    bool passed = (res == expected);
+    if (passed)
+        std::cout << "PASSED";
+    else
+        std::cerr << "FAILED";
     return 0;
 }

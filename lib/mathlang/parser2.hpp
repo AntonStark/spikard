@@ -12,17 +12,26 @@
 namespace Parser2
 {
 
-const char texSpecial[6] = {' ', '\\', '_', '^', '{', '}'};
+//const char texSpecial[6] = {' ', '\\', '_', '^', '{', '}'};
 struct TeXCommand
 {
     const std::string _cmd;
+
+    TeXCommand(const char cmd[]) : _cmd(cmd) {}
     TeXCommand(const std::string& cmd) : _cmd(cmd) {}
+    bool operator< (const TeXCommand& two) const
+    { return (_cmd < two._cmd); }
+    bool operator== (const TeXCommand& two) const
+    { return (_cmd == two._cmd); }
 };
+
+extern std::set<TeXCommand> texBrackets;
+extern std::map<TeXCommand, TeXCommand>  pairBrackets;
 
 enum class Token
 {
     N, c, s, lb, rb,    // Name, Comma, Space, Left/RightBracket - в том числе \bigl \Biggl и т.д.
-    lc, rc, t, b        // Left/RightCurve {}, Top ^, Bottom _
+    lc, rc, t, b        // Left/RightCurly {}, Top ^, Bottom _
 };
 
 class LexList;
@@ -55,45 +64,19 @@ public:
 
     std::string input;
     std::vector<TeXCommand> inputAsCmds;
+    std::map<size_t, size_t> bracketInfo;
 
-    void collectWords() {
-        for (auto& s : _where->index().getNames(NameTy::SYM))
-            words[s] = Token::N;
-        for (const auto& s : _where->index().getNames(NameTy::VAR))
-            words[s] = Token::N;
-        for (const auto& s : _where->index().getNames(NameTy::CONST))
-            words[s] = Token::N;
-        words[ Term::qword[Term::QType::FORALL] ] = Token::N;
-        words[ Term::qword[Term::QType::EXISTS] ] = Token::N;
+    void collectWords();
 
-        words[","] = Token::c;  words[" "] = Token::s;
-        words["("] = Token::lb; words[")"] = Token::rb;
-        // todo внести также команды TeX для скобок
-        words["{"] = Token::lc; words["}"] = Token::rc;
-        words["^"] = Token::t;  words["_"] = Token::b;
-    }
-    void splitToCmds() {
-        size_t i = 0;
-        size_t j = 0;
+    void splitToCmds();
 
-        while (i < input.length()) {
-            if (input.at(i) == '\\') {  // команда или экранированный символ
-                /* Лучше оставить на потом все проверки на TeX-валидность
-                 * if (not i+1 < input.length())
-                    throw std::invalid_argument("Строка не может оканчиваться на \\.");*/
-                j = input.find_first_of(texSpecial, i+1);
-                if (j != std::string::npos && j-i == 1)
-                    ++j;                // если экранированный символ, захватываем оба
-            }
-            else
-                j = i+1;
+    std::pair<size_t, std::string> checkForTexErrors();
 
-            inputAsCmds.emplace_back(input.substr(i, j-i));
-            i = j;
-        }
-    }
+    size_t findFirstBracketFrom(size_t pos);
+    bool isOpenBracket(TeXCommand cmd);
+    std::pair<size_t, std::string> findBracketPairs();
 public:
-    Lexer(PrimaryNode* where) : _where(where), localNames(where) {}
+    Lexer(PrimaryNode* where) : _where(where), localNames(where) { }
 };
 
 }
