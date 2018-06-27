@@ -7,6 +7,12 @@
 #include "../rationale.hpp"
 #include "../parser2.hpp"
 
+void print(std::vector<Parser2::TeXCommand> vec, size_t pl) {
+    for (const auto& c : vec)
+        std::cout << (c._cmd.empty() ? "." : c._cmd) << " ";
+    std::cout << "\t\t" << pl << std::endl << std::flush;
+}
+
 int main() {
     BranchNode course("Тестовый");
     course.startLecture("Раз");
@@ -22,6 +28,15 @@ int main() {
     lex.splitToCmds();
     lex.findBracketPairs();
     auto res = lex.bracketInfo;
+
+    std::vector<std::vector<Parser2::TeXCommand> > subExpressions;
+    for (const auto& brackets : res)
+        subExpressions.emplace_back(std::next(lex.inputAsCmds.begin(), brackets.first),
+                                    std::next(lex.inputAsCmds.begin(), brackets.second+1));
+
+    lex.buildLayerStructure(nullptr, 0, lex.inputAsCmds.size());
+    for (const auto& l : lex.layers)
+        print(l->_cmds, l->_placeholders);
 
     return 0;
 }
