@@ -12,7 +12,6 @@
 namespace Parser2
 {
 
-//const char texSpecial[6] = {' ', '\\', '_', '^', '{', '}'};
 struct TeXCommand
 {
     const std::string _cmd;
@@ -29,6 +28,8 @@ struct TeXCommand
 
 extern std::set<TeXCommand> texBrackets;
 extern std::map<TeXCommand, TeXCommand>  pairBrackets;
+
+bool isOpenBracket(TeXCommand cmd);
 
 struct ExpressionLayer
 {
@@ -49,40 +50,27 @@ struct ExpressionLayer
     }
 };
 
-/*enum class Token
-{
-    N, c, s, lb, rb,    // Name, Comma, Space, Left/RightBracket - в том числе \bigl \Biggl и т.д.
-    lc, rc, t, b        // Left/RightCurly {}, Top ^, Bottom _
-};
-
-class LexList;
-struct Lexeme
-{
-    std::string val;
-    Token tok;
-    LexList *top, *bottom;
-
-    Lexeme(std::pair<const std::string, Token> pair)
-        : val(pair.first), tok(pair.second), top(nullptr), bottom(nullptr) {}
-    ~Lexeme() { delete top; delete bottom; }
-    bool operator<(const Lexeme& one) const
-    { return (val != one.val ? val < one.val : tok < one.tok); }
-};
-
-class LexList
-{
-public:
-    std::list<Lexeme> data;
-};*/
+struct CurAnalysisData;
 
 class Lexer
 {
 //private:
 public:
-    const PrimaryNode* _where;
-    Hidden localNames;
-//    std::map<std::string, Token> words;
+    static void splitToCmds(CurAnalysisData* data);
 
+    static size_t findFirstBracketFrom(std::vector<TeXCommand> inputAsCmds, size_t pos);
+    static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
+
+    static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
+
+    static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
+public:
+};
+
+/// Контейнер для вспомогательной информации и
+/// промежуточных результатов разбора выражения
+struct CurAnalysisData
+{
     std::string input;
     std::vector<TeXCommand> inputAsCmds;
     std::map<size_t, size_t> bracketInfo;
@@ -93,22 +81,21 @@ public:
     };
     std::set<ExpressionLayer*, comp_by_val> layers;
 
-//    void collectWords();
+    const PrimaryNode* _where; // fixme кажется, не очень нужно
+    Hidden localNames;
 
-    void splitToCmds();
-
-    size_t findFirstBracketFrom(size_t pos);
-    bool isOpenBracket(TeXCommand cmd);
-    std::pair<size_t, std::string> findBracketPairs();
-
-    std::pair<size_t, std::string> checkForTexErrors();
+    CurAnalysisData(PrimaryNode* where, std::string toParse)
+        : _where(where), localNames(where), input(toParse) {
+        Lexer::splitToCmds(this);
+        Lexer::findBracketPairs(this);
+        Lexer::checkForTexErrors(this);
+        Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
+    }
 
     void copyCmds(std::vector<TeXCommand>& target, size_t begin, size_t end);
-    void buildLayerStructure(ExpressionLayer* parent, size_t i, size_t bound);
-public:
-    Lexer(PrimaryNode* where) : _where(where), localNames(where) { }
 };
 
+CurAnalysisData parse(PrimaryNode* where, std::string toParse);
 }
 
 #endif //SPIKARD_PARSER2_HPP

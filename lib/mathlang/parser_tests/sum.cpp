@@ -10,12 +10,10 @@
 int main() {
     BranchNode course("Тестовый");
     course.startLecture("Раз");
-    Parser2::Lexer lex(course.getSub(1));
-
     std::string sum = "\\sum_{i=0}^\\inf a_i";
-    lex.input = sum;
-    lex.splitToCmds();
-    auto res = lex.inputAsCmds;
+
+    auto data = Parser2::parse(course.getSub(1), sum);
+    auto res = data.inputAsCmds;
     std::vector<Parser2::TeXCommand> expected = {"\\sum", "_", "{", "i", "=", "0", "}",
                                                  "^", "\\inf", " ", "a", "_", "i"};
     bool passed = (res == expected);
