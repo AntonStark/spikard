@@ -31,6 +31,8 @@ extern std::map<TeXCommand, TeXCommand>  pairBrackets;
 
 bool isOpenBracket(TeXCommand cmd);
 
+extern std::set<TeXCommand> unprintable;
+
 struct ExpressionLayer
 {
     std::vector<TeXCommand> _cmds;
@@ -58,10 +60,12 @@ class Lexer
 public:
     static void splitToCmds(CurAnalysisData* data);
 
-    static size_t findFirstBracketFrom(std::vector<TeXCommand> inputAsCmds, size_t pos);
-    static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
-
     static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
+
+    static void eliminateUnprintable(CurAnalysisData* data);
+
+    static size_t findFirstBracketFrom(const std::vector<TeXCommand>& inputAsCmds, size_t pos);
+    static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
 
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
 public:
@@ -73,6 +77,7 @@ struct CurAnalysisData
 {
     std::string input;
     std::vector<TeXCommand> inputAsCmds;
+    std::vector<TeXCommand> inputCmdsPrintable;
     std::map<size_t, size_t> bracketInfo;
     struct comp_by_val {
         bool operator() (ExpressionLayer* const& one,
@@ -81,18 +86,22 @@ struct CurAnalysisData
     };
     std::set<ExpressionLayer*, comp_by_val> layers;
 
-    const PrimaryNode* _where; // fixme кажется, не очень нужно
+    const PrimaryNode* _where;
     Hidden localNames;
 
     CurAnalysisData(PrimaryNode* where, std::string toParse)
         : _where(where), localNames(where), input(toParse) {
         Lexer::splitToCmds(this);
-        Lexer::findBracketPairs(this);
         Lexer::checkForTexErrors(this);
-        Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
+        Lexer::eliminateUnprintable(this);
+        Lexer::findBracketPairs(this); // todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
+        Lexer::buildLayerStructure(this, nullptr, 0, inputCmdsPrintable.size());
     }
 
-    void copyCmds(std::vector<TeXCommand>& target, size_t begin, size_t end);
+    void copyCmds(std::vector<TeXCommand>& target, size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i)
+            target.emplace_back(inputCmdsPrintable.at(i));
+    }
 };
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse);

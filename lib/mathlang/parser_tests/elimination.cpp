@@ -1,5 +1,5 @@
 //
-// Created by anton on 14.06.18.
+// Created by anton on 02.08.18.
 //
 
 #include <string>
@@ -12,10 +12,10 @@ int main() {
     course.startLecture("Раз");
     std::string integ = "\\int_a^b \\! f(x, y) \\, \\mathrm{d}x";
 
-    auto data = Parser2::parse(course.getSub(1), integ);
-    auto res = data.inputAsCmds;
-    std::vector<Parser2::TeXCommand> expected = {"\\int", "_", "a", "^", "b", " ", "\\!", " ",
-                                                 "f", "(", "x", ",", " ", "y", ")", " ", "\\,", " ",
+    Parser2::CurAnalysisData data = Parser2::parse(course.getSub(1), integ);
+    auto res = data.inputCmdsPrintable;
+    std::vector<Parser2::TeXCommand> expected = {"\\int", "_", "a", "^", "b",
+                                                 "f", "(", "x", ",", "y", ")",
                                                  "\\mathrm", "{", "d", "}", "x"};
     bool passed = (res == expected);
     if (passed)

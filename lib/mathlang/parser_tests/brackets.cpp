@@ -23,12 +23,12 @@ int main() {
         "\\delta_2\\cdot\\sum_{k=1}^s\\sum_{l=1}^t"
         "det\\Big(a_{k,i}(v_{l,j})\\Big)\\Bigg)";
 
-    auto data = Parser2::parse(course.getSub(1), brackets);
+    Parser2::CurAnalysisData data = Parser2::parse(course.getSub(1), brackets);
 
     std::vector<std::vector<Parser2::TeXCommand> > subExpressions;
     for (const auto& brackets : data.bracketInfo)
-        subExpressions.emplace_back(std::next(data.inputAsCmds.begin(), brackets.first),
-                                    std::next(data.inputAsCmds.begin(), brackets.second+1));
+        subExpressions.emplace_back(std::next(data.inputCmdsPrintable.begin(), brackets.first),
+                                    std::next(data.inputCmdsPrintable.begin(), brackets.second+1));
 
     for (const auto& l : data.layers)
         print(l->_cmds, l->_placeholders);
