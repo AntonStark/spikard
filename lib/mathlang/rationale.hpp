@@ -70,10 +70,11 @@ public:
     //  2) closure->defType("Logical");
     //  Первый способ выглядит более громоздко, а второй
     //  перегружает интерфейс , но пусть так
-    void defType(const std::string& typeName);
-    void defVar (const std::string& varName, const std::string& typeName);
-    void defSym (const std::string& symForm,
-                 const std::vector<std::string>& argT, const std::string& retT);
+    void defType (const std::string& typeName);
+    void defConst(const std::string& constName, const std::string& typeName);
+    void defVar  (const std::string& varName, const std::string& typeName);
+    void defSym  (const std::string& symForm,
+                  const std::vector<std::string>& argT, const std::string& retT);
     void addTerm(const std::string& term);
     void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec,  const std::string& termVar);

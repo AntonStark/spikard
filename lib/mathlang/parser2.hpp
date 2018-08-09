@@ -56,7 +56,6 @@ struct CurAnalysisData;
 
 class Lexer
 {
-//private:
 public:
     static void splitToCmds(CurAnalysisData* data);
 
@@ -67,8 +66,9 @@ public:
     static size_t findFirstBracketFrom(const std::vector<TeXCommand>& inputAsCmds, size_t pos);
     static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
 
+    static void parseNames(CurAnalysisData* data);
+
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
-public:
 };
 
 /// Контейнер для вспомогательной информации и
@@ -78,6 +78,7 @@ struct CurAnalysisData
     std::string input;
     std::vector<TeXCommand> inputAsCmds;
     std::vector<TeXCommand> inputCmdsPrintable;
+    std::vector<std::vector<TeXCommand> > asNames;
     std::map<size_t, size_t> bracketInfo;
     struct comp_by_val {
         bool operator() (ExpressionLayer* const& one,
@@ -94,6 +95,7 @@ struct CurAnalysisData
         Lexer::splitToCmds(this);
         Lexer::checkForTexErrors(this);
         Lexer::eliminateUnprintable(this);
+        Lexer::parseNames(this);
         Lexer::findBracketPairs(this); // todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
         Lexer::buildLayerStructure(this, nullptr, 0, inputCmdsPrintable.size());
     }

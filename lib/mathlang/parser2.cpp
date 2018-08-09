@@ -16,7 +16,9 @@ bool isOpenBracket(TeXCommand cmd)
 
 std::set<TeXCommand> unprintable = {" ", "\\<space>", "~", "\\nobreakspace",
     "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
-    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad"};
+    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad", "&",
+    "\\left", "\\big", "\\bigl", "\\bigr", "\\middle", "\\Big", "\\Bigl", "\\Bigr",
+    "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
 
 
 void Lexer::splitToCmds(CurAnalysisData* data) {
@@ -88,7 +90,11 @@ std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
     return {size_t(-1), ""};
 }
 
-// Начальный вызов от (nullptr, 0, inputAsCmds.length())
+static void Lexer::parseNames(CurAnalysisData* data) {
+    
+}
+
+// Начальный вызов от (nullptr, 0, inputCmdsPrintable.length())
 // i - абсолютное смещение по строке, bound индекс правой скобки верхнего слоя
 void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound) {
     size_t indentInParent = (parent ? parent->_cmds.size() : 0);

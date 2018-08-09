@@ -43,6 +43,8 @@ NamedNode::NNType NamedNode::nntFromStr(std::string str) {
 
 void PrimaryNode::defType(const std::string& typeName)
 { new DefType(this, typeName); }
+void PrimaryNode::defConst(const std::string& constName, const std::string& typeName)
+{ new DefConst(this, constName, getType(index(), typeName)); }
 void PrimaryNode::defVar(const std::string& varName, const std::string& typeName)
 { new DefVar(this, varName, getType(index(), typeName)); }
 void PrimaryNode::defSym(
