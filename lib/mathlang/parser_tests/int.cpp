@@ -14,8 +14,8 @@ int main() {
 
     auto data = Parser2::parse(course.getSub(1), integ);
     auto res = data.inputAsCmds;
-    std::vector<Parser2::TeXCommand> expected = {"\\int", "_", "a", "^", "b", " ", "\\!", " ",
-                                                 "f", "(", "x", ",", " ", "y", ")", " ", "\\,", " ",
+    std::vector<Parser2::TexCommand> expected = {"\\int", "_", "a", "^", "b",
+                                                 "f", "(", "x", ",", "y", ")",
                                                  "\\mathrm", "{", "d", "}", "x"};
     bool passed = (res == expected);
     if (passed)

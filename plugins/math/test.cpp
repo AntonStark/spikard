@@ -33,7 +33,7 @@ int main(void)
 
     Map gr({">", {&real, &real}, &logical_mt});
     Term t(gr, {&x, &one});
-    const Terms* sdf = new ForallTerm(x, &t);
+    const Terms* sdf = new ForallTerm(&x, &t);
 //    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;
 
     Map ze({"0", {}, &real});

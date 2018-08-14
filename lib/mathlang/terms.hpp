@@ -223,8 +223,8 @@ extern Map forall, exists;
 class ForallTerm : public Term
 {
 public:
-    ForallTerm(Variable var, Terms* term)
-        : Term(forall, {&var, term}) { Term::boundVar(var); }
+    ForallTerm(Variable* var, Terms* term)
+        : Term(forall, {var, term}) { Term::boundVar(*var); }
     ForallTerm(const ForallTerm& one) = default;
     ~ForallTerm() override = default;
 
@@ -237,8 +237,8 @@ public:
 class ExistsTerm : public Term
 {
 public:
-    ExistsTerm(Variable var, Terms* term)
-        : Term(exists, {&var, term}) { boundVar(var); }
+    ExistsTerm(Variable* var, Terms* term)
+        : Term(exists, {var, term}) { boundVar(*var); }
     ExistsTerm(const ExistsTerm& one) = default;
     ~ExistsTerm() override = default;
 

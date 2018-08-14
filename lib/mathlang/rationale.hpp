@@ -19,9 +19,9 @@
 
 using json = nlohmann::json;
 
-PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name);
-Variable getVar  (const NameSpaceIndex& index, const std::string& name);
-Constant getConst(const NameSpaceIndex& index, const std::string& name);
+PrimaryMT*  getType (const NameSpaceIndex& index, const std::string& name);
+Variable*   getVar  (const NameSpaceIndex& index, const std::string& name);
+Constant*   getConst(const NameSpaceIndex& index, const std::string& name);
 std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name);
 
 class NamedNode : public Node

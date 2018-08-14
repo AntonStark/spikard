@@ -13,8 +13,8 @@ int main() {
     std::string integ = "\\int_a^b \\! f(x, y) \\, \\mathrm{d}x";
 
     Parser2::CurAnalysisData data = Parser2::parse(course.getSub(1), integ);
-    auto res = data.inputCmdsPrintable;
-    std::vector<Parser2::TeXCommand> expected = {"\\int", "_", "a", "^", "b",
+    auto res = data.inputAsCmds;
+    std::vector<Parser2::TexCommand> expected = {"\\int", "_", "a", "^", "b",
                                                  "f", "(", "x", ",", "y", ")",
                                                  "\\mathrm", "{", "d", "}", "x"};
     bool passed = (res == expected);

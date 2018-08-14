@@ -7,7 +7,7 @@
 #include "../rationale.hpp"
 #include "../parser2.hpp"
 
-void print(std::vector<Parser2::TeXCommand> vec, size_t pl) {
+void print(std::vector<Parser2::TexCommand> vec, size_t pl) {
     for (const auto& c : vec)
         std::cout << (c._cmd.empty() ? "." : c._cmd) << " ";
     std::cout << "\t\t" << pl << std::endl << std::flush;
@@ -25,10 +25,10 @@ int main() {
 
     Parser2::CurAnalysisData data = Parser2::parse(course.getSub(1), brackets);
 
-    std::vector<std::vector<Parser2::TeXCommand> > subExpressions;
+    std::vector<std::vector<Parser2::TexCommand> > subExpressions;
     for (const auto& brackets : data.bracketInfo)
-        subExpressions.emplace_back(std::next(data.inputCmdsPrintable.begin(), brackets.first),
-                                    std::next(data.inputCmdsPrintable.begin(), brackets.second+1));
+        subExpressions.emplace_back(std::next(data.inputAsCmds.begin(), brackets.first),
+                                    std::next(data.inputAsCmds.begin(), brackets.second+1));
 
     for (const auto& l : data.layers)
         print(l->_cmds, l->_placeholders);

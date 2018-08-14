@@ -4,12 +4,14 @@
 
 #include "rationale.hpp"
 
+// NB вообще можно вводить сущность с тем же именем (перегрузка), если ещё нет идентичной сущности:
+// для типов и переменных (и констант) это означает однозначность определения по имени, для символов - по имени и сигнатуре
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name)
 { return dynamic_cast<DefType*>(*index.get(NameTy::MT, name).begin()); }
-Variable getVar (const NameSpaceIndex& index, const std::string& name)
-{ return *dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
-Constant getConst(const NameSpaceIndex& index, const std::string& name)
-{ return *dynamic_cast<DefConst*>(*index.get(NameTy::CONST, name).begin()); }
+Variable* getVar (const NameSpaceIndex& index, const std::string& name)
+{ return dynamic_cast<DefVar*>(*index.get(NameTy::VAR, name).begin()); }
+Constant* getConst(const NameSpaceIndex& index, const std::string& name)
+{ return dynamic_cast<DefConst*>(*index.get(NameTy::CONST, name).begin()); }
 std::set<Map> getSym(const NameSpaceIndex& index, const std::string& name) {
     std::set<Map> buf;
     for (const auto& def : index.get(NameTy::SYM, name))
@@ -189,7 +191,7 @@ Terms::Path findVarFirstUsage(Variable var, const Term* term) {
 }
 
 const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
-    Variable topQVar = *static_cast<const Variable*>(quantedImpl->arg(1));
+    const auto* topQVar = static_cast<const Variable*>(quantedImpl->arg(1));
     const Terms* topQuanted = quantedImpl->arg(2);
     Terms::Path toInnerConseq;
     const Terms* innerConseq = topQuanted;
@@ -200,7 +202,7 @@ const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
     // quantedImpl должен содержать импликацию внутри
     innerConseq = static_cast<const Term*>(innerConseq)->arg(2);
     toInnerConseq.push(2);
-    const Terms* foralledConseq = new ForallTerm(topQVar, innerConseq->clone());
+    const Terms* foralledConseq = new ForallTerm(topQVar->clone(), innerConseq->clone());
     return topQuanted->replace(toInnerConseq, foralledConseq);
 }
 Terms* application(const Terms* term, const Terms* theorem) {
@@ -238,7 +240,7 @@ Term* generalization(const Terms* toGen, const Terms* x) {
     if (const auto* v = dynamic_cast<const Variable*>(x)) {
         if (const auto* tG = dynamic_cast<const Term*>(toGen)) {
             if (tG->free.find(*v) != tG->free.end())
-                return new ForallTerm(*v, tG->clone());
+                return new ForallTerm(v->clone(), tG->clone());
         }
     }
     else

@@ -33,7 +33,7 @@ int main() {
     lecture->defSym("\\times", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
     auto data = Parser2::parse(lecture, axiom);
     auto res = data.inputAsCmds;
-    std::vector<Parser2::TeXCommand> expected = {
+    std::vector<Parser2::TexCommand> expected = {
         "(", "\\forall", " ", "n", "\\in", " ", "\\mathbb", "{", "N", "}",
         "(", "(", "n", "\\in", " ", "M", ")", "\\Leftrightarrow", " ",
         "(", "\\forall", " ", "x", "\\in", " ", "\\mathbb", "{", "N", "}",

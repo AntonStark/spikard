@@ -194,7 +194,7 @@ Term* Lexer::parseQuantedTerm(Lexer::LexList& list) {
 
     if (list.front().tok != Token::V)
         return nullptr;
-    Variable var = getVar(where->index(), list.front().val);
+    Variable* var = getVar(where->index(), list.front().val);
     list.pop_front();
 
     Terms* term = parseTerms(list);
@@ -264,12 +264,12 @@ Terms* Lexer::parseTerms(Lexer::LexList& list) {
             break;
         }
         case Token::V : {
-            parsed = getVar(where->index(), list.front().val).clone();
+            parsed = getVar(where->index(), list.front().val)->clone();
             list.pop_front();
             break;
         }
         case Token::C : {
-            parsed = getConst(where->index(), list.front().val).clone();
+            parsed = getConst(where->index(), list.front().val)->clone();
             list.pop_front();
             break;
         }

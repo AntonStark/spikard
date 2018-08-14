@@ -359,7 +359,7 @@ Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ForallTerm(
-        *static_cast<Variable*>(arg(1)->clone()),
+        static_cast<Variable*>(arg(1)->clone()),
         termReplaced);
 }
 

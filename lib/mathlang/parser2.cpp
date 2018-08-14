@@ -6,23 +6,24 @@
 
 namespace Parser2 {
 
-std::set<TeXCommand> texBrackets =
+std::set<TexCommand> texBrackets =
     {"{", "}", "(", ")", "[", "]"};
-std::map<TeXCommand, TeXCommand>  pairBrackets =
+std::map<TexCommand, TexCommand>  pairBrackets =
     { {"{", "}"}, {"(", ")"}, {"[", "]"} };
 
-bool isOpenBracket(TeXCommand cmd)
+bool isOpenBracket(TexCommand cmd)
 { return (pairBrackets.find(cmd) != pairBrackets.end()); }
 
-std::set<TeXCommand> unprintable = {" ", "\\<space>", "~", "\\nobreakspace",
+std::set<TexCommand> unprintable = {" ", "\\<space>", "~", "\\nobreakspace",
     "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
     "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad", "&",
     "\\left", "\\big", "\\bigl", "\\bigr", "\\middle", "\\Big", "\\Bigl", "\\Bigr",
     "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
 
 
-void Lexer::splitToCmds(CurAnalysisData* data) {
+TexSequence Lexer::splitToCmds(CurAnalysisData* data) {
     auto input = data->input;
+    std::vector<TexCommand> buffer;
     size_t j, i = 0;
     while (i < input.length()) {
         j = i + 1;
@@ -33,9 +34,11 @@ void Lexer::splitToCmds(CurAnalysisData* data) {
                 ++j;
         }
 
-        data->inputAsCmds.emplace_back(input.substr(i, j-i));
+        buffer.emplace_back(input.substr(i, j-i));
         i = j;
     }
+    buffer = Lexer::eliminateUnprintable(buffer);
+    return buffer;
 }
 
 std::pair<size_t, std::string> Lexer::checkForTexErrors(CurAnalysisData* data) {
@@ -52,13 +55,15 @@ std::pair<size_t, std::string> Lexer::checkForTexErrors(CurAnalysisData* data) {
     return {size_t(-1), ""};
 }
 
-void Lexer::eliminateUnprintable(CurAnalysisData* data) {
-    for (const auto& c : data->inputAsCmds)
+TexSequence Lexer::eliminateUnprintable(TexSequence& inputAsCmds) {
+    TexSequence buffer;
+    for (const auto& c : inputAsCmds)
         if (unprintable.find(c) == unprintable.end())
-            data->inputCmdsPrintable.push_back(c);
+            buffer.push_back(c);
+    return buffer;
 }
 
-size_t Lexer::findFirstBracketFrom(const std::vector<TeXCommand>& inputAsCmds, size_t pos) {
+size_t Lexer::findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos) {
     while (pos < inputAsCmds.size())
         if (texBrackets.find(inputAsCmds[pos]) != texBrackets.end())
             return pos;
@@ -68,11 +73,11 @@ size_t Lexer::findFirstBracketFrom(const std::vector<TeXCommand>& inputAsCmds, s
 }
 
 std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
-    std::stack<std::pair<TeXCommand, size_t> > opened;
-    const std::vector<TeXCommand>& inputCmdsPrintable = data->inputCmdsPrintable;
+    std::stack<std::pair<TexCommand, size_t> > opened;
+    const TexSequence& inputAsCmds = data->inputAsCmds;
     size_t i = 0;
-    while ((i = findFirstBracketFrom(inputCmdsPrintable, i)) != size_t(-1)) {
-        TeXCommand iCmd = inputCmdsPrintable[i];
+    while ((i = findFirstBracketFrom(inputAsCmds, i)) != size_t(-1)) {
+        TexCommand iCmd = inputAsCmds[i];
         if (isOpenBracket(iCmd))
             opened.emplace(iCmd, i);
         else if (iCmd == pairBrackets.at(opened.top().first)) {
@@ -90,7 +95,7 @@ std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
     return {size_t(-1), ""};
 }
 
-static void Lexer::parseNames(CurAnalysisData* data) {
+void Lexer::parseNames(CurAnalysisData* data) {
     
 }
 
@@ -114,6 +119,28 @@ void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, 
     }                                           // если такой нет вовсе или она в следующей вложенности - идём до конца
     data->copyCmds(cur->_cmds, i, bound);
     data->layers.insert(cur);
+}
+
+inline void insertSet(std::set<std::string>& target, const std::set<std::string>& set) {
+    for (const auto& v : set)
+        target.insert(v);
+}
+std::set<std::string> getAllNames(const NameSpaceIndex& index) {
+    std::set<std::string> buf;
+    insertSet(buf, index.getNames(NameSpaceIndex::NameTy::MT));
+    insertSet(buf, index.getNames(NameSpaceIndex::NameTy::SYM));
+    insertSet(buf, index.getNames(NameSpaceIndex::NameTy::VAR));
+    insertSet(buf, index.getNames(NameSpaceIndex::NameTy::CONST));
+    return buf;
+}
+CurAnalysisData::CurAnalysisData(PrimaryNode* where, std::string toParse)
+    : _where(where), localNames(where), namesDefined(getAllNames(localNames.index())),
+      input(std::move(toParse)) {
+    inputAsCmds = Lexer::splitToCmds(this);
+    Lexer::checkForTexErrors(this);
+    Lexer::parseNames(this);
+    Lexer::findBracketPairs(this); // todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
+    Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
 }
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse)

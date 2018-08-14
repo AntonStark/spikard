@@ -6,36 +6,38 @@
 #define SPIKARD_PARSER2_HPP
 
 #include <string>
-
+#include <utility>
 #include "rationale.hpp"
 
 namespace Parser2
 {
 
-struct TeXCommand
+struct TexCommand
 {
     const std::string _cmd;
 
-    TeXCommand(const char cmd[]) : _cmd(cmd) {}
-    TeXCommand(const std::string& cmd) : _cmd(cmd) {}
-    TeXCommand(const TeXCommand& one) = default;
+    TexCommand(const char cmd[]) : _cmd(cmd) {}
+    TexCommand(std::string cmd) : _cmd(std::move(cmd)) {}
+    TexCommand(const TexCommand& one) = default;
 
-    bool operator< (const TeXCommand& two) const
+    bool operator< (const TexCommand& two) const
     { return (_cmd < two._cmd); }
-    bool operator== (const TeXCommand& two) const
+    bool operator== (const TexCommand& two) const
     { return (_cmd == two._cmd); }
 };
 
-extern std::set<TeXCommand> texBrackets;
-extern std::map<TeXCommand, TeXCommand>  pairBrackets;
+extern std::set<TexCommand> texBrackets;
+extern std::map<TexCommand, TexCommand>  pairBrackets;
 
-bool isOpenBracket(TeXCommand cmd);
+bool isOpenBracket(TexCommand cmd);
 
-extern std::set<TeXCommand> unprintable;
+extern std::set<TexCommand> unprintable;
+
+typedef std::vector<TexCommand> TexSequence;
 
 struct ExpressionLayer
 {
-    std::vector<TeXCommand> _cmds;
+    TexSequence _cmds;
     std::pair<ExpressionLayer*, size_t> _parent;
     unsigned _placeholders;
 
@@ -57,13 +59,13 @@ struct CurAnalysisData;
 class Lexer
 {
 public:
-    static void splitToCmds(CurAnalysisData* data);
+    static TexSequence splitToCmds(CurAnalysisData* data);
 
     static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
 
-    static void eliminateUnprintable(CurAnalysisData* data);
+    static TexSequence eliminateUnprintable(TexSequence& inputAsCmds);
 
-    static size_t findFirstBracketFrom(const std::vector<TeXCommand>& inputAsCmds, size_t pos);
+    static size_t findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos);
     static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
 
     static void parseNames(CurAnalysisData* data);
@@ -76,9 +78,8 @@ public:
 struct CurAnalysisData
 {
     std::string input;
-    std::vector<TeXCommand> inputAsCmds;
-    std::vector<TeXCommand> inputCmdsPrintable;
-    std::vector<std::vector<TeXCommand> > asNames;
+    TexSequence inputAsCmds;
+    std::vector<TexSequence> asNames;
     std::map<size_t, size_t> bracketInfo;
     struct comp_by_val {
         bool operator() (ExpressionLayer* const& one,
@@ -89,20 +90,13 @@ struct CurAnalysisData
 
     const PrimaryNode* _where;
     Hidden localNames;
+    std::set<std::string> namesDefined;
 
-    CurAnalysisData(PrimaryNode* where, std::string toParse)
-        : _where(where), localNames(where), input(toParse) {
-        Lexer::splitToCmds(this);
-        Lexer::checkForTexErrors(this);
-        Lexer::eliminateUnprintable(this);
-        Lexer::parseNames(this);
-        Lexer::findBracketPairs(this); // todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
-        Lexer::buildLayerStructure(this, nullptr, 0, inputCmdsPrintable.size());
-    }
+    CurAnalysisData(PrimaryNode* where, std::string toParse);
 
-    void copyCmds(std::vector<TeXCommand>& target, size_t begin, size_t end) {
+    void copyCmds(TexSequence& target, size_t begin, size_t end) {
         for (size_t i = begin; i < end; ++i)
-            target.emplace_back(inputCmdsPrintable.at(i));
+            target.emplace_back(inputAsCmds.at(i));
     }
 };
 
