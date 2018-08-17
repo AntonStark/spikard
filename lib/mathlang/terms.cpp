@@ -375,6 +375,6 @@ Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const {
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ExistsTerm(
-        *static_cast<Variable*>(arg(1)->clone()),
+        static_cast<Variable*>(arg(1)->clone()),
         termReplaced);
 }

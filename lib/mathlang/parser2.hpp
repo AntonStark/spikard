@@ -14,24 +14,24 @@ namespace Parser2
 
 struct TexCommand
 {
-    const std::string _cmd;
+    std::string _cmd;
 
     TexCommand(const char cmd[]) : _cmd(cmd) {}
     TexCommand(std::string cmd) : _cmd(std::move(cmd)) {}
-    TexCommand(const TexCommand& one) = default;
+    TexCommand(const TexCommand&) = default;
 
     bool operator< (const TexCommand& two) const
     { return (_cmd < two._cmd); }
     bool operator== (const TexCommand& two) const
     { return (_cmd == two._cmd); }
+    bool operator!= (const TexCommand& two) const
+    { return !(_cmd == two._cmd); }
 };
 
 extern std::set<TexCommand> texBrackets;
-extern std::map<TexCommand, TexCommand>  pairBrackets;
-
-bool isOpenBracket(TexCommand cmd);
-
-extern std::set<TexCommand> unprintable;
+extern std::map<TexCommand, TexCommand> pairBrackets;
+extern std::set<TexCommand> blankCommands;
+extern std::set<TexCommand> bracketSizeCommands;
 
 typedef std::vector<TexCommand> TexSequence;
 
@@ -63,11 +63,13 @@ public:
 
     static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
 
-    static TexSequence eliminateUnprintable(TexSequence& inputAsCmds);
+    static TexSequence eliminateBracketSizeCommands(const TexSequence& texSequence);
+    static TexSequence normalizeBlank(const TexSequence& texSequence);
 
     static size_t findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos);
     static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
 
+    static TexSequence readOneSymbolsCommands(const TexSequence& texSequence);
     static void parseNames(CurAnalysisData* data);
 
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
@@ -101,6 +103,7 @@ struct CurAnalysisData
 };
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse);
+
 }
 
 #endif //SPIKARD_PARSER2_HPP

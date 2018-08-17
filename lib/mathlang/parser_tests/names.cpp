@@ -10,11 +10,10 @@
 int main() {
     BranchNode course("Тестовый");
     course.startLecture("Раз");
-    std::string axiom = "(\\forall n\\in \\mathbb{N}"
-        "((n\\in M)\\Leftrightarrow "
-        "(\\forall x\\in \\mathbb{N}"
-        "(((1+x)** n)\\ge (1+(n\\times x)))"
-        ")))";
+    std::string axiom = R"((\forall n\in \mathbb{N})"
+                        R"(((n\in M)\Leftrightarrow)"
+                        R"((\forall x\in \mathbb{N})"
+                        R"((((1+x)** n)\ge (1+(n\times x)))))))";
 
     PrimaryNode* lecture = course.getSub(1);
     lecture->defType("any");
@@ -35,11 +34,10 @@ int main() {
     auto res = data.inputAsCmds;
     std::vector<Parser2::TexCommand> expected = {
         "(", "\\forall", " ", "n", "\\in", " ", "\\mathbb", "{", "N", "}",
-        "(", "(", "n", "\\in", " ", "M", ")", "\\Leftrightarrow", " ",
+        "(", "(", "n", "\\in", " ", "M", ")", "\\Leftrightarrow",
         "(", "\\forall", " ", "x", "\\in", " ", "\\mathbb", "{", "N", "}",
         "(", "(", "(", "1", "+", "x", ")", "*", "*", " ", "n", ")",
-            "\\ge", " ", "(", "1", "+", "(", "n", "\\times", " ", "x", ")", ")", ")",
-        ")", ")", ")"};
+            "\\ge", " ", "(", "1", "+", "(", "n", "\\times", " ", "x", ")", ")", ")", ")", ")", ")"};
     bool passed = (res == expected);
     if (passed)
         std::cout << "PASSED";

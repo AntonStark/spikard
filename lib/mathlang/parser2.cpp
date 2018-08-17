@@ -11,19 +11,18 @@ std::set<TexCommand> texBrackets =
 std::map<TexCommand, TexCommand>  pairBrackets =
     { {"{", "}"}, {"(", ")"}, {"[", "]"} };
 
-bool isOpenBracket(TexCommand cmd)
-{ return (pairBrackets.find(cmd) != pairBrackets.end()); }
-
-std::set<TexCommand> unprintable = {" ", "\\<space>", "~", "\\nobreakspace",
+// fixme "&" вовсе не отступ, но его тоже можно заменять пробелом при работе
+std::set<TexCommand> blankCommands = {" ", "\\<space>", "~", "\\nobreakspace",
     "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
-    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad", "&",
-    "\\left", "\\big", "\\bigl", "\\bigr", "\\middle", "\\Big", "\\Bigl", "\\Bigr",
-    "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
+    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad", "&"};
+
+std::set<TexCommand> bracketSizeCommands = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
+    "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
 
 
 TexSequence Lexer::splitToCmds(CurAnalysisData* data) {
     auto input = data->input;
-    std::vector<TexCommand> buffer;
+    TexSequence buffer;
     size_t j, i = 0;
     while (i < input.length()) {
         j = i + 1;
@@ -37,7 +36,8 @@ TexSequence Lexer::splitToCmds(CurAnalysisData* data) {
         buffer.emplace_back(input.substr(i, j-i));
         i = j;
     }
-    buffer = Lexer::eliminateUnprintable(buffer);
+    buffer = Lexer::normalizeBlank(buffer);
+    buffer = Lexer::eliminateBracketSizeCommands(buffer);
     return buffer;
 }
 
@@ -55,11 +55,26 @@ std::pair<size_t, std::string> Lexer::checkForTexErrors(CurAnalysisData* data) {
     return {size_t(-1), ""};
 }
 
-TexSequence Lexer::eliminateUnprintable(TexSequence& inputAsCmds) {
+TexSequence Lexer::eliminateBracketSizeCommands(const TexSequence& texSequence) {
+    auto isBracketSizeCmd = [] (const TexCommand& c) -> bool
+    { return (bracketSizeCommands.find(c) != bracketSizeCommands.end()); };
     TexSequence buffer;
-    for (const auto& c : inputAsCmds)
-        if (unprintable.find(c) == unprintable.end())
+    for (const auto& c : texSequence)
+        if (!isBracketSizeCmd(c))
             buffer.push_back(c);
+    return buffer;
+}
+
+TexSequence Lexer::normalizeBlank(const TexSequence& texSequence) {
+    TexCommand space(" ");
+    auto isBlank = [] (const TexCommand& c) -> bool
+                        { return (blankCommands.find(c) != blankCommands.end()); };
+    TexSequence buffer;
+    for (const auto& c : texSequence)
+        if (!isBlank(c))
+            buffer.push_back(c);
+        else if (buffer.back() != space)
+            buffer.push_back(space);
     return buffer;
 }
 
@@ -73,6 +88,8 @@ size_t Lexer::findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos) {
 }
 
 std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
+    auto isOpenBracket = [] (const TexCommand& c) -> bool
+    { return (pairBrackets.find(c) != pairBrackets.end()); };
     std::stack<std::pair<TexCommand, size_t> > opened;
     const TexSequence& inputAsCmds = data->inputAsCmds;
     size_t i = 0;
@@ -93,6 +110,10 @@ std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
         return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + opened.top().first._cmd +
             " (" + std::to_string(opened.top().second) + "-ая TeX-команда)."};
     return {size_t(-1), ""};
+}
+
+TexSequence Lexer::readOneSymbolsCommands(const TexSequence& texSequence) {
+
 }
 
 void Lexer::parseNames(CurAnalysisData* data) {
