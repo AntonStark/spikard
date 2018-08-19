@@ -63,13 +63,14 @@ public:
 
     static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
 
+    static TexSequence eliminateSpaces(const TexSequence& texSequence);
     static TexSequence eliminateBracketSizeCommands(const TexSequence& texSequence);
     static TexSequence normalizeBlank(const TexSequence& texSequence);
 
     static size_t findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos);
     static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
 
-    static TexSequence readOneSymbolsCommands(const TexSequence& texSequence);
+    static TexSequence readOneSymbolsCommands(CurAnalysisData* data, size_t from);
     static void parseNames(CurAnalysisData* data);
 
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);

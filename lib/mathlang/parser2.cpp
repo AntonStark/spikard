@@ -36,6 +36,7 @@ TexSequence Lexer::splitToCmds(CurAnalysisData* data) {
         buffer.emplace_back(input.substr(i, j-i));
         i = j;
     }
+    buffer = Lexer::eliminateSpaces(buffer);
     buffer = Lexer::normalizeBlank(buffer);
     buffer = Lexer::eliminateBracketSizeCommands(buffer);
     return buffer;
@@ -53,6 +54,15 @@ std::pair<size_t, std::string> Lexer::checkForTexErrors(CurAnalysisData* data) {
             return {i, "Ошибка: повторный ^."};
     }
     return {size_t(-1), ""};
+}
+
+// todo выделяется несколько функций фильтрации inputAsCmds, потенциал для рефакторинга
+TexSequence Lexer::eliminateSpaces(const Parser2::TexSequence& texSequence) {
+    TexSequence buffer;
+    for (const auto& c : texSequence)
+        if (c != " ")
+            buffer.push_back(c);
+    return buffer;
 }
 
 TexSequence Lexer::eliminateBracketSizeCommands(const TexSequence& texSequence) {
@@ -112,10 +122,39 @@ std::pair<size_t, std::string> Lexer::findBracketPairs(CurAnalysisData* data) {
     return {size_t(-1), ""};
 }
 
-TexSequence Lexer::readOneSymbolsCommands(const TexSequence& texSequence) {
+TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
+    TexSequence source = data->inputAsCmds;
+    auto bracketInfo = data->bracketInfo;
+    size_t i = from;
+    if (source.empty() || i > source.size())
+        return {};
+    ++i; // одну команду берём в любом случае
 
+    TexCommand group("{");
+    std::set<TexCommand> indMod = {"_", "^"};       // идея в том, что если одну форму индекса
+                                                    // встретили, больше её быть не может
+    if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
+    auto searchIndMod = indMod.find(source.at(i));
+    while (searchIndMod != indMod.end()) {
+        ++i;        // съели индекс
+        if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
+        if (source.at(i) != group)
+            ++i;    // съели одиночный индексный аргумент
+        else
+            i = bracketInfo[i]+1;   // переходим на следующую после скобки команду
+        indMod.erase(searchIndMod);
+        if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
+        searchIndMod = indMod.find(source.at(i));
+    }
+    while (i < source.size() && source.at(i) == group)
+        i = bracketInfo[i]+1;
+
+    return TexSequence(std::next(source.begin(), from),
+                       (i >= source.size() ? source.end() : std::next(source.begin(), i)));
 }
 
+// NB новое имя может возникать и в тех случаях когда множество подходящих
+// имён не пусто (A определён, а индекс суммирования A_i)
 void Lexer::parseNames(CurAnalysisData* data) {
     
 }
