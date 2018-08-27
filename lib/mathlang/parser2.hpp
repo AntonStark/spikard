@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by anton on 10.06.18.
 //
@@ -7,6 +9,8 @@
 
 #include <string>
 #include <utility>
+#include <queue>
+
 #include "rationale.hpp"
 
 namespace Parser2
@@ -35,6 +39,19 @@ extern std::set<TexCommand> bracketSizeCommands;
 
 typedef std::vector<TexCommand> TexSequence;
 
+struct PartialResolved
+{
+    typedef std::vector<TexSequence> result_type;
+
+    size_t indent;
+    result_type recognized;
+
+    PartialResolved(size_t indent, result_type recognized)
+        : indent(indent), recognized(std::move(recognized)) {}
+    bool operator< (const PartialResolved& two) const
+    { return (indent < two.indent); }
+};
+
 struct ExpressionLayer
 {
     TexSequence _cmds;
@@ -52,6 +69,10 @@ struct ExpressionLayer
         _cmds.emplace_back("");
         ++_placeholders;
     }
+    void emplaceBack(const TexSequence& from, size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i)
+            _cmds.emplace_back(from.at(i));
+    }
 };
 
 struct CurAnalysisData;
@@ -59,18 +80,19 @@ struct CurAnalysisData;
 class Lexer
 {
 public:
-    static TexSequence splitToCmds(CurAnalysisData* data);
+    static TexSequence splitToCmds(const std::string& input);
 
-    static std::pair<size_t, std::string> checkForTexErrors(CurAnalysisData* data);
+    static std::pair<size_t, std::string> checkForTexErrors(const TexSequence& source);
 
     static TexSequence eliminateSpaces(const TexSequence& texSequence);
     static TexSequence eliminateBracketSizeCommands(const TexSequence& texSequence);
     static TexSequence normalizeBlank(const TexSequence& texSequence);
 
-    static size_t findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos);
-    static std::pair<size_t, std::string> findBracketPairs(CurAnalysisData* data);
+    static std::pair<size_t, std::string> collectBracketInfo(CurAnalysisData* data);
 
     static TexSequence readOneSymbolsCommands(CurAnalysisData* data, size_t from);
+    static std::set<TexSequence> selectSuitableWithIndent(const std::set<TexSequence>& definedTexSeq,
+                                                          size_t indent, const TexSequence& source);
     static void parseNames(CurAnalysisData* data);
 
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
@@ -94,13 +116,9 @@ struct CurAnalysisData
     const PrimaryNode* _where;
     Hidden localNames;
     std::set<std::string> namesDefined;
+    std::set<TexSequence> definedTexSeq;
 
     CurAnalysisData(PrimaryNode* where, std::string toParse);
-
-    void copyCmds(TexSequence& target, size_t begin, size_t end) {
-        for (size_t i = begin; i < end; ++i)
-            target.emplace_back(inputAsCmds.at(i));
-    }
 };
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse);

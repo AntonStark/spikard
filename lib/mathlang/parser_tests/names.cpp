@@ -3,6 +3,7 @@
 //
 
 #include <string>
+#include <algorithm>
 
 #include "../rationale.hpp"
 #include "../parser2.hpp"
@@ -20,6 +21,8 @@ int main() {
     lecture->defType("Logical");
     lecture->defSym("\\forall", {"any", "Logical"}, "Logical");
     lecture->defType("\\mathbb{N}");
+    lecture->defType("\\mathbb{R}");
+    lecture->defType("\\mathbb{N}(");
     lecture->defVar("n", "\\mathbb{N}");
     lecture->defType("Set");
     lecture->defSym("\\in", {"any", "Set"}, "Logical");
@@ -38,6 +41,19 @@ int main() {
         "(", "\\forall", " ", "x", "\\in", " ", "\\mathbb", "{", "N", "}",
         "(", "(", "(", "1", "+", "x", ")", "*", "*", " ", "n", ")",
             "\\ge", " ", "(", "1", "+", "(", "n", "\\times", " ", "x", ")", ")", ")", ")", ")", ")"};
+    /*auto ub = std::upper_bound(data.definedTexSeq.begin(), data.definedTexSeq.end(), Parser2::TexSequence({"\\mathbb"}));
+    auto er = std::equal_range(data.definedTexSeq.begin(), data.definedTexSeq.end(), Parser2::TexSequence({"\\mathbb"}),
+        [] (const Parser2::TexSequence& one, const Parser2::TexSequence& two) -> bool {
+        if (one.size() <= two.size()) {
+            auto twoBeg = Parser2::TexSequence(two.begin(), std::next(two.begin(), one.size()));
+            return (one == twoBeg);
+        }
+        else {
+            auto oneBeg = Parser2::TexSequence(one.begin(), std::next(one.begin(), two.size()));
+            return (oneBeg == two);
+        }
+    }); // fixme эта идея не срабатывает, привет перебор :(*/
+    Parser2::Lexer::parseNames(&data);
     bool passed = (res == expected);
     if (passed)
         std::cout << "PASSED";
