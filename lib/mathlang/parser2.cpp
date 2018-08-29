@@ -6,120 +6,154 @@
 
 namespace Parser2 {
 
-std::set<TexCommand> texBrackets =
-    {"{", "}", "(", ")", "[", "]"};
-std::map<TexCommand, TexCommand>  pairBrackets =
-    { {"{", "}"}, {"(", ")"}, {"[", "]"} };
-
-// fixme "&" вовсе не отступ, но его тоже можно заменять пробелом при работе
-std::set<TexCommand> blankCommands = {" ", "\\<space>", "~", "\\nobreakspace",
+std::set<std::string> blankCommands = {"\\<space>", "~", "\\nobreakspace",
     "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
-    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad", "&"};
+    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad"};
 
-std::set<TexCommand> bracketSizeCommands = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
+std::set<std::string> bracketSizeCommands = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
     "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
 
+std::map<std::string, Token> structureSymbols = {
+    {"^", Token::t}, {"_", Token::b},
+    {"(", Token::l}, {")", Token::r},
+    {"[", Token::ls},{"]", Token::rs},
+    {"{", Token::lc},{"}", Token::rc},
+    {",", Token::c}
+};
 
-TexSequence Lexer::splitToCmds(const std::string& input) {
-    TexSequence buffer;
+std::map<Token, std::string> tokenPrints = {
+    {Token::t, "^"}, {Token::b, "_"},
+    {Token::l, "("}, {Token::r, ")"},
+    {Token::ls,"["}, {Token::rs,"]"},
+    {Token::lc,"{"}, {Token::rc,"}"},
+    {Token::c, ","}
+};
+std::string printToken(const Token& t) {
+    if (t == Token::w)
+        return "";
+    else if (t == Token::s)
+        return " ";
+    else
+        return tokenPrints.at(t);
+}
+
+std::set<char> skippingChars = {' ', '\t', '&'};
+
+bool filterTexCommands(const std::string& cmd) {
+    if (cmd.length() == 1)
+        // опускаем ' ' и другие skippingChars
+        return (skippingChars.find(cmd.at(0)) == skippingChars.end());
+    else
+        // а также размеры скобок
+        return (bracketSizeCommands.find(cmd) == bracketSizeCommands.end());
+}
+
+/// В этой функции только разбор на команды ТеХ-а и соответствующая проверка корректности
+ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexems) {
+    auto isAlphaAt = [input] (size_t j) -> bool
+    { return std::isalpha(static_cast<unsigned char>(input.at(j))); };
+
     size_t j, i = 0;
     while (i < input.length()) {
         j = i + 1;
-        if (input.at(i) == '\\') {  // команда или экранированный символ
-            while (j < input.length() && std::isalpha(static_cast<unsigned char>(input.at(j))))
+        if (input.at(i) == '\\') {      // тогда далее команда или экранированный символ
+            if (j == input.length())    // i-ый символ - конец строки, и строка оканчивается на \ - ошибка
+                return {input.length()-1, "Ошибка: пустая TeX-команда."};
+            while (j < input.length() && isAlphaAt(j))
                 ++j;
-            if (j == i + 1)         // следом за \ идёт не буква, а экранированный символ
+            if (j == i + 1)             // значит следом за \ идёт не буква, а экранированный символ
                 ++j;
         }
 
-        buffer.emplace_back(input.substr(i, j-i));
+        const std::string& cmd = input.substr(i, j-i);
+        auto search = structureSymbols.find(cmd);
+        if (search != structureSymbols.end())
+            lexems.emplace_back(search->second);
+        else if (blankCommands.find(cmd) != blankCommands.end())
+            lexems.emplace_back(Token::s);
+        else if (filterTexCommands(cmd))
+            lexems.emplace_back(i, j-i);
+
         i = j;
     }
-    buffer = Lexer::eliminateSpaces(buffer);
-    buffer = Lexer::normalizeBlank(buffer);
-    buffer = Lexer::eliminateBracketSizeCommands(buffer);
-    return buffer;
+
+    // todo вызвать функцию, строющую вектор границ символов и проверяющую на двойные индексы
+
+    return ParseStatus();
+}
+void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
+    auto appendSet = [&storage] (const std::set<std::string>& set)
+        { storage.insert(set.begin(), set.end()); };
+
+    typedef NameSpaceIndex::NameTy NType;
+    const NameSpaceIndex& index = node->index();
+    for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST})
+        appendSet(index.getNames(t));
+}
+Lexer::Lexer(PrimaryNode* where)
+    : _where(where), localNames(where) {
+    scanNames(where, namesDefined);
+    // todo наполнение definedTexSeq
 }
 
-std::pair<size_t, std::string> Lexer::checkForTexErrors(const TexSequence& source) {
-    /// Проверяемые ошибки: хвостовой \, двойное __ и ^^
-    if (source.back()._cmd == "\\")
-        return {source.size()-1, "Ошибка: пустая TeX-команда."};
-    for (size_t i = 1; i < source.size(); ++i) {
-        if (source.at(i)._cmd == "_" && source.at(i-1)._cmd == "_")
-            return {i, "Ошибка: повторный _."};
-        else if (source.at(i)._cmd == "^" && source.at(i-1)._cmd == "^")
-            return {i, "Ошибка: повторный ^."};
-    }
-    return {size_t(-1), ""};
-}
+ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo) {
+    auto isOpenBracket  = [] (const Token& t) -> bool
+        { return (t == Token::l || t == Token::ls || t == Token::lc); };
+    auto isCloseBracket = [] (const Token& t) -> bool
+    { return (t == Token::r || t == Token::rs || t == Token::rc); };
+    auto isPairBrackets = [] (const Token& open, const Token& some) -> bool {
+        return  (open == Token::l  && some == Token::r   ||
+                 open == Token::ls && some == Token::rs  ||
+                 open == Token::lc && some == Token::rc);
+    };
+    std::stack<std::pair<Token, size_t> > opened;
 
-// todo выделяется несколько функций фильтрации inputAsCmds, потенциал для рефакторинга
-TexSequence Lexer::eliminateSpaces(const TexSequence& texSequence) {
-    TexSequence buffer;
-    for (const auto& c : texSequence)
-        if (c != " ")
-            buffer.push_back(c);
-    return buffer;
-}
-
-TexSequence Lexer::eliminateBracketSizeCommands(const TexSequence& texSequence) {
-    auto isBracketSizeCmd = [] (const TexCommand& c) -> bool
-    { return (bracketSizeCommands.find(c) != bracketSizeCommands.end()); };
-    TexSequence buffer;
-    for (const auto& c : texSequence)
-        if (!isBracketSizeCmd(c))
-            buffer.push_back(c);
-    return buffer;
-}
-
-TexSequence Lexer::normalizeBlank(const TexSequence& texSequence) {
-    TexCommand space(" ");
-    auto isBlank = [] (const TexCommand& c) -> bool
-                        { return (blankCommands.find(c) != blankCommands.end()); };
-    TexSequence buffer;
-    for (const auto& c : texSequence)
-        if (!isBlank(c))
-            buffer.push_back(c);
-        else if (buffer.back() != space)
-            buffer.push_back(space);
-    return buffer;
-}
-
-size_t findFirstBracketFrom(const TexSequence& inputAsCmds, size_t pos) {
-    while (pos < inputAsCmds.size())
-        if (texBrackets.find(inputAsCmds[pos]) != texBrackets.end())
-            return pos;
-        else
-            ++pos;
-    return size_t(-1);
-}
-
-// todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
-std::pair<size_t, std::string> Lexer::collectBracketInfo(CurAnalysisData* data) {
-    auto isOpenBracket = [] (const TexCommand& c) -> bool
-    { return (pairBrackets.find(c) != pairBrackets.end()); };
-    std::stack<std::pair<TexCommand, size_t> > opened;
-    const TexSequence& inputAsCmds = data->inputAsCmds;
     size_t i = 0;
-    while ((i = findFirstBracketFrom(inputAsCmds, i)) != size_t(-1)) {
-        TexCommand iCmd = inputAsCmds[i];
-        if (isOpenBracket(iCmd))
-            opened.emplace(iCmd, i);
-        else if (iCmd == pairBrackets.at(opened.top().first)) {
-            data->bracketInfo.emplace(opened.top().second, i);
-            opened.pop();
+    while (i < lexems.size()) {
+        Token iTok = lexems.at(i)._tok;
+        if (isOpenBracket(iTok))
+            opened.emplace(iTok, i);
+        else if (isCloseBracket(iTok)) {
+            if (isPairBrackets(opened.top().first, iTok)) {
+                bracketInfo.emplace(opened.top().second, i);
+                opened.pop();
+            }
+            else
+                return {i, "Ошибка: закрывающая скобка " + printToken(iTok) +
+                           " (" + std::to_string(i) + "-ая TeX-команда) не имеет пары."};
         }
-        else
-            return {i, "Ошибка: закрывающая скобка " + iCmd._cmd +
-                " (" + std::to_string(i) + "-ая TeX-команда) не имеет пары."};
         ++i;
     }
     if (not opened.empty())
-        return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + opened.top().first._cmd +
+        return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + printToken(opened.top().first) +
             " (" + std::to_string(opened.top().second) + "-ая TeX-команда)."};
-    return {size_t(-1), ""};
+    return ParseStatus();
 }
+
+// Начальный вызов от (nullptr, 0, inputCmdsPrintable.length())
+// i - абсолютное смещение по строке, bound индекс правой скобки верхнего слоя
+// todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
+void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t pos, size_t bound) {
+    size_t indentInParent = (parent ? parent->_cmds.size() : 0);
+    auto cur = new ExpressionLayer(parent, indentInParent);
+
+    auto bracketInfo = data->bracketInfo;
+    auto search = bracketInfo.lower_bound(pos);   // находим ближайшую откр. скобку после pos
+    while (search != bracketInfo.end() && search->first < bound) {
+        size_t j = search->first;
+        cur->emplaceBack(data->inputAsCmds, pos, j + 1);
+
+        buildLayerStructure(data, cur, j+1, search->second);
+        cur->insertPlaceholder();
+
+        pos = search->second;
+        search = bracketInfo.lower_bound(pos);
+    }                                           // если такой нет вовсе или она в следующей вложенности - идём до конца
+    cur->emplaceBack(data->inputAsCmds, pos, bound);
+    data->layers.insert(cur);
+}
+
+/*
 
 TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
     TexSequence source = data->inputAsCmds;
@@ -172,13 +206,14 @@ std::set<TexSequence> Lexer::selectSuitableWithIndent(const std::set<TexSequence
     from = next(from);             // и взять следующий, тогда [from, lb) будет содержать префиксы
     return std::set<TexSequence>(from, lb);
 }
+*/
 
 // NB новое имя может возникать и в тех случаях когда множество подходящих имён
 // не пусто (напр., множество A определёно, а суммирование ведётся по A_i\in A)
 // NB2 ни одно имя не может начинаться со скобки, так что если остановились на скобке - пропускать
 // todo имена не должны содержать пробелов: при определении имени ругаться на пробелы.
 // todo обрабатывать служебные символы: ( ) , . { } _ ^
-void Lexer::parseNames(CurAnalysisData* data) {
+/*void Lexer::parseNames(CurAnalysisData* data) {
     TexSequence source = data->inputAsCmds;
     std::priority_queue<PartialResolved> hypotheses;
     hypotheses.emplace(0, PartialResolved::result_type());
@@ -203,55 +238,25 @@ void Lexer::parseNames(CurAnalysisData* data) {
         }
     }
     auto debug = 1;
+}*/
+
+CurAnalysisData::CurAnalysisData(std::string toParse)
+    : input(std::move(toParse)) {
+    ParseStatus res;
+    res = Lexer::splitTexUnits(input, lexems);
+    if (!res.success)
+        throw std::invalid_argument(res.mess);
+    res = Lexer::collectBracketInfo(lexems, bracketInfo);
+    if (!res.success)
+        throw std::invalid_argument(res.mess);
+
+//    Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
+//    Lexer::parseNames(this);
 }
 
-// Начальный вызов от (nullptr, 0, inputCmdsPrintable.length())
-// i - абсолютное смещение по строке, bound индекс правой скобки верхнего слоя
-void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound) {
-    size_t indentInParent = (parent ? parent->_cmds.size() : 0);
-    auto cur = new ExpressionLayer(parent, indentInParent);
-
-    auto bracketInfo = data->bracketInfo;
-    auto search = bracketInfo.lower_bound(i);   // находим ближайшую откр. скобку после данной позиции
-    while (search != bracketInfo.end() && search->first < bound) {
-        size_t j = search->first;
-        cur->emplaceBack(data->inputAsCmds, i, j + 1);
-
-        buildLayerStructure(data, cur, j+1, search->second);
-        cur->insertPlaceholder();
-
-        i = search->second;
-        search = bracketInfo.lower_bound(i);
-    }                                           // если такой нет вовсе или она в следующей вложенности - идём до конца
-    cur->emplaceBack(data->inputAsCmds, i, bound);
-    data->layers.insert(cur);
+CurAnalysisData parse(PrimaryNode* where, std::string toParse) {
+    Lexer lexer(where); // fixme задействовать для получения списка определённых имён (как послед. команд)
+    return CurAnalysisData(toParse);
 }
-
-std::set<std::string> getAllNames(const NameSpaceIndex& index) {
-    std::set<std::string> buf;
-    auto appendBuf = [&buf] (const std::set<std::string>& set)
-        { buf.insert(set.begin(), set.end()); };
-    appendBuf(index.getNames(NameSpaceIndex::NameTy::MT));
-    appendBuf(index.getNames(NameSpaceIndex::NameTy::SYM));
-    appendBuf(index.getNames(NameSpaceIndex::NameTy::VAR));
-    appendBuf(index.getNames(NameSpaceIndex::NameTy::CONST));
-    return buf;
-}
-CurAnalysisData::CurAnalysisData(PrimaryNode* where, std::string toParse)
-    : _where(where), localNames(where), namesDefined(getAllNames(localNames.index())),
-      input(std::move(toParse)) {
-    std::transform(namesDefined.begin(), namesDefined.end(),
-        std::inserter(definedTexSeq, definedTexSeq.begin()), Lexer::splitToCmds);
-    inputAsCmds = Lexer::splitToCmds(input);
-
-    Lexer::checkForTexErrors(inputAsCmds);
-    Lexer::collectBracketInfo(this);
-
-    Lexer::parseNames(this);
-    Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
-}
-
-CurAnalysisData parse(PrimaryNode* where, std::string toParse)
-{ return CurAnalysisData(where, toParse); }
 
 }

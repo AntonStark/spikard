@@ -6,24 +6,25 @@
 
 #include <string>
 
-#include "../rationale.hpp"
 #include "../parser2.hpp"
 
+using namespace std;
+using namespace Parser2;
 
 TEST(ParserTests, Limit) {
-    BranchNode course("Тестовый");
-    course.startLecture("Раз");
-    std::string lim = R"(\lim_{n\rightarrow\infty} f(x) = \ell)";
+    string source = R"(\lim_{n\rightarrow\infty} f(x) = \ell)";
 
-    auto data = Parser2::parse(course.getSub(1), lim);
-    auto res = data.inputAsCmds;
-    std::vector<Parser2::TexCommand> expected = {"\\lim", "_",
-                         "{", "n", "\\rightarrow", "\\infty", "}",
-                         "f", "(", "x", ")", "=", "\\ell"};
-    ASSERT_EQ(res, expected);
-}
+    LexemeSequence lexems;
+    auto ret = Lexer::splitTexUnits(source, lexems);
 
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    vector<string> result;
+    transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
+              [&source] (const Lexeme& l) -> string {
+                  return (l._tok == Token::w ? source.substr(l._pos, l._len) : printToken(l._tok));
+              });
+    
+    vector<string> expected = {"\\lim", "_",
+                                "{", "n", "\\rightarrow", "\\infty", "}",
+                                "f", "(", "x", ")", "=", "\\ell"};
+    ASSERT_EQ(result, expected);
 }

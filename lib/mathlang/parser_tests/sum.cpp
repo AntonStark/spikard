@@ -6,23 +6,25 @@
 
 #include <string>
 
-#include "../rationale.hpp"
 #include "../parser2.hpp"
 
+using namespace std;
+using namespace Parser2;
 
 TEST(ParserTests, Sum) {
-    BranchNode course("Тестовый");
-    course.startLecture("Раз");
-    std::string sum = R"(\sum_{i=0}^\inf a_i)";
+    std::string source = R"(\sum_{i=0}^\inf a_i)";
 
-    auto data = Parser2::parse(course.getSub(1), sum);
-    auto res = data.inputAsCmds;
-    std::vector<Parser2::TexCommand> expected = {"\\sum", "_", 
-                 "{", "i", "=", "0", "}", "^", "\\inf", "a", "_", "i"};
-    ASSERT_EQ(res, expected);
-}
+    LexemeSequence lexems;
+    auto ret = Lexer::splitTexUnits(source, lexems);
 
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    vector<string> result;
+    transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
+              [&source] (const Lexeme& l) -> string {
+                  return (l._tok == Token::w ? source.substr(l._pos, l._len) : printToken(l._tok));
+              });
+    
+    vector<string> expected = {"\\sum", 
+                       "_", "{", "i", "=", "0", "}", 
+                       "^", "\\inf", "a", "_", "i"};
+    ASSERT_EQ(result, expected);
 }

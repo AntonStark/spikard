@@ -16,32 +16,41 @@
 namespace Parser2
 {
 
-struct TexCommand
+enum class Token {w, t, b, c, s,
+                  l, r, ls, rs, lc, rc};
+std::string printToken(const Token& t);
+
+struct Lexeme
 {
-    std::string _cmd;
+    Token  _tok;
+    size_t _pos;
+    size_t _len;
 
-    TexCommand(const char cmd[]) : _cmd(cmd) {}
-    TexCommand(std::string cmd) : _cmd(std::move(cmd)) {}
-    TexCommand(const TexCommand&) = default;
-
-    bool operator< (const TexCommand& two) const
-    { return (_cmd < two._cmd); }
-    bool operator== (const TexCommand& two) const
-    { return (_cmd == two._cmd); }
-    bool operator!= (const TexCommand& two) const
-    { return !(_cmd == two._cmd); }
+    Lexeme(Token tokNotW) : _tok(tokNotW), _pos(0), _len(0) {}
+    Lexeme(size_t pos, size_t len)
+        : _tok(Token::w), _pos(pos), _len(len) {}
 };
 
-extern std::set<TexCommand> texBrackets;
-extern std::map<TexCommand, TexCommand> pairBrackets;
-extern std::set<TexCommand> blankCommands;
-extern std::set<TexCommand> bracketSizeCommands;
+typedef std::vector<Lexeme> LexemeSequence;
+struct ParseStatus
+{
+    bool success;
+    size_t at;
+    std::string mess;
+    ParseStatus() : success(true), at(size_t(-1)), mess("") {}
+    ParseStatus(size_t at, std::string mess)
+        : success(false), at(at), mess(std::move(mess)) {}
+};
 
-typedef std::vector<TexCommand> TexSequence;
+extern std::set<std::string> blankCommands;
+extern std::set<std::string> bracketSizeCommands;
+extern std::map<std::string, Token> structureSymbols;
+extern std::map<Token, std::string> tokenPrints;
+extern std::set<char> skippingChars;
 
 struct PartialResolved
 {
-    typedef std::vector<TexSequence> result_type;
+    typedef std::vector<LexemeSequence> result_type;
 
     size_t indent;
     result_type recognized;
@@ -54,7 +63,7 @@ struct PartialResolved
 
 struct ExpressionLayer
 {
-    TexSequence _cmds;
+    LexemeSequence _cmds;
     std::pair<ExpressionLayer*, size_t> _parent;
     unsigned _placeholders;
 
@@ -69,7 +78,7 @@ struct ExpressionLayer
         _cmds.emplace_back("");
         ++_placeholders;
     }
-    void emplaceBack(const TexSequence& from, size_t begin, size_t end) {
+    void emplaceBack(const LexemeSequence& from, size_t begin, size_t end) {
         for (size_t i = begin; i < end; ++i)
             _cmds.emplace_back(from.at(i));
     }
@@ -80,22 +89,22 @@ struct CurAnalysisData;
 class Lexer
 {
 public:
-    static TexSequence splitToCmds(const std::string& input);
+    const PrimaryNode* _where;
+    Hidden localNames; //fixme тут что-то странное: в лексере имена местных переменных не содержатся
+    std::set<std::string> namesDefined;
+    std::set<LexemeSequence> definedTexSeq;
 
-    static std::pair<size_t, std::string> checkForTexErrors(const TexSequence& source);
+    Lexer(PrimaryNode* where);
+    static ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
+    static ParseStatus collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo);
 
-    static TexSequence eliminateSpaces(const TexSequence& texSequence);
-    static TexSequence eliminateBracketSizeCommands(const TexSequence& texSequence);
-    static TexSequence normalizeBlank(const TexSequence& texSequence);
+    static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t pos, size_t bound);
 
-    static std::pair<size_t, std::string> collectBracketInfo(CurAnalysisData* data);
-
-    static TexSequence readOneSymbolsCommands(CurAnalysisData* data, size_t from);
+    /*static TexSequence readOneSymbolsCommands(CurAnalysisData* data, size_t from);
     static std::set<TexSequence> selectSuitableWithIndent(const std::set<TexSequence>& definedTexSeq,
-                                                          size_t indent, const TexSequence& source);
-    static void parseNames(CurAnalysisData* data);
+                                                          size_t indent, const TexSequence& source);*/
+//    static void parseNames(CurAnalysisData* data);
 
-    static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t i, size_t bound);
 };
 
 /// Контейнер для вспомогательной информации и
@@ -103,22 +112,21 @@ public:
 struct CurAnalysisData
 {
     std::string input;
-    TexSequence inputAsCmds;
-    std::vector<TexSequence> asNames;
+    LexemeSequence lexems;
     std::map<size_t, size_t> bracketInfo;
+
+    template <typename T>
     struct comp_by_val {
-        bool operator() (ExpressionLayer* const& one,
-                         ExpressionLayer* const& two) const
+        bool operator() (T* const& one, T* const& two) const
         { return (*one < *two); }
     };
-    std::set<ExpressionLayer*, comp_by_val> layers;
+    std::set<ExpressionLayer*, comp_by_val<ExpressionLayer> > layers;
 
-    const PrimaryNode* _where;
-    Hidden localNames;
-    std::set<std::string> namesDefined;
-    std::set<TexSequence> definedTexSeq;
 
-    CurAnalysisData(PrimaryNode* where, std::string toParse);
+    CurAnalysisData(std::string toParse);
+
+    inline std::string getVal(Lexeme& l) const
+    { return (l._tok == Token::w ? input.substr(l._pos, l._len) : printToken(l._tok)); }
 };
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse);
