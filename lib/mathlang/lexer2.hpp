@@ -29,7 +29,7 @@ struct Lexeme
     std::string val;
 
     Lexeme(const std::string& source, Token structureTok) : _tok(structureTok), _pos(0), _len(0),
-        _base(source), val(_base.substr(_pos, _len)) {} //fimxe debug only
+        _base(source), val(_base.substr(_pos, _len)) {} //fixme _base and val for debug only
     Lexeme(const std::string& source, size_t pos, size_t len)
         : _tok(Token::w), _pos(pos), _len(len), _base(source), val(_base.substr(_pos, _len)) {}
     bool operator< (const Lexeme& two) const
@@ -72,7 +72,7 @@ struct ExpressionLayer
 
     ExpressionLayer* insertPlaceholder() {
         size_t indent = lexems.size();
-        lexems.emplace_back("sdfsd", Token::w);
+        lexems.emplace_back("for_debug", Token::w);
         ++_placeholders;
         return new ExpressionLayer(_base, this, indent);
     }

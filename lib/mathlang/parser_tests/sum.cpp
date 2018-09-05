@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "../parser2.hpp"
+#include "../lexer2.hpp"
 
 using namespace std;
 using namespace Parser2;

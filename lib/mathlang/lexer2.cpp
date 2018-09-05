@@ -2,7 +2,7 @@
 // Created by anton on 10.06.18.
 //
 
-#include "parser2.hpp"
+#include "lexer2.hpp"
 
 namespace Parser2 {
 
@@ -156,6 +156,8 @@ void Lexer::buildLayerStructure(CurAnalysisData* data,
     target->emplaceBack(i, enclosingBrackets.second);
     data->layers.insert(target);
 }
+
+
 
 /*
 /// Строим карту границ символов в пределах ExpressionLayer и походу проверка на двойные индексы
