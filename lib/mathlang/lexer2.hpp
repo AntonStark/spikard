@@ -1,11 +1,9 @@
-#include <utility>
-
 //
 // Created by anton on 10.06.18.
 //
 
-#ifndef SPIKARD_PARSER2_HPP
-#define SPIKARD_PARSER2_HPP
+#ifndef SPIKARD_LEXER2_HPP
+#define SPIKARD_LEXER2_HPP
 
 #include <string>
 #include <utility>
@@ -83,21 +81,7 @@ struct ExpressionLayer
     }
 };
 
-struct PartialResolved
-{
-    typedef std::vector<LexemeSequence> result_type;
-
-    size_t indent;
-    result_type recognized;
-
-    PartialResolved(size_t indent, result_type recognized)
-        : indent(indent), recognized(std::move(recognized)) {}
-    bool operator< (const PartialResolved& two) const
-    { return (indent < two.indent); }
-};
-
 struct CurAnalysisData;
-
 class Lexer
 {
 public:
@@ -146,4 +130,4 @@ CurAnalysisData parse(PrimaryNode* where, std::string toParse);
 
 }
 
-#endif //SPIKARD_PARSER2_HPP
+#endif //SPIKARD_LEXER2_HPP
