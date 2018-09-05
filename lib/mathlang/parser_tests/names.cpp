@@ -33,7 +33,7 @@ int main() {
     lecture->defSym("+", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
     lecture->defSym("**", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
     lecture->defSym("\\times", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
-    auto data = Parser2::parse(lecture, axiom);
+    /*auto data = Parser2::parse(lecture, axiom);
     auto res = data.inputAsCmds;
     std::vector<Parser2::TexCommand> expected = {
         "(", "\\forall", " ", "n", "\\in", " ", "\\mathbb", "{", "N", "}",
@@ -48,6 +48,6 @@ int main() {
     else
         std::cerr << "FAILED";
     Parser2::LexemeSequence seq;
-    auto res = Parser2::splitTexUnits(axiom, seq);
+    auto res = Parser2::splitTexUnits(axiom, seq);*/
     return 0;
 }

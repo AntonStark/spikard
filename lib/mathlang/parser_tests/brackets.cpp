@@ -9,12 +9,6 @@
 using namespace std;
 using namespace Parser2;
 
-/*void print(std::vector<Parser2::TexCommand> vec, size_t pl) {
-    for (const auto& c : vec)
-        std::cout << (c._cmd.empty() ? "." : c._cmd) << " ";
-    std::cout << "\t\t" << pl << std::endl << std::flush;
-}*/
-
 int main() {
     std::string brackets = R"(\Bigg(\bigg[)"
                            R"(x\mapsto \delta_1\sum_{k=1}^s)"
@@ -30,12 +24,12 @@ int main() {
             cout << data.getVal(data.lexems.at(i)) << ' ';
         cout << endl;
     }
-
-
-/*
-    for (const auto& l : data.layers)
-        print(l->_cmds, l->_placeholders);
-*/
+    cout << "=======================================" << endl;
+    for (const auto& L : data.layers) {
+        for (const auto& l : L->lexems)
+            std::cout << data.getVal(l) << " ";
+        std::cout << "\t\t" << L->_placeholders << std::endl << std::flush;
+    }
 
     return 0;
 }

@@ -17,27 +17,37 @@ std::map<std::string, Token> structureSymbols = {
     {"^", Token::t}, {"_", Token::b},
     {"(", Token::l}, {")", Token::r},
     {"[", Token::ls},{"]", Token::rs},
-    {"{", Token::lc},{"}", Token::rc},
-    {",", Token::c}
+    {"{", Token::lc},{"}", Token::rc}
 };
 
 std::map<Token, std::string> tokenPrints = {
     {Token::t, "^"}, {Token::b, "_"},
     {Token::l, "("}, {Token::r, ")"},
     {Token::ls,"["}, {Token::rs,"]"},
-    {Token::lc,"{"}, {Token::rc,"}"},
-    {Token::c, ","}
+    {Token::lc,"{"}, {Token::rc,"}"}
 };
 std::string printToken(const Token& t) {
     if (t == Token::w)
         return "";
-    else if (t == Token::s)
-        return " ";
     else
         return tokenPrints.at(t);
 }
 
 std::set<char> skippingChars = {' ', '\t', '&'};
+
+void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
+    typedef NameSpaceIndex::NameTy NType;
+    const NameSpaceIndex& index = node->index();
+    for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST}) {
+        const std::set<std::string>& namesThisType = index.getNames(t);
+        storage.insert(namesThisType.begin(), namesThisType.end());
+    }
+}
+Lexer::Lexer(PrimaryNode* where)
+    : _where(where), localNames(where) {
+    scanNames(where, namesDefined);
+    // todo наполнение definedTexSeq
+}
 
 bool filterTexCommands(const std::string& cmd) {
     if (cmd.length() == 1)
@@ -48,7 +58,7 @@ bool filterTexCommands(const std::string& cmd) {
         return (bracketSizeCommands.find(cmd) == bracketSizeCommands.end());
 }
 
-/// В этой функции только разбор на команды ТеХ-а и соответствующая проверка корректности
+/// В этой функции только разбор на команды ТеХ-а и проверка корректности на \ в конце строки
 ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexems) {
     auto isAlphaAt = [input] (size_t j) -> bool
     { return std::isalpha(static_cast<unsigned char>(input.at(j))); };
@@ -58,7 +68,7 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         j = i + 1;
         if (input.at(i) == '\\') {      // тогда далее команда или экранированный символ
             if (j == input.length())    // i-ый символ - конец строки, и строка оканчивается на \ - ошибка
-                return {input.length()-1, "Ошибка: пустая TeX-команда."};
+                return ParseStatus(input.length()-1, "Ошибка: пустая TeX-команда.");
             while (j < input.length() && isAlphaAt(j))
                 ++j;
             if (j == i + 1)             // значит следом за \ идёт не буква, а экранированный символ
@@ -68,43 +78,25 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         const std::string& cmd = input.substr(i, j-i);
         auto search = structureSymbols.find(cmd);
         if (search != structureSymbols.end())
-            lexems.emplace_back(search->second);
-        else if (blankCommands.find(cmd) != blankCommands.end())
-            lexems.emplace_back(Token::s);
+            lexems.emplace_back(input, search->second);
         else if (filterTexCommands(cmd))
-            lexems.emplace_back(i, j-i);
+            lexems.emplace_back(input, i, j-i);
 
         i = j;
     }
-
-    // todo вызвать функцию, строющую вектор границ символов и проверяющую на двойные индексы
-
     return ParseStatus();
 }
-void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
-    auto appendSet = [&storage] (const std::set<std::string>& set)
-        { storage.insert(set.begin(), set.end()); };
 
-    typedef NameSpaceIndex::NameTy NType;
-    const NameSpaceIndex& index = node->index();
-    for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST})
-        appendSet(index.getNames(t));
-}
-Lexer::Lexer(PrimaryNode* where)
-    : _where(where), localNames(where) {
-    scanNames(where, namesDefined);
-    // todo наполнение definedTexSeq
-}
-
+/// В этой функции строится словарь парных скобок и проверяется правильность их расстановки
 ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo) {
     auto isOpenBracket  = [] (const Token& t) -> bool
         { return (t == Token::l || t == Token::ls || t == Token::lc); };
     auto isCloseBracket = [] (const Token& t) -> bool
     { return (t == Token::r || t == Token::rs || t == Token::rc); };
     auto isPairBrackets = [] (const Token& open, const Token& some) -> bool {
-        return  (open == Token::l  && some == Token::r   ||
-                 open == Token::ls && some == Token::rs  ||
-                 open == Token::lc && some == Token::rc);
+        return ((open == Token::l  && some == Token::r)   ||
+                (open == Token::ls && some == Token::rs)  ||
+                (open == Token::lc && some == Token::rc));
     };
     std::stack<std::pair<Token, size_t> > opened;
 
@@ -130,32 +122,108 @@ ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<siz
     return ParseStatus();
 }
 
-// Начальный вызов от (nullptr, 0, inputCmdsPrintable.length())
-// i - абсолютное смещение по строке, bound индекс правой скобки верхнего слоя
-// todo нужно обрабатывать аргументы функций отдельно: разделять по запятым
-void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* parent, size_t pos, size_t bound) {
-    size_t indentInParent = (parent ? parent->_cmds.size() : 0);
-    auto cur = new ExpressionLayer(parent, indentInParent);
+/// В этой функции строится слоистая структура, описывающая вложенность выражений со скобками
+void Lexer::buildLayerStructure(CurAnalysisData* data,
+    std::pair<size_t, size_t> enclosingBrackets, ExpressionLayer* target) {
+    if (enclosingBrackets.second == 0)
+        enclosingBrackets.second = data->lexems.size();
+    if (target == nullptr) // стартовый вызов
+        target = new ExpressionLayer(data->lexems);
 
-    auto bracketInfo = data->bracketInfo;
-    auto search = bracketInfo.lower_bound(pos);   // находим ближайшую откр. скобку после pos
-    while (search != bracketInfo.end() && search->first < bound) {
-        size_t j = search->first;
-        cur->emplaceBack(data->inputAsCmds, pos, j + 1);
+    // находим ближайшую откр. скобку после i
+    auto nextBracketsAfter = [data] (size_t i) -> std::map<size_t, size_t>::iterator {
+        auto innerBracket = data->bracketInfo.upper_bound(i);
+        while (innerBracket != data->bracketInfo.end()
+                && data->lexems.at(innerBracket->first)._tok == Token::lc)      // игнорируем фигурные скобки
+            ++innerBracket;
+        return innerBracket;
+    };
 
-        buildLayerStructure(data, cur, j+1, search->second);
-        cur->insertPlaceholder();
+    // если 0, то стартовый вызов - начиаем с самого начала, иначе пропускаем скобку
+    size_t i = (enclosingBrackets.first == 0 ? 0 : enclosingBrackets.first + 1);
+    auto innerBracket = nextBracketsAfter(i);
+    auto endBI = data->bracketInfo.end();
+    while (innerBracket != endBI && innerBracket->first < enclosingBrackets.second) {
+        target->emplaceBack(i, innerBracket->first + 1);
 
-        pos = search->second;
-        search = bracketInfo.lower_bound(pos);
-    }                                           // если такой нет вовсе или она в следующей вложенности - идём до конца
-    cur->emplaceBack(data->inputAsCmds, pos, bound);
-    data->layers.insert(cur);
+        auto innerLayer = target->insertPlaceholder();
+        buildLayerStructure(data, *innerBracket, innerLayer);
+
+        i = innerBracket->second; // указатель ставится на закрывающую скобку внутренней пары - её не теряем
+        innerBracket = nextBracketsAfter(i);
+    }
+    // и забираем конец
+    target->emplaceBack(i, enclosingBrackets.second);
+    data->layers.insert(target);
 }
 
 /*
+/// Строим карту границ символов в пределах ExpressionLayer и походу проверка на двойные индексы
+ParseStatus Lexer::detectSymbolBounds(Parser2::ExpressionLayer* layer) {
+    const auto& source = layer->lexems;
+    auto& target = layer->symbolBounds;
+    // если встречаем переход к индексу, то ставим отметку (или ошибка при повторном) и откладываем
+    // частичный распознанный символ в стек, начинаем новый
+    struct SymInfo {
+        size_t begin;
+        std::map<Token, bool> indices;
+        SymInfo(size_t i) { reset(i); }
 
-TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
+        void reset(size_t i) {
+            begin = i;
+            indices[Token::t] = indices[Token::b] = false;
+        }
+    };
+    std::stack<SymInfo> buf;
+
+    size_t i = 0;
+    SymInfo cur(i);
+//    ++i;
+    while (i < source.size()) {
+        // можем встретить: w, t, b, s, lc, rc
+        auto iTok = source.at(i)._tok;
+        if (iTok == Token::t || iTok == Token::b) {
+            if (cur.indices[iTok])      // такой режим индексности уже был использован
+                return ParseStatus(i, std::string("Ошибка: повторное использование ")
+                                        + (iTok == Token::t ? "верхнего" : "нижнего") + " регистра.");
+            if (i + 1 == source.size()) // на смене индексности строка закончилась - ошибка
+                return ParseStatus(i, "Ошибка: строка заканчивается командой смены регистра.");
+            cur.indices[iTok] = true;
+
+            // далее либо одна команда, либо открывающая скобка и тогда несколько
+            auto nextTok = source.at(i + 1)._tok;
+            if (nextTok == Token::w)
+                ++i;                    // переходим только через символ смены регистра
+            else if (nextTok == Token::lc) {
+                buf.push(cur);
+                ++i;                    // перепрыгиваем через символ смены индекса и открывающую скобку
+                cur.reset(++i);         // и начинаем новый символ
+            }
+            else    // остаётся возможность rc, но после t или b это ошибка
+                return ParseStatus(i + 1, "Ошибка: нет команды после смены регистра.");
+        }
+        else if (iTok == Token::w) {
+            target.emplace(cur.begin, i);
+            cur.reset(++i);
+        }
+        else if (iTok == Token::lc) {   // открывающая скобка
+            // если встретили (а не перескочили), значит это случай аргумента команды
+            buf.push(cur);
+            cur.reset(++i);
+        }
+        else {  // остаётся закрывающая скобка
+            target.emplace(cur.begin, i);
+            cur = buf.top();
+            buf.pop();
+            ++i;
+        }
+    }
+    return ParseStatus();
+}
+*/
+
+
+/*TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
     TexSequence source = data->inputAsCmds;
     auto bracketInfo = data->bracketInfo;
     size_t i = from;
@@ -184,9 +252,9 @@ TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
 
     return TexSequence(std::next(source.begin(), from),
                        (i >= source.size() ? source.end() : std::next(source.begin(), i)));
-}
+}*/
 
-bool isPrefix(const TexSequence& sequence, const TexSequence& candidate) {
+/*bool isPrefix(const TexSequence& sequence, const TexSequence& candidate) {
     if (candidate.size() > sequence.size())
         return false;
     auto ce = candidate.end();
@@ -205,8 +273,7 @@ std::set<TexSequence> Lexer::selectSuitableWithIndent(const std::set<TexSequence
         --from;                         // имён относительно indent (возможно сразу же)
     from = next(from);             // и взять следующий, тогда [from, lb) будет содержать префиксы
     return std::set<TexSequence>(from, lb);
-}
-*/
+}*/
 
 // NB новое имя может возникать и в тех случаях когда множество подходящих имён
 // не пусто (напр., множество A определёно, а суммирование ведётся по A_i\in A)
@@ -243,19 +310,24 @@ std::set<TexSequence> Lexer::selectSuitableWithIndent(const std::set<TexSequence
 CurAnalysisData::CurAnalysisData(std::string toParse)
     : input(std::move(toParse)) {
     ParseStatus res;
+    auto checkResult = [&res] {
+        if (!res.success)
+            throw std::invalid_argument(res.mess);
+    };
     res = Lexer::splitTexUnits(input, lexems);
-    if (!res.success)
-        throw std::invalid_argument(res.mess);
+    checkResult();
     res = Lexer::collectBracketInfo(lexems, bracketInfo);
-    if (!res.success)
-        throw std::invalid_argument(res.mess);
-
-//    Lexer::buildLayerStructure(this, nullptr, 0, inputAsCmds.size());
+    checkResult();
+    Lexer::buildLayerStructure(this);
+    /*for (auto pL : layers) {
+        res = Lexer::detectSymbolBounds(pL);
+        checkResult();
+    }*/
 //    Lexer::parseNames(this);
 }
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse) {
-    Lexer lexer(where); // fixme задействовать для получения списка определённых имён (как послед. команд)
+    Lexer lexer(where);
     return CurAnalysisData(toParse);
 }
 
