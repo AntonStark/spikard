@@ -35,20 +35,6 @@ std::string printToken(const Token& t) {
 
 std::set<char> skippingChars = {' ', '\t', '&'};
 
-void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
-    typedef NameSpaceIndex::NameTy NType;
-    const NameSpaceIndex& index = node->index();
-    for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST}) {
-        const std::set<std::string>& namesThisType = index.getNames(t);
-        storage.insert(namesThisType.begin(), namesThisType.end());
-    }
-}
-Lexer::Lexer(PrimaryNode* where)
-    : _where(where), localNames(where) {
-    scanNames(where, namesDefined);
-    // todo наполнение definedTexSeq
-}
-
 bool filterTexCommands(const std::string& cmd) {
     if (cmd.length() == 1)
         // опускаем ' ' и другие skippingChars
@@ -78,9 +64,9 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         const std::string& cmd = input.substr(i, j-i);
         auto search = structureSymbols.find(cmd);
         if (search != structureSymbols.end())
-            lexems.emplace_back(input, search->second);
+            lexems.emplace_back(search->second);
         else if (filterTexCommands(cmd))
-            lexems.emplace_back(input, i, j-i);
+            lexems.emplace_back(i, j-i);
 
         i = j;
     }
@@ -123,161 +109,97 @@ ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<siz
 }
 
 /// В этой функции строится слоистая структура, описывающая вложенность выражений со скобками
-void Lexer::buildLayerStructure(CurAnalysisData* data,
-    std::pair<size_t, size_t> enclosingBrackets, ExpressionLayer* target) {
-    if (enclosingBrackets.second == 0)
-        enclosingBrackets.second = data->lexems.size();
+/**
+ *  на этом этапе проще работать с наполнением слоя как с набором границ интервалов
+ *  это представляется как нарезание ленты [0, length) на кусочки - вложенности и они как бы проваливаются
+ *  а в следующей функции, что анализиует регистры - там уже важно получившееся наполнение и его можно всё разом собирать
+ */
+void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target) {
     if (target == nullptr) // стартовый вызов
         target = new ExpressionLayer(data->lexems);
 
     // находим ближайшую откр. скобку после i
-    auto nextBracketsAfter = [data] (size_t i) -> std::map<size_t, size_t>::iterator {
+    auto nextBracketsAfter = [data, &target] (size_t i) -> std::map<size_t, size_t>::iterator {
         auto innerBracket = data->bracketInfo.upper_bound(i);
-        while (innerBracket != data->bracketInfo.end()
-                && data->lexems.at(innerBracket->first)._tok == Token::lc)      // игнорируем фигурные скобки
-            ++innerBracket;
-        return innerBracket;
+        while (innerBracket != data->bracketInfo.end() && innerBracket->first < target->_bounds.second) {
+            if (data->lexems.at(innerBracket->first)._tok == Token::lc) {   // игнорируем фигурные скобки
+                target->bracketPairs.emplace(*innerBracket);
+                ++innerBracket;
+            }
+            else
+                return innerBracket;
+        }
+        return data->bracketInfo.end();
     };
 
-    // если 0, то стартовый вызов - начиаем с самого начала, иначе пропускаем скобку
-    size_t i = (enclosingBrackets.first == 0 ? 0 : enclosingBrackets.first + 1);
-    auto innerBracket = nextBracketsAfter(i);
     auto endBI = data->bracketInfo.end();
-    while (innerBracket != endBI && innerBracket->first < enclosingBrackets.second) {
-        target->emplaceBack(i, innerBracket->first + 1);
+    size_t i = target->_bounds.first;
+    auto innerBracket = nextBracketsAfter(i);
+    while (innerBracket != endBI) {
+        auto innerLayer = target->insertSublayer(*innerBracket);
+        buildLayerStructure(data, innerLayer);
 
-        auto innerLayer = target->insertPlaceholder();
-        buildLayerStructure(data, *innerBracket, innerLayer);
-
-        i = innerBracket->second; // указатель ставится на закрывающую скобку внутренней пары - её не теряем
+        i = innerBracket->second + 1; // перескочили через вложенную пару скобок
         innerBracket = nextBracketsAfter(i);
     }
-    // и забираем конец
-    target->emplaceBack(i, enclosingBrackets.second);
     data->layers.insert(target);
 }
 
+/// Здесь нужно только проверить, что у команд нет повторных нижних или верхних индексов
+ParseStatus checkRegisters(ExpressionLayer* layer, ExpressionLayer::Iter& it, size_t bound) {
+    std::map<Token, bool> ind;
+    ind[Token::b] = ind[Token::t] = false;
+    
+    while (!it.end && it.pos <= bound) {
+        // после _ ^ загрядывать дальше (проверить, что возможно) и если там w, то перескакивать через
+        // него, иначе lb обработаем соотв. пунктом
+        if (it.tok() == Token::t || it.tok() == Token::b) {    // проверка флага и, возможно, ошибка
+            if (ind[it.tok()])                  // такой режим индексности уже был использован
+                return ParseStatus(it.pos, std::string("Ошибка: повторное использование ")
+                                      + (it.tok() == Token::t ? "верхнего" : "нижнего") + " регистра.");
+            ind[it.tok()] = true;
 
+            ++it;
+            if (it.end)                         // на смене индексности строка закончилась - ошибка
+                return ParseStatus(it.pos - 1, "Ошибка: строка заканчивается командой смены регистра.");
 
-/*
-/// Строим карту границ символов в пределах ExpressionLayer и походу проверка на двойные индексы
-ParseStatus Lexer::detectSymbolBounds(Parser2::ExpressionLayer* layer) {
-    const auto& source = layer->lexems;
-    auto& target = layer->symbolBounds;
-    // если встречаем переход к индексу, то ставим отметку (или ошибка при повторном) и откладываем
-    // частичный распознанный символ в стек, начинаем новый
-    struct SymInfo {
-        size_t begin;
-        std::map<Token, bool> indices;
-        SymInfo(size_t i) { reset(i); }
-
-        void reset(size_t i) {
-            begin = i;
-            indices[Token::t] = indices[Token::b] = false;
-        }
-    };
-    std::stack<SymInfo> buf;
-
-    size_t i = 0;
-    SymInfo cur(i);
-//    ++i;
-    while (i < source.size()) {
-        // можем встретить: w, t, b, s, lc, rc
-        auto iTok = source.at(i)._tok;
-        if (iTok == Token::t || iTok == Token::b) {
-            if (cur.indices[iTok])      // такой режим индексности уже был использован
-                return ParseStatus(i, std::string("Ошибка: повторное использование ")
-                                        + (iTok == Token::t ? "верхнего" : "нижнего") + " регистра.");
-            if (i + 1 == source.size()) // на смене индексности строка закончилась - ошибка
-                return ParseStatus(i, "Ошибка: строка заканчивается командой смены регистра.");
-            cur.indices[iTok] = true;
-
-            // далее либо одна команда, либо открывающая скобка и тогда несколько
-            auto nextTok = source.at(i + 1)._tok;
-            if (nextTok == Token::w)
-                ++i;                    // переходим только через символ смены регистра
-            else if (nextTok == Token::lc) {
-                buf.push(cur);
-                ++i;                    // перепрыгиваем через символ смены индекса и открывающую скобку
-                cur.reset(++i);         // и начинаем новый символ
-            }
-            else    // остаётся возможность rc, но после t или b это ошибка
-                return ParseStatus(i + 1, "Ошибка: нет команды после смены регистра.");
-        }
-        else if (iTok == Token::w) {
-            target.emplace(cur.begin, i);
-            cur.reset(++i);
-        }
-        else if (iTok == Token::lc) {   // открывающая скобка
-            // если встретили (а не перескочили), значит это случай аргумента команды
-            buf.push(cur);
-            cur.reset(++i);
-        }
-        else {  // остаётся закрывающая скобка
-            target.emplace(cur.begin, i);
-            cur = buf.top();
-            buf.pop();
-            ++i;
+            if (it.tok() == Token::w)
+                ++it;
+        } else if (it.tok() == Token::lc) {     // рекурсивная проверка диапазона и переход на-после rc
+            // todo нужно различать {} в регистре и строчные. Вторые сами выступают как w - обнуление флагов
+            size_t pair = layer->bracketPairs[it.pos];
+            auto res = checkRegisters(layer, ++it, pair);
+            if (!res.success)
+                return res;
+        } else {                                // все остальные токены обрабатываются также как w
+            ind[Token::b] = ind[Token::t] = false;
+            ++it;
         }
     }
     return ParseStatus();
 }
-*/
 
-
-/*TexSequence Lexer::readOneSymbolsCommands(CurAnalysisData* data, size_t from) {
-    TexSequence source = data->inputAsCmds;
-    auto bracketInfo = data->bracketInfo;
-    size_t i = from;
-    if (source.empty() || i > source.size())
-        return {};
-    ++i; // одну команду берём в любом случае
-
-    TexCommand group("{");
-    std::set<TexCommand> indMod = {"_", "^"};       // идея в том, что если одну форму индекса
-                                                    // встретили, больше её быть не может
-    if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
-    auto searchIndMod = indMod.find(source.at(i));
-    while (searchIndMod != indMod.end()) {
-        ++i;        // съели индекс
-        if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
-        if (source.at(i) != group)
-            ++i;    // съели одиночный индексный аргумент
-        else
-            i = bracketInfo[i]+1;   // переходим на следующую после скобки команду
-        indMod.erase(searchIndMod);
-        if (i >= source.size()) return TexSequence(std::next(source.begin(), from), source.end());
-        searchIndMod = indMod.find(source.at(i));
-    }
-    while (i < source.size() && source.at(i) == group)
-        i = bracketInfo[i]+1;
-
-    return TexSequence(std::next(source.begin(), from),
-                       (i >= source.size() ? source.end() : std::next(source.begin(), i)));
-}*/
-
+ParseStatus Lexer::checkRegisters(Parser2::ExpressionLayer* layer) {
+    auto it = layer->begin();
+    return Parser2::checkRegisters(layer, it, layer->_bounds.second);
+}
 
 CurAnalysisData::CurAnalysisData(std::string toParse)
     : input(std::move(toParse)) {
-    ParseStatus res;
-    auto checkResult = [&res] {
-        if (!res.success)
-            throw std::invalid_argument(res.mess);
-    };
     res = Lexer::splitTexUnits(input, lexems);
-    checkResult();
+    if (!res.success) return;
+
     res = Lexer::collectBracketInfo(lexems, bracketInfo);
-    checkResult();
-    Lexer::buildLayerStructure(this);
-    /*for (auto pL : layers) {
-        res = Lexer::detectSymbolBounds(pL);
-        checkResult();
-    }*/
-//    Lexer::parseNames(this);
+    if (!res.success) return;
+
+    Lexer::buildLayerStructure(this, nullptr);
+    for (auto pL : layers) {
+        res = Lexer::checkRegisters(pL);
+        if (!res.success) return;
+    }
 }
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse) {
-    Lexer lexer(where);
     return CurAnalysisData(toParse);
 }
 

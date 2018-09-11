@@ -4,6 +4,9 @@
 
 #include "parser2.hpp"
 
+namespace Parser2
+{
+
 /*bool isPrefix(const TexSequence& sequence, const TexSequence& candidate) {
     if (candidate.size() > sequence.size())
         return false;
@@ -56,3 +59,20 @@ std::set<TexSequence> Lexer::selectSuitableWithIndent(const std::set<TexSequence
     }
     auto debug = 1;
 }*/
+
+void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
+    typedef NameSpaceIndex::NameTy NType;
+    const NameSpaceIndex& index = node->index();
+    for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST}) {
+        const std::set<std::string>& namesThisType = index.getNames(t);
+        storage.insert(namesThisType.begin(), namesThisType.end());
+    }
+}
+
+Parser::Parser(PrimaryNode* where)
+    : _where(where), localNames(where) {
+    scanNames(where, namesDefined);
+    // todo наполнение definedTexSeq
+}
+
+}
