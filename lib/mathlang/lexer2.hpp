@@ -14,8 +14,25 @@
 namespace Parser2
 {
 
+struct ParseStatus
+{
+    bool success;
+    size_t at;
+    std::string mess;
+    ParseStatus() : success(true), at(size_t(-1)), mess("") {}
+    ParseStatus(size_t at, std::string mess)
+        : success(false), at(at), mess(std::move(mess)) {}
+};
+
+extern std::set<std::string> blankCommands;
+extern std::set<std::string> bracketSizeCommands;
+extern std::set<char> skippingChars;
+
 enum class Token {w, t, b, l, r,
-                    ls, rs, lc, rc};
+    ls, rs, lc, rc};
+
+extern std::map<std::string, Token> structureSymbols;
+extern std::map<Token, std::string> tokenPrints;
 std::string printToken(const Token& t);
 
 struct Lexeme
@@ -36,24 +53,9 @@ struct Lexeme
                     && (_pos == other._pos)
                     && (_len == other._len) ); }
 };
-
 typedef std::vector<Lexeme> LexemeSequence;
-struct ParseStatus
-{
-    bool success;
-    size_t at;
-    std::string mess;
-    ParseStatus() : success(true), at(size_t(-1)), mess("") {}
-    ParseStatus(size_t at, std::string mess)
-        : success(false), at(at), mess(std::move(mess)) {}
-};
 
-extern std::set<std::string> blankCommands;
-extern std::set<std::string> bracketSizeCommands;
-extern std::map<std::string, Token> structureSymbols;
-extern std::map<Token, std::string> tokenPrints;
-extern std::set<char> skippingChars;
-
+/// Слой выражения представляется набором границ интервалов
 struct ExpressionLayer
 {
     const LexemeSequence& _base;
@@ -97,30 +99,10 @@ struct ExpressionLayer
         ExpressionLayer* parent, size_t indent) : _base(base), _parent({parent, indent}), _bounds(bounds) {}
     ExpressionLayer(const LexemeSequence& base) : ExpressionLayer(base, {0, base.size()-1}, nullptr, 0) {}
 
-    bool operator< (const ExpressionLayer& two) const
-    { return (_excludes.size() != two._excludes.size()
-              ? _excludes.size() < two._excludes.size()
-              : _bounds < two._bounds); }
+    bool operator< (const ExpressionLayer& two) const;
 
-    ExpressionLayer* insertSublayer(std::pair<size_t, size_t> bounds) {
-        size_t spaceN = _excludes.size();
-        _excludes.emplace(bounds);
-        return new ExpressionLayer(_base, bounds, this, spaceN);
-    }
-
-    LexemeSequence getLexems() {
-        LexemeSequence buf;
-        size_t at = _bounds.first;
-        for (const auto& e : _excludes) {
-            for (size_t i = at; i < e.first; ++i)
-                buf.emplace_back(_base.at(i));
-            at = e.second + 1;
-        }
-        for (size_t i = at; i <= _bounds.second; ++i)
-            buf.emplace_back(_base.at(i));
-        return buf;
-    }
-
+    ExpressionLayer* insertSublayer(std::pair<size_t, size_t> bounds);
+    LexemeSequence getLexems();
     Iter begin() { return Iter(*this, _bounds.first); }
 };
 
@@ -131,14 +113,9 @@ public:
     static ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
     static ParseStatus collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo);
     static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target);
-//    static ParseStatus checkRegisters(ExpressionLayer* layer, ExpressionLayer::Iter& it, size_t bound = 0);
     static ParseStatus checkRegisters(ExpressionLayer* layer);
 
     // todo не статик соответствие id->word и хранить в Lexem id вместо (_pos, _len)
-    /*static std::set<TexSequence> selectSuitableWithIndent(const std::set<TexSequence>& definedTexSeq,
-                                                          size_t indent, const TexSequence& source);*/
-//    static void parseNames(CurAnalysisData* data);
-
 };
 
 /// Контейнер для вспомогательной информации и

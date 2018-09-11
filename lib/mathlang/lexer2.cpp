@@ -13,6 +13,8 @@ std::set<std::string> blankCommands = {"\\<space>", "~", "\\nobreakspace",
 std::set<std::string> bracketSizeCommands = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
     "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
 
+std::set<char> skippingChars = {' ', '\t', '&'};
+
 std::map<std::string, Token> structureSymbols = {
     {"^", Token::t}, {"_", Token::b},
     {"(", Token::l}, {")", Token::r},
@@ -33,7 +35,29 @@ std::string printToken(const Token& t) {
         return tokenPrints.at(t);
 }
 
-std::set<char> skippingChars = {' ', '\t', '&'};
+bool ExpressionLayer::operator<(const Parser2::ExpressionLayer& two) const
+{ return (_excludes.size() != two._excludes.size()
+          ? _excludes.size() < two._excludes.size()
+          : _bounds < two._bounds); }
+
+ExpressionLayer * ExpressionLayer::insertSublayer(std::pair<size_t, size_t> bounds) {
+    size_t spaceN = _excludes.size();
+    _excludes.emplace(bounds);
+    return new ExpressionLayer(_base, bounds, this, spaceN);
+}
+
+LexemeSequence ExpressionLayer::getLexems() {
+    LexemeSequence buf;
+    size_t at = _bounds.first;
+    for (const auto& e : _excludes) {
+        for (size_t i = at; i < e.first; ++i)
+            buf.emplace_back(_base.at(i));
+        at = e.second + 1;
+    }
+    for (size_t i = at; i <= _bounds.second; ++i)
+        buf.emplace_back(_base.at(i));
+    return buf;
+}
 
 bool filterTexCommands(const std::string& cmd) {
     if (cmd.length() == 1)
@@ -109,11 +133,6 @@ ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<siz
 }
 
 /// В этой функции строится слоистая структура, описывающая вложенность выражений со скобками
-/**
- *  на этом этапе проще работать с наполнением слоя как с набором границ интервалов
- *  это представляется как нарезание ленты [0, length) на кусочки - вложенности и они как бы проваливаются
- *  а в следующей функции, что анализиует регистры - там уже важно получившееся наполнение и его можно всё разом собирать
- */
 void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target) {
     if (target == nullptr) // стартовый вызов
         target = new ExpressionLayer(data->lexems);
