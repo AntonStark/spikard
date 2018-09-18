@@ -5,7 +5,7 @@
 #include <string>
 
 #include "../rationale.hpp"
-#include "../lexer2.hpp"
+#include "../lexer.hpp"
 
 using namespace Parser2;
 int main() {

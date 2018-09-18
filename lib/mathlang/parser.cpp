@@ -2,7 +2,7 @@
 // Created by anton on 05.09.18.
 //
 
-#include "parser2.hpp"
+#include "parser.hpp"
 
 namespace Parser2
 {

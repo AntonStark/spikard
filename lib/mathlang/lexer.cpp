@@ -4,7 +4,7 @@
 // Created by anton on 10.06.18.
 //
 
-#include "lexer2.hpp"
+#include "lexer.hpp"
 
 namespace Parser2 {
 

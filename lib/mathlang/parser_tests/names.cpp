@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #include "../rationale.hpp"
-#include "../lexer2.hpp"
+#include "../lexer.hpp"
 
 int main() {
     BranchNode course("Тестовый");
