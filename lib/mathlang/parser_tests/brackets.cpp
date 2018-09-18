@@ -10,6 +10,7 @@ using namespace std;
 using namespace Parser2;
 
 int main() {
+    Lexer lex;
     string brackets = R"(\Bigg(\bigg[)"
                            R"(x\mapsto \delta_1\sum_{k=1}^s)"
                            R"(\big(v_{l,1}+v_{l,2}+v_{l,3}-a^*_{k,1}-a^*_{k,2}-a^*_{k,3})"
@@ -17,7 +18,7 @@ int main() {
                            R"(\delta_2\cdot\sum_{k=1}^s\sum_{l=1}^t)"
                            R"(det\Big(a_{k,i}(v_{l,j})\Big)\Bigg))";
 
-    CurAnalysisData data = CurAnalysisData(brackets);
+    CurAnalysisData data = CurAnalysisData(lex, brackets);
 
     /*for (const auto& bI : data.bracketInfo) {
         for (auto i = bI.first; i < bI.second + 1; ++i)
@@ -27,7 +28,7 @@ int main() {
     cout << "=======================================" << endl;*/
     for (const auto& L : data.layers) {
         for (const auto& l : L->getLexems())
-            cout << data.getVal(l) << " ";
+            cout << lex.print(l) << " ";
         cout << "\t\t" << L->_excludes.size() << endl;
         for (auto bP : L->bracketPairs)
             cout << bP.first - L->_bounds.first << "," << bP.second - L->_bounds.first << "  ";

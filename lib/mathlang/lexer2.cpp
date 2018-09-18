@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by anton on 10.06.18.
 //
@@ -6,33 +8,52 @@
 
 namespace Parser2 {
 
-std::set<std::string> blankCommands = {"\\<space>", "~", "\\nobreakspace",
-    "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
-    "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad"};
+void Lexer::configureLatex() {
+    structureSymbols = {
+        {"^", Token::t}, {"_", Token::b},
+        {"(", Token::l}, {")", Token::r},
+        {"[", Token::ls},{"]", Token::rs},
+        {"{", Token::lc},{"}", Token::rc}
+    };
+    tokenPrints = {
+        {Token::t, "^"}, {Token::b, "_"},
+        {Token::l, "("}, {Token::r, ")"},
+        {Token::ls,"["}, {Token::rs,"]"},
+        {Token::lc,"{"}, {Token::rc,"}"}
+    };
+    
+    storage["blank"] = {"\\<space>", "~", "\\nobreakspace",
+                        "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
+                        "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad"};
+    storage["bracket_size"] = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
+                               "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg",
+                               "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
+    storage["skipping_chars"] = {" ", "\t", "&"};
+}
 
-std::set<std::string> bracketSizeCommands = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
-    "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg", "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
+LexemStorage::CatCode LexemStorage::_catCode(std::string category) {
+    for (int i = 0; i < _catNames.size(); ++i)
+        if (_catNames[i] == category)
+            return i;
+    _catNames.push_back(category);
+    return (_catNames.size() - 1);
+}
 
-std::set<char> skippingChars = {' ', '\t', '&'};
-
-std::map<std::string, Token> structureSymbols = {
-    {"^", Token::t}, {"_", Token::b},
-    {"(", Token::l}, {")", Token::r},
-    {"[", Token::ls},{"]", Token::rs},
-    {"{", Token::lc},{"}", Token::rc}
-};
-
-std::map<Token, std::string> tokenPrints = {
-    {Token::t, "^"}, {Token::b, "_"},
-    {Token::l, "("}, {Token::r, ")"},
-    {Token::ls,"["}, {Token::rs,"]"},
-    {Token::lc,"{"}, {Token::rc,"}"}
-};
-std::string printToken(const Token& t) {
-    if (t == Token::w)
-        return "";
-    else
-        return tokenPrints.at(t);
+LexemStorage::Id LexemStorage::_store(std::string cmd, unsigned char catCode) {
+    auto search = _dictionary.find(cmd);
+    if (search != _dictionary.end()) {              // в случае, когда такая команда уже определена и ...
+        unsigned char oldCat = _catIndex[search->second];
+        if (catCode != 0 && oldCat != catCode)      // категория задана явно и не совпадает ...
+            _catIndex[search->second] = catCode;    // просто изменяем категорию команды
+        return search->second;
+    }
+    else {
+        Id id = _index.size();
+        _index.push_back(cmd);
+        _dictionary[cmd] = id;
+        _catIndex.push_back(catCode);
+        return id;
+    }
 }
 
 bool ExpressionLayer::operator<(const Parser2::ExpressionLayer& two) const
@@ -59,15 +80,6 @@ LexemeSequence ExpressionLayer::getLexems() {
     return buf;
 }
 
-bool filterTexCommands(const std::string& cmd) {
-    if (cmd.length() == 1)
-        // опускаем ' ' и другие skippingChars
-        return (skippingChars.find(cmd.at(0)) == skippingChars.end());
-    else
-        // а также размеры скобок
-        return (bracketSizeCommands.find(cmd) == bracketSizeCommands.end());
-}
-
 /// В этой функции только разбор на команды ТеХ-а и проверка корректности на \ в конце строки
 ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexems) {
     auto isAlphaAt = [input] (size_t j) -> bool
@@ -89,8 +101,12 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         auto search = structureSymbols.find(cmd);
         if (search != structureSymbols.end())
             lexems.emplace_back(search->second);
-        else if (filterTexCommands(cmd))
-            lexems.emplace_back(i, j-i);
+        else {
+            auto id = storage.store(cmd);
+            std::string category = storage.which(id);
+            if (category != "skipping_chars" && category != "bracket_size")
+                lexems.emplace_back(storage.store(cmd));
+        }
 
         i = j;
     }
@@ -121,13 +137,13 @@ ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<siz
                 opened.pop();
             }
             else
-                return {i, "Ошибка: закрывающая скобка " + printToken(iTok) +
+                return {i, "Ошибка: закрывающая скобка " + tokenPrints.at(iTok) +
                            " (" + std::to_string(i) + "-ая TeX-команда) не имеет пары."};
         }
         ++i;
     }
     if (not opened.empty())
-        return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + printToken(opened.top().first) +
+        return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + tokenPrints.at(opened.top().first) +
             " (" + std::to_string(opened.top().second) + "-ая TeX-команда)."};
     return ParseStatus();
 }
@@ -203,12 +219,12 @@ ParseStatus Lexer::checkRegisters(Parser2::ExpressionLayer* layer) {
     return Parser2::checkRegisters(layer, it, layer->_bounds.second);
 }
 
-CurAnalysisData::CurAnalysisData(std::string toParse)
-    : input(std::move(toParse)) {
-    res = Lexer::splitTexUnits(input, lexems);
+CurAnalysisData::CurAnalysisData(Lexer& lexer, std::string toParse)
+    : _lexer(lexer), input(std::move(toParse)) {
+    res = _lexer.splitTexUnits(input, lexems);
     if (!res.success) return;
 
-    res = Lexer::collectBracketInfo(lexems, bracketInfo);
+    res = _lexer.collectBracketInfo(lexems, bracketInfo);
     if (!res.success) return;
 
     Lexer::buildLayerStructure(this, nullptr);
@@ -219,7 +235,8 @@ CurAnalysisData::CurAnalysisData(std::string toParse)
 }
 
 CurAnalysisData parse(PrimaryNode* where, std::string toParse) {
-    return CurAnalysisData(toParse);
+    Lexer lex;
+    return CurAnalysisData(lex, std::move(toParse));
 }
 
 }

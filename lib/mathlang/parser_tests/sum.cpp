@@ -14,14 +14,13 @@ using namespace Parser2;
 TEST(ParserTests, Sum) {
     std::string source = R"(\sum_{i=0}^\inf a_i)";
 
+    Lexer lex;
     LexemeSequence lexems;
-    auto ret = Lexer::splitTexUnits(source, lexems);
+    auto ret = lex.splitTexUnits(source, lexems);
 
     vector<string> result;
     transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
-              [&source] (const Lexeme& l) -> string {
-                  return (l._tok == Token::w ? source.substr(l._pos, l._len) : printToken(l._tok));
-              });
+              [&lex] (const Lexeme& l) -> string { return (lex.print(l)); });
     
     vector<string> expected = {"\\sum", 
                        "_", "{", "i", "=", "0", "}", 

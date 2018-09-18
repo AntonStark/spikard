@@ -9,8 +9,8 @@
 using namespace std;
 using namespace Parser2;
 
-CurAnalysisData e2eTest(string input) {
-    auto data = CurAnalysisData(input);
+CurAnalysisData e2eTest(Lexer& lex, string input) {
+    auto data = CurAnalysisData(lex, input);
     if (data.res.success)
         cout << "OK" << endl;
     else
@@ -19,12 +19,13 @@ CurAnalysisData e2eTest(string input) {
 };
 
 int main () {
+    Lexer lex;
     string source = R"(\Theta_{l,m_l}(\theta)=N_{l,m_l}P_l^{m_l}(\cos\theta))";
-    auto data = e2eTest(source);
+    auto data = e2eTest(lex, source);
 
     for (const auto& L : data.layers) {
         for (const auto& l : L->getLexems())
-            cout << data.getVal(l) << " ";
+            cout << lex.print(l) << " ";
         cout << "\t\t" << L->_excludes.size() << endl;
         for (auto bP : L->bracketPairs)
             cout << bP.first - L->_bounds.first << "," << bP.second - L->_bounds.first << "  ";
@@ -32,7 +33,7 @@ int main () {
     }
     cout << flush;
 
-    // todo неативные тесты
+    // todo негативные тесты
     
     return 0;
 }

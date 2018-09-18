@@ -14,17 +14,16 @@ using namespace Parser2;
 TEST(ParserTests, Integral) {
     string source = R"(\int_a^b \! f(x, y) \, \mathrm{d}x)";
 
+    Lexer lex;
     LexemeSequence lexems;
-    auto ret = Lexer::splitTexUnits(source, lexems);
+    auto ret = lex.splitTexUnits(source, lexems);
 
     vector<string> result;
     transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
-              [&source] (const Lexeme& l) -> string {
-                    return (l._tok == Token::w ? source.substr(l._pos, l._len) : printToken(l._tok));
-    });
+              [&lex] (const Lexeme& l) -> string { return (lex.print(l)); });
 
-    vector<string> expected = {"\\int", "_", "a", "^", "b", " ",
-                                "f", "(", "x", ",", "y", ")", " ",
+    vector<string> expected = {"\\int", "_", "a", "^", "b", "\\!",
+                                "f", "(", "x", ",", "y", ")", "\\,",
                                 "\\mathrm", "{", "d", "}", "x"};
     ASSERT_EQ(result, expected);
 }
