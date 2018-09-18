@@ -51,8 +51,6 @@ private:
     friend Terms* parse(PrimaryNode* where, std::string source);
     void recognize(std::string source);
 
-    // Вообще, это функционал парсера
-    // todo дорефакторить, чтобы они были аккуратно интегрированы
     Term* parseQuantedTerm(Lexer::LexList& list);
     Term* parseTerm(Lexer::LexList& list);
     Terms* parseTerms(Lexer::LexList& list);

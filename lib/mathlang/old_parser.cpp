@@ -2,7 +2,7 @@
 // Created by anton on 14.01.17.
 //
 
-#include "parser.hpp"
+#include "old_parser.hpp"
 
 bool matchIndented(const std::string& source, const size_t indent, const std::string& word) {
     if (indent + word.length() > source.length())
@@ -304,8 +304,6 @@ Terms* parse(PrimaryNode* where, std::string source) {
         if (parsed)
             break;
     }
-    // todo выводить предупреждение о неоднозначности разбора,
-    // если в итоге получится больше одного варианта...
     if (parsed)
         return parsed;
     throw std::invalid_argument("Не удалось построить терм по строке \"" + source + "\". "
