@@ -11,7 +11,7 @@
 #include <utility>
 #include <queue>
 
-#include "rationale.hpp"
+#include "../rationale.hpp"
 
 namespace Parser2
 {

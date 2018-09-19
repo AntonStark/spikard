@@ -89,8 +89,6 @@ public:
     std::string print() const override { return getName(); }
 };
 
-// Указание типов в отображнеии вовлекает семантику, но позволяет более полное описание сущности
-// Важно, что с априорной информацией о типах упрощается парсер.
 // Это реализация неоднородного символа.
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
 // Отображения сами являются термами, поскольку есть отображения отображений.
@@ -189,7 +187,7 @@ public:
     { return _args.at(oneTwoThree-1); }
     std::string print() const;
 };
-class Term : public Terms, public ParenSymbol
+class Term : public Terms, public ParenSymbol // fixme зачем наследование от ParenSymbol? разве они в отношении "является"?!
 {
 protected:
     void boundVar(Variable var);

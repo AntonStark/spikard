@@ -1,10 +1,10 @@
 #include <sstream>
 #include <fstream>
 
-#include "../../lib/mathlang/mathtype.hpp"
-#include "../../lib/mathlang/terms.hpp"
+#include "../../lib/mathlang/basics/mathtype.hpp"
+#include "../../lib/mathlang/basics/terms.hpp"
 #include "../../lib/mathlang/rationale.hpp"
-#include "../../lib/mathlang/old_parser.hpp"
+#include "../../lib/mathlang/parser/old_parser.hpp"
 #include "../../lib/mathlang/view.hpp"
 
 #include "../../json.hpp"
