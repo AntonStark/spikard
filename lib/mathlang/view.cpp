@@ -32,30 +32,41 @@ void PlainText::process(const NamedNode* nn)
             value = ""; break;
     }
 }
-void PlainText::process(const DefType* dt)
-{ value = ("Объявлен тип " + dt->getName() + "."); }
 
-void PlainText::process(const DefVar* dv)
-{ value = ("Добавлена переменная " + dv->getName() +
-          " типа " + dv->getType()->getName() + "."); }
-
-void PlainText::process(const DefConst* dc)
-{ value = ("Введена константа " + dc->getName() +
-           " типа " + dc->getType()->getName() + "."); }
-
-void PlainText::process(const DefSym* ds) {
-    std::stringstream buf;
-    buf << "Введен символ " << ds->get().getName() << " : ";
-    auto argTypes = ds->get().getArgs()->getNames();
-    if (!argTypes.empty())
-    {
-        buf << argTypes.front();
-        auto e = argTypes.end();
-        for (auto it = std::next(argTypes.begin()); it != e; ++it)
-            buf << " x " << *it;
+void PlainText::process(const Definition* def) {
+    switch (def->defType) {
+        case NameTy::MT : {
+            value = ("Объявлен тип " + def->getType()->getName() + ".");
+            break;
+        }
+        case NameTy::VAR : {
+            auto dv = def->getTerm();
+            value = ("Добавлена переменная " + dv->getName() +
+                " типа " + dv->getType()->getName() + ".");
+            break;
+        }
+        case NameTy::CONST : {
+            auto dc = def->getTerm();
+            value = ("Введена константа " + dc->getName() +
+                " типа " + dc->getType()->getName() + ".");
+            break;
+        }
+        case NameTy::SYM : {
+            auto ds = def->getMap();
+            std::stringstream buf;
+            buf << "Введен символ " << ds->getName() << " : ";
+            auto argTypes = ds->getArgs()->getNames();
+            if (!argTypes.empty())
+            {
+                buf << argTypes.front();
+                auto e = argTypes.end();
+                for (auto it = std::next(argTypes.begin()); it != e; ++it)
+                    buf << " x " << *it;
+            }
+            buf << " -> " << ds->getType()->getName() << ".";
+            value = buf.str();
+        }
     }
-    buf << " -> " << ds->get().getType()->getName() << ".";
-    value = buf.str();
 }
 
 void PlainText::process(const TermsBox* ax) {
@@ -104,36 +115,40 @@ void AsJson::process(const NamedNode* nn) {
                     } });
 }
 
-void AsJson::process(const DefType* dt) {
-    value.push_back({"DefType",
-                    {{"name", dt->getName()}}
-                   });
-}
-
-void AsJson::process(const DefVar* dv) {
-    value.push_back({"DefVar",
-                    {
-                        {"name", dv->getName()},
-                        {"type", dv->getType()->getName()}
-                    } });
-}
-
-void AsJson::process(const DefConst* dc) {
-    value.push_back({"DefConst",
-                     {
-                         {"name", dc->getName()},
-                         {"type", dc->getType()->getName()}
-                     } });
-}
-
-void AsJson::process(const DefSym* ds) {
-    auto map = ds->get();
-    value.push_back({"DefSym",
-                    {
-                        {"name", map.getName()},
-                        {"argT", map.getArgs()->getNames()},
-                        {"retT", map.getType()->getName()}
-                    } });
+void AsJson::process(const Definition* def) {
+    switch (def->defType) {
+        case NameTy::MT : {
+            auto dt = def->getType();
+            value.push_back({"DefType", {
+                                 {"name", dt->getName()}
+                             } });
+            break;
+        }
+        case NameTy::VAR : {
+            auto dv = def->getTerm();
+            value.push_back({"DefVar", {
+                                 {"name", dv->getName()},
+                                 {"type", dv->getType()->getName()}
+                             } });
+            break;
+        }
+        case NameTy::CONST : {
+            auto dc = def->getTerm();
+            value.push_back({"DefConst", {
+                                 {"name", dc->getName()},
+                                 {"type", dc->getType()->getName()}
+                             } });
+            break;
+        }
+        case NameTy::SYM : {
+            auto ds = def->getMap();
+            value.push_back({"DefSym", {
+                                 {"name", ds->getName()},
+                                 {"argT", ds->getArgs()->getNames()},
+                                 {"retT", ds->getType()->getName()}
+                             } });
+        }
+    }
 }
 
 void AsJson::process(const TermsBox* ax) {
@@ -167,44 +182,52 @@ void AsMlObj::process(const NamedNode* nn) {
     );
 }
 
-void AsMlObj::process(const DefType* dt) {
-    buffer.push_back(
-        MlObj("def_type", dt->getNumber(), dt->getName()).toJson()
-    );
-}
-
-void AsMlObj::process(const DefVar* dv) {
-    std::stringstream body;
-    body << dv->getName() << "\\in " << dv->getType()->getName();
-    buffer.push_back(
-        MlObj("def_var", dv->getNumber(), body.str()).toJson()
-    );
-}
-
-void AsMlObj::process(const DefConst* dc) {
-    std::stringstream body;
-    body << dc->getName() << "\\in " << dc->getType()->getName();
-    buffer.push_back(
-        MlObj("def_const", dc->getNumber(), body.str()).toJson()
-    );
-}
-
-void AsMlObj::process(const DefSym* ds) {
-    std::stringstream out;
-    auto map = ds->get();
-    out << map.getName() << " : ";
-    auto argTypes = map.getArgs()->getNames();
-    if (!argTypes.empty())
-    {
-        out << argTypes.front();
-        auto e = argTypes.end();
-        for (auto it = next(argTypes.begin()); it != e; ++it)
-            out << "\\times " << *it;
+void AsMlObj::process(const Definition* def) {
+    switch (def->defType) {
+        case NameTy::MT : {
+            auto dt = def->getType();
+            buffer.push_back(
+                MlObj("def_type", def->getNumber(), dt->getName()).toJson()
+            );
+            break;
+        }
+        case NameTy::VAR : {
+            auto dv = def->getTerm();
+            std::stringstream body;
+            body << dv->getName() << "\\in " << dv->getType()->getName();
+            buffer.push_back(
+                MlObj("def_var", def->getNumber(), body.str()).toJson()
+            );
+            break;
+        }
+        case NameTy::CONST : {
+            auto dc = def->getTerm();
+            std::stringstream body;
+            body << dc->getName() << "\\in " << dc->getType()->getName();
+            buffer.push_back(
+                MlObj("def_const", def->getNumber(), body.str()).toJson()
+            );
+            break;
+        }
+        case NameTy::SYM : {
+            auto ds = def->getMap();
+            std::stringstream out;
+            out << ds->getName() << " : ";
+            auto argTypes = ds->getArgs()->getNames();
+            if (!argTypes.empty())
+            {
+                out << argTypes.front();
+                auto e = argTypes.end();
+                for (auto it = next(argTypes.begin()); it != e; ++it)
+                    out << "\\times " << *it;
+            }
+            out << "\\rightarrow " << ds->getType()->getName();
+            buffer.push_back(
+                MlObj("def_sym", def->getNumber(), out.str()).toJson()
+            );
+            break;
+        }
     }
-    out << "\\rightarrow " << map.getType()->getName();
-    buffer.push_back(
-        MlObj("def_sym", ds->getNumber(), out.str()).toJson()
-    );
 }
 
 void AsMlObj::process(const TermsBox* ax) {

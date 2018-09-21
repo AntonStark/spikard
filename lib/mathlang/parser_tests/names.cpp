@@ -5,7 +5,7 @@
 #include <string>
 #include <algorithm>
 
-#include "../rationale.hpp"
+#include "../definition.hpp"
 #include "../parser/lexer.hpp"
 
 int main() {

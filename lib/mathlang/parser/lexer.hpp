@@ -1,5 +1,3 @@
-#include <utility>
-
 //
 // Created by anton on 10.06.18.
 //
@@ -11,7 +9,7 @@
 #include <utility>
 #include <queue>
 
-#include "../rationale.hpp"
+#include "../primary_node.hpp"
 
 namespace Parser2
 {

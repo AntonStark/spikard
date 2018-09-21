@@ -3,7 +3,7 @@
 //
 
 #include "../../core.hpp"
-#include "../../lib/mathlang/rationale.hpp"
+#include "../../lib/mathlang/definition.hpp"
 #include "../../lib/mathlang/parser/old_parser.hpp"
 #include "../../lib/mathlang/view.hpp"
 

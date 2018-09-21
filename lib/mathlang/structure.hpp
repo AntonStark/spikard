@@ -11,29 +11,9 @@
 
 #include "../../json.hpp"
 
+#include "names.hpp"
 
 using json = nlohmann::json;
-
-class Definition;
-class NameSpaceIndex
-/// Инкапсулирует работу с именами: имя-сущность, уникальность, доступ
-{
-public:
-    enum class NameTy {SYM, CONST, VAR, MT};
-private:
-    std::map<std::string, std::pair<NameTy, std::set<Definition*> > > data;
-
-    class name_doubling;
-    class no_name;
-public:
-    void add(NameTy type, const std::string& name, Definition* where);
-    bool isThatType(const std::string& name, const NameTy& type) const;
-    bool isSomeType(const std::string& name) const;
-
-    std::set<std::string> getNames(NameTy type) const;
-    std::set<Definition*> get(NameTy type, const std::string& name) const;
-};
-typedef NameSpaceIndex::NameTy NameTy;
 
 class Representation;
 class Node;
@@ -58,19 +38,16 @@ public:
     virtual std::string print(Representation* r, bool incremental = true) const = 0;
 };
 
-
-class NameStoringStrategy
-/// Интерфейс работы с именами со стороны узлов
+class Item : public Hierarchy
+/// Этот класс для первичных конструкций как определения и утверждения
 {
+protected:
+    explicit Item(Node* parent) : Hierarchy(parent) {}
+
 public:
-    virtual const NameSpaceIndex& index() const = 0;
-    friend class Definition;
-    virtual void registerName(
-            NameTy type, const std::string& name, Definition* where) = 0;
-
-    virtual std::string printType() const = 0;
+    Hierarchy* getByPass(Path path) override
+    { return (path.empty() ? this : nullptr); }
 };
-
 
 class ListStorage
 /// Реализация хранения потомков узла
@@ -121,58 +98,8 @@ public:
 };
 
 
-class Hidden : public NameStoringStrategy
-/// Стратегия внутреннего хранения имён как в Теоремах и Курсах
-{
-private:
-    /*  Здесь хранится NSI, соответствующее концу Node,
-        потому что запись ведётся именно в конец.
-        Вставки Def-ов влекут обновление. */
-    NameSpaceIndex atTheEnd;
-public:
-    Hidden() : Hidden(nullptr) {}
-    explicit Hidden(Node* parent) {
-        if (parent)
-            atTheEnd = parent->index();
-    }
-
-    const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string &name, Definition* where) override
-    { atTheEnd.add(type, name, where); }
-    std::string printType() const override { return "Hidden"; }
-};
-
-class Appending : public NameStoringStrategy
-/// Стратегия внешнего хранения имён как в Лекциях и Разделах
-{
-private:
-    /*  Здесь хранится NSI, соответствующее концу Node,
-    потому что запись ведётся именно в конец.
-    Вставки Def-ов влекут обновление. */
-    NameSpaceIndex atTheEnd;
-    Node* _parent;
-public:
-    explicit Appending(Node* parent) : _parent(parent) {
-        if (parent)
-            atTheEnd = parent->index();
-    }
-
-    const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string& name, Definition* where) override {
-        _parent->registerName(type, name, where);
-        atTheEnd.add(type, name, where);
-    }
-    std::string printType() const override { return "Appending"; }
-};
-
-NameStoringStrategy* nssFromStr(std::string str, Node* parent);
-
-
 class NamedNode;
-class DefType;
-class DefVar;
-class DefConst;
-class DefSym;
+class Definition;
 class TermsBox;
 class Inference;
 
@@ -186,10 +113,7 @@ public:
     // имеет смысл (т.е. для конкретных классов иерархии)
     virtual void process(const ListStorage*) = 0;
     virtual void process(const NamedNode*) = 0;
-    virtual void process(const DefType*) = 0;
-    virtual void process(const DefVar*) = 0;
-    virtual void process(const DefConst*) = 0;
-    virtual void process(const DefSym*) = 0;
+    virtual void process(const Definition*) = 0;
     virtual void process(const TermsBox*) = 0;
     virtual void process(const Inference*) = 0;
 };

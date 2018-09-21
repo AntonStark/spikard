@@ -5,7 +5,8 @@
 #ifndef TEST_BUILD_VIEW_HPP
 #define TEST_BUILD_VIEW_HPP
 
-#include "rationale.hpp"
+#include "definition.hpp"
+#include "statement.hpp"
 
 class PlainText : public Representation
 {
@@ -20,10 +21,7 @@ public:
 
     void process(const ListStorage* ls) override;
     void process(const NamedNode* nn) override;
-    void process(const DefType* dt) override;
-    void process(const DefVar* dv) override;
-    void process(const DefConst* dc) override;
-    void process(const DefSym* ds) override;
+    void process(const Definition* def) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
 };
@@ -37,10 +35,7 @@ public:
 
     void process(const ListStorage* ls) override;
     void process(const NamedNode* nn) override;
-    void process(const DefType* dt) override;
-    void process(const DefVar* dv) override;
-    void process(const DefConst* dc) override;
-    void process(const DefSym* ds) override;
+    void process(const Definition* def) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
 };
@@ -85,10 +80,7 @@ public:
 
     void process(const ListStorage* ls) override;
     void process(const NamedNode* nn) override;
-    void process(const DefType* dt) override;
-    void process(const DefVar* dv) override;
-    void process(const DefConst* dc) override;
-    void process(const DefSym* ds) override;
+    void process(const Definition* def) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
 };

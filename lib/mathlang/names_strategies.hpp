@@ -1,0 +1,57 @@
+//
+// Created by anton on 19.09.18.
+//
+
+#ifndef SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
+#define SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
+
+#include "names.hpp"
+#include "structure.hpp"
+
+class Hidden : public NameStoringStrategy
+/// Стратегия внутреннего хранения имён как в Теоремах и Курсах
+{
+private:
+    /*  Здесь хранится NSI, соответствующее концу Node,
+        потому что запись ведётся именно в конец.
+        Вставки Def-ов влекут обновление. */
+    NameSpaceIndex atTheEnd;
+public:
+    Hidden() : Hidden(nullptr) {}
+    explicit Hidden(Node* parent) {
+        if (parent)
+            atTheEnd = parent->index();
+    }
+
+    const NameSpaceIndex& index() const override { return atTheEnd; }
+    void registerName(NameTy type, const std::string &name, Definition* where) override
+    { atTheEnd.add(type, name, where); }
+    std::string printType() const override { return "Hidden"; }
+};
+
+class Appending : public NameStoringStrategy
+/// Стратегия внешнего хранения имён как в Лекциях и Разделах
+{
+private:
+    /*  Здесь хранится NSI, соответствующее концу Node,
+    потому что запись ведётся именно в конец.
+    Вставки Def-ов влекут обновление. */
+    NameSpaceIndex atTheEnd;
+    Node* _parent;
+public:
+    explicit Appending(Node* parent) : _parent(parent) {
+        if (parent)
+            atTheEnd = parent->index();
+    }
+
+    const NameSpaceIndex& index() const override { return atTheEnd; }
+    void registerName(NameTy type, const std::string& name, Definition* where) override {
+        _parent->registerName(type, name, where);
+        atTheEnd.add(type, name, where);
+    }
+    std::string printType() const override { return "Appending"; }
+};
+
+NameStoringStrategy* nssFromStr(std::string str, Node* parent);
+
+#endif //SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
