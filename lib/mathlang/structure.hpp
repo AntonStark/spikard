@@ -11,7 +11,7 @@
 
 #include "../../json.hpp"
 
-#include "names.hpp"
+#include "names_index.hpp"
 
 using json = nlohmann::json;
 

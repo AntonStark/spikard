@@ -15,9 +15,8 @@
 
 #include "basics/mathtype.hpp"
 #include "basics/terms.hpp"
-#include "names.hpp"
-#include "names_strategies.hpp"
-#include "named_node.hpp"
+#include "names_index.hpp"
+#include "structure.hpp"
 
 using json = nlohmann::json;
 

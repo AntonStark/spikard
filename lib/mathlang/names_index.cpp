@@ -2,7 +2,7 @@
 // Created by anton on 19.09.18.
 //
 
-#include "names.hpp"
+#include "names_index.hpp"
 
 class NameSpaceIndex::name_doubling : public std::invalid_argument
 {

@@ -9,7 +9,6 @@
 #include <map>
 #include <set>
 
-
 class Definition;
 class NameSpaceIndex
 /// Инкапсулирует работу с именами: имя-сущность, уникальность, доступ

@@ -5,7 +5,7 @@
 #ifndef SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
 #define SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
 
-#include "names.hpp"
+#include "names_index.hpp"
 #include "structure.hpp"
 
 class Hidden : public NameStoringStrategy

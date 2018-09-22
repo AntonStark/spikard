@@ -7,6 +7,8 @@
 
 #include "definition.hpp"
 #include "statement.hpp"
+#include "structure.hpp"
+#include "named_node.hpp"
 
 class PlainText : public Representation
 {

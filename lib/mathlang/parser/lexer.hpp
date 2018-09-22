@@ -8,8 +8,11 @@
 #include <string>
 #include <utility>
 #include <queue>
+#include "map"
+#include "set"
+#include "stack"
 
-#include "../primary_node.hpp"
+#include "../named_node.hpp"
 
 namespace Parser2
 {
