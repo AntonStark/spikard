@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "../definition.hpp"
+#include "../proof/definition.hpp"
 #include "../parser/lexer.hpp"
 
 using namespace Parser2;

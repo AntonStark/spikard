@@ -12,7 +12,7 @@
 #include "set"
 #include "stack"
 
-#include "../named_node.hpp"
+#include "../proof/named_node.hpp"
 
 namespace Parser2
 {

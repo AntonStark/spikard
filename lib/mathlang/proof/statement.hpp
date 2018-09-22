@@ -5,7 +5,7 @@
 #ifndef SPIKARD_MATHLANG_STATEMENT_HPP
 #define SPIKARD_MATHLANG_STATEMENT_HPP
 
-#include "basics/terms.hpp"
+#include "../basics/terms.hpp"
 #include "structure.hpp"
 #include "names_strategies.hpp"
 #include "definition.hpp"

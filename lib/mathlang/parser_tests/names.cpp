@@ -5,7 +5,7 @@
 #include <string>
 #include <algorithm>
 
-#include "../definition.hpp"
+#include "../proof/definition.hpp"
 #include "../parser/lexer.hpp"
 
 int main() {

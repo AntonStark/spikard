@@ -5,10 +5,10 @@
 #ifndef TEST_BUILD_VIEW_HPP
 #define TEST_BUILD_VIEW_HPP
 
-#include "definition.hpp"
-#include "statement.hpp"
-#include "structure.hpp"
-#include "named_node.hpp"
+#include "proof/definition.hpp"
+#include "proof/statement.hpp"
+#include "proof/structure.hpp"
+#include "proof/named_node.hpp"
 
 class PlainText : public Representation
 {

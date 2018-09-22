@@ -3,7 +3,7 @@
 
 #include "../../lib/mathlang/basics/mathtype.hpp"
 #include "../../lib/mathlang/basics/terms.hpp"
-#include "../../lib/mathlang/definition.hpp"
+#include "../../lib/mathlang/proof/definition.hpp"
 #include "../../lib/mathlang/parser/old_parser.hpp"
 #include "../../lib/mathlang/view.hpp"
 

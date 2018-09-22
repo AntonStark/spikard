@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "lexer.hpp"
-#include "../named_node.hpp"
+#include "../proof/named_node.hpp"
 
 namespace Parser2
 {
