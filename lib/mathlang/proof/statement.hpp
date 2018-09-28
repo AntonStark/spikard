@@ -6,6 +6,8 @@
 #define SPIKARD_MATHLANG_STATEMENT_HPP
 
 #include "../basics/terms.hpp"
+#include "../basics/mapterm.hpp"
+#include "../basics/contructedterm.hpp"
 #include "structure.hpp"
 #include "names_strategies.hpp"
 #include "definition.hpp"

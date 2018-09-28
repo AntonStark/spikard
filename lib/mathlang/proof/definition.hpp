@@ -15,6 +15,7 @@
 
 #include "../basics/mathtype.hpp"
 #include "../basics/terms.hpp"
+#include "../basics/mapterm.hpp"
 #include "names_index.hpp"
 #include "structure.hpp"
 
@@ -63,7 +64,7 @@ public:
     Definition(Node* parent, const std::string& symForm,
         const ProductMT& argT, const MathType* retT)
         : Definition(parent, NameTy::SYM, symForm)
-        { term = Map::create(symForm, argT, retT); }
+    { term = Map::create(symForm, argT, retT); }
 
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
