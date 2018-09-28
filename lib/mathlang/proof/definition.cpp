@@ -7,17 +7,14 @@
 // NB вообще можно вводить сущность с тем же именем (перегрузка), если ещё нет идентичной сущности:
 // для типов и переменных (и констант) это означает однозначность определения по имени, для символов - по имени и сигнатуре
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name)
-{ return (*index.get(NameTy::MT, name).begin())->getType(); }
+{ return index.get(NameTy::MT, name)->getType(); }
 NamedTerm* getVar (const NameSpaceIndex& index, const std::string& name)
-{ return (*index.get(NameTy::VAR, name).begin())->getTerm(); }
+{ return index.get(NameTy::VAR, name)->getTerm(); }
 NamedTerm* getConst(const NameSpaceIndex& index, const std::string& name)
-{ return (*index.get(NameTy::CONST, name).begin())->getTerm(); }
-std::set<NamedTerm*> getSym(const NameSpaceIndex& index, const std::string& name) {
-    std::set<NamedTerm*> buf;
-    for (const auto& def : index.get(NameTy::SYM, name))
-        buf.insert(def->getTerm());
-    return buf;
-}
+{ return index.get(NameTy::CONST, name)->getTerm(); }
+NamedTerm* getSym(const NameSpaceIndex& index, const std::string& name)
+{ return index.get(NameTy::SYM, name)->getTerm(); }
+// todo эти методы действительно нужны новому парсеру?
 
 Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
     switch (type) {

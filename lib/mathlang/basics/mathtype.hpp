@@ -71,7 +71,7 @@ private:
     const ProductMT* _argsT;
     const MathType* _retT;
 public:
-    MapMT(MTVector argsT, const MathType* retT) : _retT(retT)
+    MapMT(const ProductMT& argsT, const MathType* retT) : _retT(retT)
     { _argsT = new ProductMT(argsT); }
     MapMT(const MapMT& one) : _retT(one._retT)
     { _argsT = new ProductMT(*one._argsT); }

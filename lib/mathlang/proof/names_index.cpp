@@ -19,14 +19,10 @@ public:
 
 void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
                          const std::string& name, Definition* where) {
-    if (isSomeType(name)) {
-        if (data.at(name).first == type)
-            data.at(name).second.insert(where);
-        else
-            throw name_doubling(name);
-    }
+    if (!isSomeType(name))
+        data[name] = std::make_pair(type, where);
     else
-        data[name] = std::make_pair(type, std::set<Definition*>({where}));
+        throw name_doubling(name);
 }
 
 bool NameSpaceIndex::isThatType(const std::string& name, const NameTy& type) const {
@@ -44,7 +40,7 @@ std::set<std::string> NameSpaceIndex::getNames(NameTy type) const {
     return buf;
 }
 
-std::set<Definition*> NameSpaceIndex::get(NameTy type, const std::string& name) const {
+Definition* NameSpaceIndex::get(NameTy type, const std::string& name) const {
     if (isThatType(name, type))
         return data.at(name).second;
     throw no_name(name);

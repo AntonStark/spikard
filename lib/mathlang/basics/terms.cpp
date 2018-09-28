@@ -4,9 +4,9 @@
 
 #include "terms.hpp"
 
-Map::Map(std::string name, MTVector argT, const MathType* retT)
+Map::Map(std::string name, ProductMT argT, const MathType* retT)
     : NamedTerm(std::move(name)), _type(argT, retT) {
-    if (argT.size() == 0)
+    if (argT.getArity() == 0)
         throw std::invalid_argument("Нуль-арные отображения запрещены. Используйте константы.");
 }
 
@@ -25,15 +25,15 @@ public:
 };
 
 UnaryOperation::UnaryOperation(std::string name, Form form,
-                               MTVector argT, const MathType* retT)
-    : Map(name, argT, retT), _form(form) { if (argT.size() != 1) throw argN_oper_error(); }
+                               ProductMT argT, const MathType* retT)
+    : Map(name, argT, retT), _form(form) { if (argT.getArity() != 1) throw argN_oper_error(); }
 
 BinaryOperation::BinaryOperation(std::string name, Form form,
-                                 MTVector argT, const MathType* ret)
-    : Map(name, argT, ret), _form(form) { if (argT.size() != 2) throw argN_oper_error(); }
+                                 ProductMT argT, const MathType* ret)
+    : Map(name, argT, ret), _form(form) { if (argT.getArity() != 2) throw argN_oper_error(); }
 
-TernaryOperation::TernaryOperation(std::string name, MTVector argT, const MathType* ret)
-    : Map(name, argT, ret) { if (argT.size() != 3) throw argN_oper_error(); }
+TernaryOperation::TernaryOperation(std::string name, ProductMT argT, const MathType* ret)
+    : Map(name, argT, ret) { if (argT.getArity() != 3) throw argN_oper_error(); }
 
 ArgForm Map::parseForm(std::string symDefStr) {
     ArgForm flags;
@@ -109,7 +109,7 @@ std::string Map::extractName(std::string symDefStr) {
     return symDefStr;
 }
 
-Map* Map::create(std::string symForm, MTVector argT, const MathType* retT) {
+Map* Map::create(std::string symForm, const ProductMT& argT, const MathType* retT) {
     std::string name = extractName(symForm);
     ArgForm af = parseForm(symForm);
     size_t totalArgs = af.prefix + af.top + af.bottom + af.tail;
@@ -324,9 +324,9 @@ std::map<Term::QType, const std::string>
         Term::qword = { {Term::QType::FORALL,"\\forall "},
                         {Term::QType::EXISTS,"\\exists "} };
 Map forall(Term::qword[Term::QType::FORALL],
-              {&any_mt, &logical_mt}, &logical_mt);
+              ProductMT({&any_mt, &logical_mt}), &logical_mt);
 Map exists(Term::qword[Term::QType::EXISTS],
-              {&any_mt, &logical_mt}, &logical_mt);
+              ProductMT({&any_mt, &logical_mt}), &logical_mt);
 
 Terms* NamedTerm::replace(const Terms* x, const Terms* t) const
 { return (comp(x) ? t->clone() : this->clone()); }

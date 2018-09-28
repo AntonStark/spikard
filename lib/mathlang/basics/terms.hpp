@@ -110,9 +110,9 @@ public:
 private:
     MapMT _type;
 public:
-    Map(std::string name, MTVector argT, const MathType* retT);
+    Map(std::string name, ProductMT argT, const MathType* retT);
     Map(std::string name, size_t arity, const MathType* argT, const MathType* retT)
-        : Map(name, {arity, argT}, retT) {}
+        : Map(name, ProductMT({arity, argT}), retT) {}
     Map(const Map&) = default;
     ~Map() override = default;
 
@@ -129,7 +129,7 @@ public:
 
     static std::string extractName(std::string symDefStr);
     static ArgForm parseForm(std::string symDefStr);
-    static Map* create(std::string symForm, MTVector argT, const MathType* retT);
+    static Map* create(std::string symForm, const ProductMT& argT, const MathType* retT);
 };
 
 class UnaryOperation : public Map
@@ -140,7 +140,7 @@ private:
     Form _form;
 public:
     UnaryOperation(std::string name, Form form,
-                   MTVector argT, const MathType* retT);
+                   ProductMT argT, const MathType* retT);
     Terms* clone() const override { return new UnaryOperation(*this); }
 };
 
@@ -152,14 +152,14 @@ private:
     Form _form;
 public:
     BinaryOperation(std::string name, Form form,
-                    MTVector argT, const MathType* ret);
+                    ProductMT argT, const MathType* ret);
     Terms* clone() const override { return new BinaryOperation(*this); }
 };
 
 class TernaryOperation : public Map
 {
 public:
-    TernaryOperation(std::string name, MTVector argT, const MathType* ret);
+    TernaryOperation(std::string name, ProductMT argT, const MathType* ret);
     Terms* clone() const override { return new TernaryOperation(*this); }
 };
 
