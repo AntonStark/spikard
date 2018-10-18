@@ -6,27 +6,29 @@
 
 namespace Parser2 {
 
-void Lexer::configureLatex() {
-    structureSymbols = {
+Lexer Lexer::configureLatex() {
+    Lexer lex;
+    lex.structureSymbols = {
         {"^", Token::t}, {"_", Token::b},
         {"(", Token::l}, {")", Token::r},
         {"[", Token::ls},{"]", Token::rs},
         {"{", Token::lc},{"}", Token::rc}
     };
-    tokenPrints = {
+    lex.tokenPrints = {
         {Token::t, "^"}, {Token::b, "_"},
         {Token::l, "("}, {Token::r, ")"},
         {Token::ls,"["}, {Token::rs,"]"},
         {Token::lc,"{"}, {Token::rc,"}"}
     };
-    
-    storage["blank"] = {"\\<space>", "~", "\\nobreakspace",
+
+    lex.storage["blank"] = {"\\<space>", "~", "\\nobreakspace",
                         "\\!", "\\,", "\\thinspace", "\\:", "\\medspace",
                         "\\;", "\\thickspace", "\\enspace", "\\quad", "\\qquad"};
-    storage["bracket_size"] = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
+    lex.storage["bracket_size"] = {"\\left", "\\big", "\\bigl", "\\bigr", "\\middle",
                                "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg",
                                "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
-    storage["skipping_chars"] = {" ", "\t", "&"};
+    lex.storage["skipping_chars"] = {" ", "\t", "&"};
+    return lex;
 }
 
 LexemStorage::CatCode LexemStorage::_catCode(std::string category) {
@@ -217,24 +219,22 @@ ParseStatus Lexer::checkRegisters(Parser2::ExpressionLayer* layer) {
     return Parser2::checkRegisters(layer, it, layer->_bounds.second);
 }
 
-CurAnalysisData::CurAnalysisData(Lexer& lexer, std::string toParse)
-    : _lexer(lexer), input(std::move(toParse)) {
-    res = _lexer.splitTexUnits(input, lexems);
-    if (!res.success) return;
+CurAnalysisData Lexer::recognize(const std::string& toParse) {
+    CurAnalysisData buf;
+    buf.res = splitTexUnits(toParse, buf.lexems);
+    if (!buf.res.success) return buf;
 
-    res = _lexer.collectBracketInfo(lexems, bracketInfo);
-    if (!res.success) return;
+    buf.res = collectBracketInfo(buf.lexems, buf.bracketInfo);
+    if (!buf.res.success) return buf;
 
-    Lexer::buildLayerStructure(this, nullptr);
-    for (auto pL : layers) {
-        res = Lexer::checkRegisters(pL);
-        if (!res.success) return;
+    Lexer::buildLayerStructure(&buf, nullptr);
+    for (auto pL : buf.layers) {
+        buf.res = Lexer::checkRegisters(pL);
+        if (!buf.res.success) return buf;
     }
+    return buf;
 }
 
-CurAnalysisData parse(PrimaryNode* where, std::string toParse) {
-    Lexer lex;
-    return CurAnalysisData(lex, std::move(toParse));
-}
+Lexer texLexer = Lexer::configureLatex();
 
 }

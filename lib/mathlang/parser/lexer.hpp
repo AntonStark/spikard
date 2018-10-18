@@ -2,8 +2,8 @@
 // Created by anton on 10.06.18.
 //
 
-#ifndef SPIKARD_LEXER2_HPP
-#define SPIKARD_LEXER2_HPP
+#ifndef SPIKARD_LEXER_HPP
+#define SPIKARD_LEXER_HPP
 
 #include <string>
 #include <utility>
@@ -57,7 +57,8 @@ struct LexemStorage
                 _base._store(cmd, _catCode);
         }
     };
-    const StoreSet operator[] (const std::string& category) { return {*this, category}; }
+    const StoreSet operator[] (const std::string& category)
+    { return {*this, category}; }
 };
 
 struct Lexeme
@@ -137,29 +138,10 @@ struct ParseStatus
         : success(false), at(at), mess(std::move(mess)) {}
 };
 
-struct CurAnalysisData;
-class Lexer
-{
-    std::map<std::string, Token> structureSymbols;
-    std::map<Token, std::string> tokenPrints;
-    void configureLatex();
-public:
-    LexemStorage storage;
-    Lexer() { configureLatex(); }
-    ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
-    ParseStatus collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo);
-    static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target);
-    static ParseStatus checkRegisters(ExpressionLayer* layer);
-
-    inline std::string print(const Lexeme& l) const
-    { return (l._tok == Token::w ? storage.get(l._id) : tokenPrints.at(l._tok)); }
-};
-
 /// Контейнер для вспомогательной информации и
 /// промежуточных результатов разбора выражения
 struct CurAnalysisData
 {
-    Lexer& _lexer;
     std::string input;
     LexemeSequence lexems;
     std::map<size_t, size_t> bracketInfo;
@@ -171,12 +153,29 @@ struct CurAnalysisData
     };
     std::set<ExpressionLayer*, comp_by_val<ExpressionLayer> > layers;
     ParseStatus res;
-
-    CurAnalysisData(Lexer& lexer, std::string toParse);
 };
 
-CurAnalysisData parse(PrimaryNode* where, std::string toParse);
+class Lexer
+{
+    std::map<std::string, Token> structureSymbols;
+    std::map<Token, std::string> tokenPrints;
+public:
+    LexemStorage storage;
+    Lexer() {}
+    static Lexer configureLatex();
+    CurAnalysisData recognize(const std::string& toParse);
+
+    ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
+    ParseStatus collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo);
+    static void buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target);
+    static ParseStatus checkRegisters(ExpressionLayer* layer);
+
+    inline std::string print(const Lexeme& l) const
+    { return (l._tok == Token::w ? storage.get(l._id) : tokenPrints.at(l._tok)); }
+};
+
+extern Lexer texLexer;
 
 }
 
-#endif //SPIKARD_LEXER2_HPP
+#endif //SPIKARD_LEXER_HPP

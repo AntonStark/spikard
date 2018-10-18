@@ -2,8 +2,8 @@
 // Created by anton on 05.09.18.
 //
 
-#ifndef SPIKARD_PARSER2_HPP
-#define SPIKARD_PARSER2_HPP
+#ifndef SPIKARD_PARSER_HPP
+#define SPIKARD_PARSER_HPP
 
 #include <vector>
 
@@ -39,4 +39,4 @@ public:
 
 }
 
-#endif //SPIKARD_PARSER2_HPP
+#endif //SPIKARD_PARSER_HPP
