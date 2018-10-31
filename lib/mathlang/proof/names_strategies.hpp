@@ -7,7 +7,7 @@
 
 #include "names_index.hpp"
 #include "structure.hpp"
-#include "../parser/lexer.hpp"
+#include "../parser/lexeme.hpp"
 
 class Hidden : public NameStoringStrategy
 /// Стратегия внутреннего хранения имён как в Теоремах и Курсах

@@ -31,7 +31,7 @@ class Parser
 public:
     const PrimaryNode* _where;
     Hidden localNames;
-    std::set<std::string> namesDefined;
+    std::set<Parser2::LexemeSequence> namesDefined;
     std::set<LexemeSequence> definedTexSeq;
 
     Parser(PrimaryNode* where);

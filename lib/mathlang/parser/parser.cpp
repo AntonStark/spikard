@@ -60,11 +60,11 @@ std::set<TexSequence> Lexer::selectSuitableWithIndent(const std::set<TexSequence
     auto debug = 1;
 }*/
 
-void scanNames(PrimaryNode* node, std::set<std::string>& storage) {
+void scanNames(PrimaryNode* node, std::set<Parser2::LexemeSequence>& storage) {
     typedef NameSpaceIndex::NameTy NType;
     const NameSpaceIndex& index = node->index();
     for (const auto& t : {NType::MT, NType::SYM, NType::VAR, NType::CONST}) {
-        const std::set<std::string>& namesThisType = index.getNames(t);
+        const auto& namesThisType = index.getNames(t);
         storage.insert(namesThisType.begin(), namesThisType.end());
     }
 }

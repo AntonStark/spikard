@@ -234,7 +234,7 @@ CurAnalysisData Lexer::recognize(const std::string& toParse) {
 
 std::string Lexer::print(const Parser2::LexemeSequence& lSeq) const {
     return std::accumulate(
-        lSeq.begin(), lSeq.end(), "",
+        lSeq.begin(), lSeq.end(), std::string(""),
         [this] (const std::string& buf, const Lexeme& l) -> std::string
         { return buf + print(l); });
 }

@@ -2,7 +2,7 @@
 // Created by anton on 28.09.18.
 //
 
-#include "contructedterm.hpp"
+#include "contructed_term.hpp"
 
 std::string ParenSymbol::print() const {
     std::stringstream buf;
@@ -79,13 +79,6 @@ bool ParenSymbol::operator==(const ParenSymbol& other) const {
     return true;
 }
 
-bool NamedTerm::comp(const Terms* other) const {
-    if (auto namedOther = dynamic_cast<const NamedTerm*>(other))
-        return (*getType() == *namedOther->getType()
-                && getName() == namedOther->getName());
-    else
-        return false;
-}
 bool Term::comp(const Terms* other) const {
     if (auto t = dynamic_cast<const Term*>(other))
         return (_f == t->_f && ParenSymbol::operator==(*t));
@@ -93,8 +86,6 @@ bool Term::comp(const Terms* other) const {
         return false;
 }
 
-const Terms* NamedTerm::get(Path path) const
-{ return (path.empty() ? this : nullptr); }
 const Terms* Term::get(Path path) const {
     if (path.empty())
         return this;
@@ -104,8 +95,6 @@ const Terms* Term::get(Path path) const {
     }
 }
 
-Terms* NamedTerm::replace(Path path, const Terms* by) const
-{ return (path.empty() ? by->clone() : nullptr); }
 const ParenSymbol::TermsVector&
 ParenSymbol::replace(Terms::Path path, const Terms* by) const {
     TermsVector updated;
@@ -172,8 +161,6 @@ Map forall(Term::qword[Term::QType::FORALL],
 Map exists(Term::qword[Term::QType::EXISTS],
            ProductMT({&any_mt, &logical_mt}), &logical_mt);
 
-Terms* NamedTerm::replace(const Terms* x, const Terms* t) const
-{ return (comp(x) ? t->clone() : this->clone()); }
 
 Terms* Term::replace(const Terms* x, const Terms* t) const {
     // если x переменная...

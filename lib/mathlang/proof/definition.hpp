@@ -13,12 +13,14 @@
 #include <sstream>
 #include "../../../json.hpp"
 
+#include "../basics/mapterm.hpp"
 #include "../basics/mathtype.hpp"
 #include "../basics/terms.hpp"
-#include "../basics/mapterm.hpp"
+
+#include "../parser/lexer.hpp"
+
 #include "names_index.hpp"
 #include "structure.hpp"
-#include "../parser/lexer.hpp"
 
 using json = nlohmann::json;
 

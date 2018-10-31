@@ -7,6 +7,7 @@
 
 #include "terms.hpp"
 #include "mapterm.hpp"
+#include "named_term.hpp"
 
 class ParenSymbol
 {

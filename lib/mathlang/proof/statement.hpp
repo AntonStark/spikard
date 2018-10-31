@@ -5,11 +5,13 @@
 #ifndef SPIKARD_MATHLANG_STATEMENT_HPP
 #define SPIKARD_MATHLANG_STATEMENT_HPP
 
-#include "../basics/terms.hpp"
+#include "../basics/contructed_term.hpp"
 #include "../basics/mapterm.hpp"
-#include "../basics/contructedterm.hpp"
-#include "structure.hpp"
+#include "../basics/terms.hpp"
+
+#include "definition.hpp"
 #include "names_strategies.hpp"
+#include "structure.hpp"
 
 class Statement
 {

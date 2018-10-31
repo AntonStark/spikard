@@ -5,7 +5,7 @@
 #ifndef SPIKARD_MATHLANG_MAPTERM_HPP
 #define SPIKARD_MATHLANG_MAPTERM_HPP
 
-#include "terms.hpp"
+#include "named_term.hpp"
 
 // Это реализация неоднородного символа.
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
