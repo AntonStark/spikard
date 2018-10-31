@@ -7,6 +7,7 @@
 
 #include "names_index.hpp"
 #include "structure.hpp"
+#include "../parser/lexer.hpp"
 
 class Hidden : public NameStoringStrategy
 /// Стратегия внутреннего хранения имён как в Теоремах и Курсах
@@ -24,7 +25,7 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string &name, Definition* where) override
+    void registerName(NameTy type, const Parser2::LexemeSequence& name, Definition* where) override
     { atTheEnd.add(type, name, where); }
     std::string printType() const override { return "Hidden"; }
 };
@@ -45,7 +46,7 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(NameTy type, const std::string& name, Definition* where) override {
+    void registerName(NameTy type, const Parser2::LexemeSequence& name, Definition* where) override {
         _parent->registerName(type, name, where);
         atTheEnd.add(type, name, where);
     }

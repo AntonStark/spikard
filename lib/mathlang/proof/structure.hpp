@@ -89,7 +89,7 @@ public:
 
     virtual const NameSpaceIndex& index() const
     { return _naming->index(); }
-    virtual void registerName(NameTy type, const std::string& name, Definition* where)
+    virtual void registerName(NameTy type, const Parser2::LexemeSequence& name, Definition* where)
     { _naming->registerName(type, name, where); }
 
     virtual std::string print(Representation* r, bool incremental = true) const override

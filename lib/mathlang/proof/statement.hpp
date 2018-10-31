@@ -10,7 +10,6 @@
 #include "../basics/contructedterm.hpp"
 #include "structure.hpp"
 #include "names_strategies.hpp"
-#include "definition.hpp"
 
 class Statement
 {

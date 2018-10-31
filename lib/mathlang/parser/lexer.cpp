@@ -28,32 +28,8 @@ Lexer Lexer::configureLatex() {
                                "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg",
                                "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
     lex.storage["skipping_chars"] = {" ", "\t", "&"};
+    lex.storage["argument_place"] = {"\\cdot"};
     return lex;
-}
-
-LexemStorage::CatCode LexemStorage::_catCode(std::string category) {
-    for (int i = 0; i < _catNames.size(); ++i)
-        if (_catNames[i] == category)
-            return i;
-    _catNames.push_back(category);
-    return (_catNames.size() - 1);
-}
-
-LexemStorage::Id LexemStorage::_store(std::string cmd, unsigned char catCode) {
-    auto search = _dictionary.find(cmd);
-    if (search != _dictionary.end()) {              // в случае, когда такая команда уже определена и ...
-        unsigned char oldCat = _catIndex[search->second];
-        if (catCode != 0 && oldCat != catCode)      // категория задана явно и не совпадает ...
-            _catIndex[search->second] = catCode;    // просто изменяем категорию команды
-        return search->second;
-    }
-    else {
-        Id id = _index.size();
-        _index.push_back(cmd);
-        _dictionary[cmd] = id;
-        _catIndex.push_back(catCode);
-        return id;
-    }
 }
 
 bool ExpressionLayer::operator<(const Parser2::ExpressionLayer& two) const
@@ -111,6 +87,24 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         i = j;
     }
     return ParseStatus();
+}
+
+/// Получаем последовательность лексем без skipping_chars и bracket_size // todo вызывать следом за splitTexUnits
+void Lexer::filterNotPtintableCmds(const Parser2::LexemeSequence& lexems) {
+    // todo перенести сюда код, отбрасывающий skipping_chars и bracket_size
+    // todo для сообщений об ошибках нужно знать позицию в исходной строке (до всех фильтраций!) - возможно нужно хранить originOffset в Lexeme
+    // а сейчас индекс идёт по lexems где уже нет skipping_chars и bracket_size
+}
+
+/// Проверка, есть ли в последовательности команды категории blank
+bool Lexer::hasBlanks(const Parser2::LexemeSequence& lexems) {
+    return std::any_of(lexems.begin(), lexems.end(),
+                       [this] (const Lexeme& l) -> bool
+                       { return (storage.which(l._id) == "blank"); });
+}
+
+void Lexer::dropBlanks(Parser2::LexemeSequence& lexems) {
+    
 }
 
 /// В этой функции строится словарь парных скобок и проверяется правильность их расстановки
@@ -221,7 +215,8 @@ ParseStatus Lexer::checkRegisters(Parser2::ExpressionLayer* layer) {
 
 CurAnalysisData Lexer::recognize(const std::string& toParse) {
     CurAnalysisData buf;
-    buf.res = splitTexUnits(toParse, buf.lexems);
+    buf.input = toParse;
+    buf.res = splitTexUnits(buf.input, buf.lexems);
     if (!buf.res.success) return buf;
 
     buf.res = collectBracketInfo(buf.lexems, buf.bracketInfo);
@@ -232,7 +227,16 @@ CurAnalysisData Lexer::recognize(const std::string& toParse) {
         buf.res = Lexer::checkRegisters(pL);
         if (!buf.res.success) return buf;
     }
+
+    buf.blankFound = hasBlanks(buf.lexems);
     return buf;
+}
+
+std::string Lexer::print(const Parser2::LexemeSequence& lSeq) const {
+    return std::accumulate(
+        lSeq.begin(), lSeq.end(), "",
+        [this] (const std::string& buf, const Lexeme& l) -> std::string
+        { return buf + print(l); });
 }
 
 Lexer texLexer = Lexer::configureLatex();
