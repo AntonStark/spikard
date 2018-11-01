@@ -6,7 +6,7 @@
 
 TermsBox::TermsBox(Node* parent, std::string source)
     : Node(parent, new Hidden(parent)),
-      data(parse(this, std::move(source))) {}
+      data(Parser2::parse(this, std::move(source))) {}
 
 class Inference::bad_inf : public std::invalid_argument
 {

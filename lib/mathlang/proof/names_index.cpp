@@ -39,6 +39,14 @@ std::set<NameSpaceIndex::NamesType> NameSpaceIndex::getNames(NameTy type) const 
     return buf;
 }
 
+std::set<std::string> NameSpaceIndex::getNamesStr(NameTy type) const {
+    std::set<std::string> buf;
+    for (auto& n : data)
+        if (n.second.first == type)
+            buf.insert(Parser2::texLexer.print(n.first));
+    return buf;
+}
+
 Definition* NameSpaceIndex::get(NameTy type, const NamesType& name) const {
     if (isThatType(name, type))
         return data.at(name).second;

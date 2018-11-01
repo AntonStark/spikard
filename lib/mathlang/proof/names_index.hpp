@@ -30,6 +30,7 @@ public:
     bool isSomeType(const NamesType& name) const;
 
     std::set<NamesType> getNames(NameTy type) const;
+    std::set<std::string> getNamesStr(NameTy type) const;
     Definition* get(NameTy type, const NamesType& name) const;
 };
 typedef NameSpaceIndex::NameTy NameTy;

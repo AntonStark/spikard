@@ -4,7 +4,7 @@
 
 #include "../../core.hpp"
 #include "../../lib/mathlang/proof/definition.hpp"
-#include "../../lib/mathlang/parser/old_parser.hpp"
+//#include "../../lib/mathlang/parser/old_parser.hpp"
 #include "../../lib/mathlang/view.hpp"
 
 using namespace std;
@@ -18,7 +18,7 @@ private:
     void resetStorage(NamedNode* _storage);
     void tellTypeNames();
     string userCheck() const;
-    void print(bool incr);
+    void print(bool incr = true);
     json getIndexFromFile(const string& indexFilePath);
 
     // Далее следуют функции, реализующие функционал плагина
@@ -73,11 +73,11 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
 }
 
 void MathlangPlugin::tellTypeNames() {
-    json types = { {"types", current->index().getNames(NameTy::MT)} };
+    json types = { {"types", current->index().getNamesStr(NameTy::MT)} };
     write(INFO_TYPE::NAME, types);
 }
 
-void MathlangPlugin::print(bool incr = true) {
+void MathlangPlugin::print(bool incr) {
     AsMlObj asMlObj;
     if (!incr) {
         current->print(&asMlObj);
@@ -450,7 +450,7 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs) {
         return;
 
     write(INFO_TYPE::TXT, "Определены следующие типы:");
-    for (const auto& n : current->index().getNames(NameTy::MT))
+    for (const auto& n : current->index().getNamesStr(NameTy::MT))
         write(INFO_TYPE::TXT, n);
 }
 
@@ -458,7 +458,7 @@ void MathlangPlugin::viewSyms(vector<string> cmdArgs) {
     CALL_INFO("символы", "<символы> - перечислить уже определённые символы.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
-    for (const auto& n : current->index().getNames(NameTy::SYM))
+    for (const auto& n : current->index().getNamesStr(NameTy::SYM))
         write(INFO_TYPE::TXT, n);
 }
 
@@ -466,7 +466,7 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs) {
     CALL_INFO("переменные", "<переменные> - перечислить уже определённые переменные.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
-    for (const auto& n : current->index().getNames(NameTy::VAR))
+    for (const auto& n : current->index().getNamesStr(NameTy::VAR))
         write(INFO_TYPE::TXT, n);
 }
 

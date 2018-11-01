@@ -13,6 +13,8 @@
 #include "names_strategies.hpp"
 #include "structure.hpp"
 
+#include "../parser/parser.hpp"
+
 class Statement
 {
 public:
@@ -38,7 +40,6 @@ public:
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
 };
-extern Terms* parse(Node* where, std::string source); // todo здесь связка с парсером
 
 class Inference : public Item, public Statement
 // Этот класс представлет любые следствия.

@@ -4,7 +4,7 @@
 #include "../../lib/mathlang/basics/mathtype.hpp"
 #include "../../lib/mathlang/basics/terms.hpp"
 #include "../../lib/mathlang/proof/definition.hpp"
-#include "../../lib/mathlang/parser/old_parser.hpp"
+//#include "../../lib/mathlang/parser/old_parser.hpp"
 #include "../../lib/mathlang/view.hpp"
 
 #include "../../json.hpp"
@@ -18,7 +18,7 @@ int main(void)
     PrimaryMT natural("Natural");
     PrimaryMT set("Set");
 
-    Map n("\\lnot ", {&logical_mt}, &logical_mt); //можно и без {скобок}
+    /*Map n("\\lnot ", {&logical_mt}, &logical_mt); //можно и без {скобок}
     Map o({"\\lor ", {2, &logical_mt}, &logical_mt});
     Map a({"\\land ", {2, &logical_mt}, &logical_mt});
     Map r({"\\Rightarrow ", {2, &logical_mt}, &logical_mt});
@@ -37,7 +37,7 @@ int main(void)
 //    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;
 
     Map ze({"0", {}, &real});
-    Map ne({"!=", {2, &real}, &logical_mt});
+    Map ne({"!=", {2, &real}, &logical_mt});*/
     //todo меньше new/delete в термах, потом
 
     BranchNode entry("global");

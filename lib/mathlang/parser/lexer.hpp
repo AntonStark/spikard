@@ -8,10 +8,11 @@
 #include <string>
 #include <utility>
 #include <queue>
-#include "map"
-#include "set"
-#include "stack"
-#include "algorithm"
+#include <map>
+#include <set>
+#include <stack>
+#include <algorithm>
+#include <sstream>
 
 #include "lexeme.hpp"
 
@@ -108,7 +109,7 @@ public:
     CurAnalysisData recognize(const std::string& toParse);
     inline std::string print(const Lexeme& l) const
     { return (l._tok == Token::w ? storage.get(l._id) : tokenPrints.at(l._tok)); }
-    inline std::string print(const LexemeSequence& lSeq) const;
+    std::string print(const LexemeSequence& lSeq) const;
 
     ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
     void filterNotPtintableCmds(const LexemeSequence& lexems);

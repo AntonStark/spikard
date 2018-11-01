@@ -9,6 +9,7 @@ int main() {
     cource.startLecture("Лекция");
     auto lecture = cource.getSub(1);
 
+    lecture->defType("any");
     lecture->defType("Set");
     lecture->defType("Logical");
     lecture->defSym(R"(\cdot\in\cdot)", {"any", "Set"}, "Logical");

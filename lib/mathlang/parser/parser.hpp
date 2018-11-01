@@ -29,14 +29,15 @@ struct PartialResolved
 class Parser
 {
 public:
-    const PrimaryNode* _where;
-    Hidden localNames;
-    std::set<Parser2::LexemeSequence> namesDefined;
-    std::set<LexemeSequence> definedTexSeq;
+    const Node* _where;
+    std::set<LexemeSequence> namesDefined;
 
-    Parser(PrimaryNode* where);
+    Parser(Node* where);
+
+    Terms* parse(LexemeSequence source);
 };
 
+Terms* parse(Node* where, std::string source);
 }
 
 #endif //SPIKARD_PARSER_HPP
