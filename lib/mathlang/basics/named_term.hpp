@@ -5,14 +5,19 @@
 #ifndef SPIKARD_NAMED_TERM_HPP
 #define SPIKARD_NAMED_TERM_HPP
 
+#include "../parser/lexeme.hpp"
+#include "../parser/lexer.hpp"
+
 #include "terms.hpp"
+
+typedef Parser2::LexemeSequence NamesType;
 
 class NamedTerm : public Terms
 {
 private:
-    std::string _name;
+    NamesType _name;
 public:
-    NamedTerm(std::string name) : _name(std::move(name)) {}
+    NamedTerm(NamesType name) : _name(name) {}
     NamedTerm(const NamedTerm& one): _name(one._name) {}
     virtual ~NamedTerm() = default;
 
@@ -21,8 +26,8 @@ public:
     bool operator< (const NamedTerm& other) const
     { return (_name < other._name); }
 
-    std::string getName() const { return _name; }
-    void setName(const std::string& name) { _name = name; }
+    std::string getName() const { return Parser2::texLexer.print(_name); }
+//    void setName(const std::string& name) { _name = name; }
     virtual bool comp(const Terms* other) const override;
 
     const Terms* get(Path path) const override;
@@ -35,10 +40,10 @@ class Constant : public NamedTerm
 private:
     const MathType* _type;
 public:
-    Constant(std::string name, const MathType* type)
+    Constant(NamesType name, const MathType* type)
         : NamedTerm(name), _type(type) {}
     Constant(const Constant& one)
-        : NamedTerm(one.getName()) { _type = one.getType()->clone(); }
+        : NamedTerm(one) { _type = one.getType()->clone(); }
     ~Constant() override = default;
 
     const MathType* getType() const override { return _type; }
@@ -51,10 +56,10 @@ class Variable : public NamedTerm
 private:
     const MathType* _type;
 public:
-    Variable(std::string name, const MathType* type)
+    Variable(NamesType name, const MathType* type)
         : NamedTerm(name), _type(type) {}
     Variable(const Variable& one)
-        : NamedTerm(one.getName()) { _type = one.getType()->clone(); }
+        : NamedTerm(one) { _type = one.getType()->clone(); }
     ~Variable() override = default;
 
     const MathType* getType() const override { return _type; }

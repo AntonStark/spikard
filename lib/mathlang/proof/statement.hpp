@@ -68,6 +68,8 @@ public:
     { r->process(this); return r->str(); }
 };
 
+extern Map standardImpl;
+
 Terms* modusPonens(const Terms* premise, const Terms* impl);
 Terms* specialization(const Terms* general, const Terms* t);
 Terms* application(const Terms* term, const Terms* theorem);

@@ -45,20 +45,6 @@ class Definition : public Item
 private:
     PrimaryMT* mtype; // fixme пока используется явный union
     NamedTerm* term;
-    Definition(Node* parent, NameTy type, const std::string& name)
-            : Item(parent), defType(type) {
-        Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(name);
-        if (!cad.res.success)
-            throw parse_error(cad.res);
-        if (type == NameTy::SYM) {
-            // todo подумать как быть с blank в символе. просто удалять? (позже, пока считаем, что blank cmd нет)
-            /// ответ: проводим восстанавливающее преобразование (описывается в лексере, после ввода Lexeme::originOffset)
-            /// нужно выделить аргументные места (или их лексер распознает соотв. лексемами?)
-        }
-        else if (cad.blankFound)
-            throw parse_error("имя типа и переменной не может содержать команд отступа.");
-        parent->registerName(type, cad.lexems, this);
-    }
 
     friend class PrimaryNode;
     static Hierarchy* fromJson(const json& j, Node* parent, NameTy type);
@@ -69,20 +55,36 @@ public:
     Definition& operator=(const Definition&) = delete;
 
     Definition(Node* parent, const std::string& typeName)
-        : Definition(parent, NameTy::MT, typeName)
-        { mtype = new PrimaryMT(typeName); }
+        : Item(parent), defType(NameTy::MT) {
+        Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(typeName);
+        if (!cad.res.success)
+            throw parse_error(cad.res);
+        if (cad.blankFound)
+            throw parse_error("имя типа и переменной не может содержать команд отступа.");
+
+        mtype = new PrimaryMT(typeName);
+
+        parent->registerName(NameTy::MT, cad.lexems, this);
+    }
     // todo подумать как можно лучше увязать создание переменных и констант
     /**
      * Возможно следует вообще упразднить класс констант, поскольку есть неполные фиксации
      */
     Definition(Node* parent, NameTy type,
         const std::string& name, const MathType* mathType)
-        : Definition(parent, type, name) {
+        : Item(parent), defType(type) {
+        Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(name);
+        if (!cad.res.success)
+            throw parse_error(cad.res);
+        if (cad.blankFound)
+            throw parse_error("имя типа и переменной не может содержать команд отступа.");
+
         if (type == NameTy::VAR)
-            term = new Variable(name, mathType);
+            term = new Variable(cad.lexems, mathType);
         else if (type == NameTy::CONST)
-            term = new Constant(name, mathType);
-        else {}
+            term = new Constant(cad.lexems, mathType);
+
+        parent->registerName(type, cad.lexems, this);
     }
     // вместо symName (напр. \Rightarrow ) теперь symForm (напр. {}\Rightarrow{} или другое обозначение инфиксности)
     // ещё примеры \sum_^{} \frac{}{} {}+{} A_{} (как  A_i v)
@@ -91,8 +93,19 @@ public:
     // где три аргументных места и ProductMT argT = any x Set x (any -> Logical)
     Definition(Node* parent, const std::string& symForm,
         const ProductMT& argT, const MathType* retT)
-        : Definition(parent, NameTy::SYM, symForm)
-    { term = Map::create(symForm, argT, retT); }
+        : Item(parent), defType(NameTy::SYM) {
+        Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(symForm);
+        if (!cad.res.success)
+            throw parse_error(cad.res);
+
+//        term = Map::create(symForm, argT, retT);
+        term = new Map(cad.lexems, argT, retT);
+        // todo подумать как быть с blank в символе. просто удалять? (позже, пока считаем, что blank cmd нет)
+        /// ответ: проводим восстанавливающее преобразование (описывается в лексере, после ввода Lexeme::originOffset)
+        /// [originOffset нужно для сообщения об ошибках в исходной строке]
+        /// нужно выделить аргументные места (или их лексер распознает соотв. лексемами?)
+        parent->registerName(NameTy::SYM, cad.lexems, this);
+    }
 
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }

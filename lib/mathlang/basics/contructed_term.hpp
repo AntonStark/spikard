@@ -42,7 +42,7 @@ protected:
 public:
     typedef std::set<Variable> VarSet;
     enum class QType {FORALL, EXISTS};
-    static std::map<QType, const std::string> qword;
+    static std::map<QType, const NamesType> qword;
 
     Map _f;
     VarSet free;

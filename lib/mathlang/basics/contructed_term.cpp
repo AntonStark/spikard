@@ -153,9 +153,9 @@ void Term::boundVar(Variable var) {
                                     "свободной перменной.\n");
 }
 
-std::map<Term::QType, const std::string>
-    Term::qword = { {Term::QType::FORALL,"\\forall "},
-                    {Term::QType::EXISTS,"\\exists "} };
+std::map<Term::QType, const NamesType>
+    Term::qword = { {Term::QType::FORALL, Parser2::texLexer.recognize("\\forall\\cdot\\cdot").lexems},
+                    {Term::QType::EXISTS, Parser2::texLexer.recognize("\\exists\\cdot\\cdot").lexems} };
 Map forall(Term::qword[Term::QType::FORALL],
            ProductMT({&any_mt, &logical_mt}), &logical_mt);
 Map exists(Term::qword[Term::QType::EXISTS],
