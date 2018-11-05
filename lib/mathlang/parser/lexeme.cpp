@@ -15,7 +15,7 @@ LexemStorage::CatCode LexemStorage::_catCode(std::string category) {
     return (_catNames.size() - 1);
 }
 
-LexemStorage::Id LexemStorage::_store(std::string cmd, unsigned char catCode) {
+LexemStorage::Id LexemStorage::_store(const std::string& cmd, unsigned char catCode) {
     auto search = _dictionary.find(cmd);
     if (search != _dictionary.end()) {              // в случае, когда такая команда уже определена и ...
         unsigned char oldCat = _catIndex[search->second];

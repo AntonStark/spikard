@@ -35,8 +35,8 @@ struct LexemStorage
      */
 
     CatCode _catCode(std::string category);
-    Id _store(std::string cmd, unsigned char catCode);
-    Id store(std::string cmd) { return _store(std::move(cmd), 0); }
+    Id _store(const std::string& cmd, unsigned char catCode);
+    Id store(const std::string& cmd) { return _store(cmd, 0); }
 
     std::string which(Id id) const { return _catNames[_catIndex[id]]; }
     std::string get(Id id) const { return _index[id]; }
@@ -47,12 +47,13 @@ struct LexemStorage
         LexemStorage::CatCode _catCode;
         StoreSet(LexemStorage& base, std::string category)
             : _base(base), _catCode(_base._catCode(std::move(category))) {}
-        StoreSet& operator= (const std::set<std::string>& cmdSet) const {
+        StoreSet& operator= (const std::set<std::string>& cmdSet) {
             for (auto& cmd : cmdSet)
                 _base._store(cmd, _catCode);
+            return *this;
         }
     };
-    const StoreSet operator[] (const std::string& category)
+    StoreSet operator[] (const std::string& category)
     { return {*this, category}; }
 };
 
