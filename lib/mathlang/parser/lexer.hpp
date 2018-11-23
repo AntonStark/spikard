@@ -41,9 +41,10 @@ struct ExpressionLayer
             auto search = _host._excludes.find(pos + 1);
             if (search != _host._excludes.end())
                 pos = search->second + 1;
-            else
+            else if (pos < _host._bounds.second)
                 ++pos;
-            end = (pos > _host._bounds.second);
+            else
+                end = true;
             return *this;
         }
         Iter& operator= (const Iter& other) {
@@ -52,11 +53,10 @@ struct ExpressionLayer
                 end = other.end;
             }
         }
-        Token tok() {
-            return ( !end
-                     ? _host._base.at(pos)._tok
-                     : Token::w );
-        }
+        Token tok()
+        { return _host._base.at(pos)._tok; }
+        Lexeme get()
+        { return _host._base.at(pos); }
     };
 
     ExpressionLayer(const LexemeSequence& base, std::pair<size_t, size_t> bounds,
@@ -86,6 +86,7 @@ struct CurAnalysisData
 {
     std::string input;
     LexemeSequence lexems;
+    LexemeSequence filtered;
     bool blankFound;
     std::map<size_t, size_t> bracketInfo;
 
@@ -112,7 +113,7 @@ public:
     std::string print(const LexemeSequence& lSeq) const;
 
     ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
-    void filterNotPtintableCmds(const LexemeSequence& lexems);
+    void filterNotPtintableCmds(const LexemeSequence& lexems, LexemeSequence& filtered);
     bool hasBlanks(const LexemeSequence& lexems);
     void dropBlanks(LexemeSequence& lexems);
     ParseStatus collectBracketInfo(const LexemeSequence& lexems, std::map<size_t, size_t>& bracketInfo);

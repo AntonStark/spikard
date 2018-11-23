@@ -74,14 +74,14 @@ Parser::Parser(Node* where)
     scanNames(where, namesDefined);
 }
 
-Terms* Parser::parse(Parser2::LexemeSequence source) {
+Terms* Parser::parse(CurAnalysisData& source) {
     return nullptr; // todo
 }
 
 Terms* parse(Node* where, std::string source) {
     Parser texParser(where);
     auto cad = texLexer.recognize(source);
-    return texParser.parse(cad.lexems);
+    return texParser.parse(cad);
 }
 
 }

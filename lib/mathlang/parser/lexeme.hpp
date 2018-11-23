@@ -61,9 +61,12 @@ struct Lexeme
 {
     Token  _tok;
     LexemStorage::Id _id;
+    unsigned _originOffset;
 
-    Lexeme(Token structureTok)  : _tok(structureTok), _id(size_t(-1)) {}
-    Lexeme(LexemStorage::Id id) : _tok(Token::w), _id(id) {}
+    Lexeme(Token structureTok, unsigned originOffset)
+    : _tok(structureTok), _id(size_t(-1)), _originOffset(originOffset) {}
+    Lexeme(LexemStorage::Id id, unsigned originOffset)
+    : _tok(Token::w), _id(id), _originOffset(originOffset) {}
     bool operator< (const Lexeme& two) const
     { return (_tok != two._tok ? _tok < two._tok : _id < two._id); }
     bool operator== (const Lexeme& other) const

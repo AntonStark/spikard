@@ -76,24 +76,22 @@ ParseStatus Lexer::splitTexUnits(const std::string& input, LexemeSequence& lexem
         const std::string& cmd = input.substr(i, j-i);
         auto search = structureSymbols.find(cmd);
         if (search != structureSymbols.end())
-            lexems.emplace_back(search->second);
-        else {
-            auto id = storage.store(cmd);
-            std::string category = storage.which(id);
-            if (category != "skipping_chars" && category != "bracket_size")
-                lexems.emplace_back(storage.store(cmd));
-        }
+            lexems.emplace_back(search->second, i);
+        else
+            lexems.emplace_back(storage.store(cmd), i);
 
         i = j;
     }
     return ParseStatus();
 }
 
-/// Получаем последовательность лексем без skipping_chars и bracket_size // todo вызывать следом за splitTexUnits
-void Lexer::filterNotPtintableCmds(const Parser2::LexemeSequence& lexems) {
-    // todo перенести сюда код, отбрасывающий skipping_chars и bracket_size
-    // todo для сообщений об ошибках нужно знать позицию в исходной строке (до всех фильтраций!) - возможно нужно хранить originOffset в Lexeme
-    // а сейчас индекс идёт по lexems где уже нет skipping_chars и bracket_size
+/// Получаем последовательность лексем без skipping_chars и bracket_size
+void Lexer::filterNotPtintableCmds(const LexemeSequence& lexems, LexemeSequence& filtered) {
+    for (const auto& l : lexems) {
+        std::string category = storage.which(l._id);
+        if (category != "skipping_chars" && category != "bracket_size")
+            filtered.push_back(l);
+    }
 }
 
 /// Проверка, есть ли в последовательности команды категории blank
@@ -103,8 +101,9 @@ bool Lexer::hasBlanks(const Parser2::LexemeSequence& lexems) {
                        { return (storage.which(l._id) == "blank"); });
 }
 
+/// Восстанавливающее преобразование: индексы при blank переносятся на левую команду того же уровня
 void Lexer::dropBlanks(Parser2::LexemeSequence& lexems) {
-    
+    // todo
 }
 
 /// В этой функции строится словарь парных скобок и проверяется правильность их расстановки
@@ -118,34 +117,38 @@ ParseStatus Lexer::collectBracketInfo(const LexemeSequence& lexems, std::map<siz
                 (open == Token::ls && some == Token::rs)  ||
                 (open == Token::lc && some == Token::rc));
     };
-    std::stack<std::pair<Token, size_t> > opened;
 
+    std::stack<std::pair<Lexeme, size_t> > opened;
     size_t i = 0;
     while (i < lexems.size()) {
-        Token iTok = lexems.at(i)._tok;
+        const Lexeme& l = lexems.at(i);
+        Token iTok = l._tok;
         if (isOpenBracket(iTok))
-            opened.emplace(iTok, i);
+            opened.emplace(l, i);
         else if (isCloseBracket(iTok)) {
-            if (isPairBrackets(opened.top().first, iTok)) {
+            if (isPairBrackets(opened.top().first._tok, iTok)) {
                 bracketInfo.emplace(opened.top().second, i);
                 opened.pop();
             }
             else
-                return {i, "Ошибка: закрывающая скобка " + tokenPrints.at(iTok) +
+                return {l._originOffset, "Ошибка: закрывающая скобка " + tokenPrints.at(iTok) +
                            " (" + std::to_string(i) + "-ая TeX-команда) не имеет пары."};
         }
         ++i;
     }
-    if (not opened.empty())
-        return {opened.top().second, "Ошибка: не найдена закрывающая скобка для " + tokenPrints.at(opened.top().first) +
-            " (" + std::to_string(opened.top().second) + "-ая TeX-команда)."};
+    if (not opened.empty()) {
+        auto unpairedBracket = opened.top();
+        return {unpairedBracket.first._originOffset,
+                "Ошибка: не найдена закрывающая скобка для " + tokenPrints.at(unpairedBracket.first._tok) +
+                " (" + std::to_string(unpairedBracket.second) + "-ая TeX-команда)."};
+    }
     return ParseStatus();
 }
 
 /// В этой функции строится слоистая структура, описывающая вложенность выражений со скобками
 void Lexer::buildLayerStructure(CurAnalysisData* data, ExpressionLayer* target) {
     if (target == nullptr) // стартовый вызов
-        target = new ExpressionLayer(data->lexems);
+        target = new ExpressionLayer(data->filtered);
 
     // находим ближайшую откр. скобку после i
     auto nextBracketsAfter = [data, &target] (size_t i) -> std::map<size_t, size_t>::iterator {
@@ -180,17 +183,17 @@ ParseStatus checkRegisters(ExpressionLayer* layer, ExpressionLayer::Iter& it, si
     ind[Token::b] = ind[Token::t] = false;
     
     while (!it.end && it.pos <= bound) {
-        // после _ ^ загрядывать дальше (проверить, что возможно) и если там w, то перескакивать через
-        // него, иначе lb обработаем соотв. пунктом
+        // после _ ^ заглядывать дальше (проверить, что возможно) и если там w, то
+        // перескакивать через него, иначе lb обработаем соотв. пунктом
         if (it.tok() == Token::t || it.tok() == Token::b) {    // проверка флага и, возможно, ошибка
             if (ind[it.tok()])                  // такой режим индексности уже был использован
-                return ParseStatus(it.pos, std::string("Ошибка: повторное использование ")
+                return ParseStatus(it.get()._originOffset, std::string("Ошибка: повторное использование ")
                                       + (it.tok() == Token::t ? "верхнего" : "нижнего") + " регистра.");
             ind[it.tok()] = true;
 
             ++it;
             if (it.end)                         // на смене индексности строка закончилась - ошибка
-                return ParseStatus(it.pos - 1, "Ошибка: строка заканчивается командой смены регистра.");
+                return ParseStatus(it.get()._originOffset, "Ошибка: строка заканчивается командой смены регистра.");
 
             if (it.tok() == Token::w)
                 ++it;
@@ -214,22 +217,23 @@ ParseStatus Lexer::checkRegisters(Parser2::ExpressionLayer* layer) {
 }
 
 CurAnalysisData Lexer::recognize(const std::string& toParse) {
-    CurAnalysisData buf;
-    buf.input = toParse;
-    buf.res = splitTexUnits(buf.input, buf.lexems);
-    if (!buf.res.success) return buf;
+    CurAnalysisData cad;
+    cad.input = toParse;
+    cad.res = splitTexUnits(cad.input, cad.lexems);
+    if (!cad.res.success) return cad;
+    filterNotPtintableCmds(cad.lexems, cad.filtered);
 
-    buf.res = collectBracketInfo(buf.lexems, buf.bracketInfo);
-    if (!buf.res.success) return buf;
+    cad.res = collectBracketInfo(cad.filtered, cad.bracketInfo);
+    if (!cad.res.success) return cad;
 
-    Lexer::buildLayerStructure(&buf, nullptr);
-    for (auto pL : buf.layers) {
-        buf.res = Lexer::checkRegisters(pL);
-        if (!buf.res.success) return buf;
+    Lexer::buildLayerStructure(&cad, nullptr);
+    for (auto pL : cad.layers) {
+        cad.res = Lexer::checkRegisters(pL);
+        if (!cad.res.success) return cad;
     }
 
-    buf.blankFound = hasBlanks(buf.lexems);
-    return buf;
+    cad.blankFound = hasBlanks(cad.lexems); // todo после переноса чистящих трансформаций наверх этот код уже не потребуется здесь
+    return cad;
 }
 
 std::string Lexer::print(const Parser2::LexemeSequence& lSeq) const {

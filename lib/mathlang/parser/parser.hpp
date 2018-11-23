@@ -34,7 +34,7 @@ public:
 
     Parser(Node* where);
 
-    Terms* parse(LexemeSequence source);
+    Terms* parse(CurAnalysisData& source);
 };
 
 Terms* parse(Node* where, std::string source);
