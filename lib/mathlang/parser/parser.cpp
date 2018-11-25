@@ -74,8 +74,36 @@ Parser::Parser(Node* where)
     scanNames(where, namesDefined);
 }
 
+std::set<LexemeSequence> match(std::set<LexemeSequence> variants,
+                               const LexemeSequence& oneLayerLexems, const std::vector<int>& lexemIndices) {
+    /**
+     * выполняем проверку за одих проход.
+     * как только нашли, что имя (с пропусками!) не подходит - отбрасываем
+     *
+     * важный момент: в пропуске не происходит смена уровня индексности
+     * это так по определению символа: ведь он - способ связи имён, подстановка их в окошки
+     * так что встретив звёздочку, сверяем с тем. что за звёздочкой только лексему с
+     * тем же уровнем индексности
+     */
+
+}
+
+std::vector<int> calculateIndexLevels(const LexemeSequence& sequence) {
+    std::vector<int> indices(sequence.size(), 0);
+    // todo собственно уровни (см checkRegisters)
+
+    return indices;
+}
+
 Terms* Parser::parse(CurAnalysisData& source) {
-    return nullptr; // todo
+    /// начинаем с одного из слоёв, которые уже не имеют вложенных
+    ExpressionLayer* inner = *source.layers.begin();
+    LexemeSequence oneLayerLexems = inner->getLexems();
+    std::vector<int> lexemIndices = calculateIndexLevels(oneLayerLexems);
+
+    /// поддержка областей видимости локальных для символов имён
+    std::stack<NameSpaceIndex> symbolsNamespaces;
+
 }
 
 Terms* parse(Node* where, std::string source) {
