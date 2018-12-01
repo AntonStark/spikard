@@ -25,11 +25,7 @@ Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
         }
         case NameTy::VAR : {
             auto type = ::getType(parent->index(), j.at("type"));
-            return new Definition(parent, NameTy::VAR, j.at("name"), type);
-        }
-        case NameTy::CONST : {
-            auto type = ::getType(parent->index(), j.at("type"));
-            return new Definition(parent, NameTy::CONST, j.at("name"), type);
+            return new Definition(parent, j.at("name"), type);
         }
         case NameTy::SYM : {
             std::vector<const MathType*> argT;

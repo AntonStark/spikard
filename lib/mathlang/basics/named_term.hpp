@@ -35,22 +35,11 @@ public:
     Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
-class Constant : public NamedTerm
-{
-private:
-    const MathType* _type;
-public:
-    Constant(NamesType name, const MathType* type)
-        : NamedTerm(name), _type(type) {}
-    Constant(const Constant& one)
-        : NamedTerm(one) { _type = one.getType()->clone(); }
-    ~Constant() override = default;
-
-    const MathType* getType() const override { return _type; }
-    Constant* clone() const override { return new Constant(*this); }
-    std::string print() const override { return getName(); }
-};
-
+/**
+ * @brief Класс для описания атомарного терма, переменной
+ *
+ * // todo поддержка Contraint
+ */
 class Variable : public NamedTerm
 {
 private:

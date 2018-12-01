@@ -66,25 +66,16 @@ public:
 
         parent->registerName(NameTy::MT, cad.lexems, this);
     }
-    // todo подумать как можно лучше увязать создание переменных и констант
-    /**
-     * Возможно следует вообще упразднить класс констант, поскольку есть неполные фиксации
-     */
-    Definition(Node* parent, NameTy type,
-        const std::string& name, const MathType* mathType)
-        : Item(parent), defType(type) {
+    Definition(Node* parent, const std::string& name, const MathType* mathType)
+        : Item(parent), defType(NameTy::VAR) {
         Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(name);
         if (!cad.res.success)
             throw parse_error(cad.res);
         if (cad.blankFound)
             throw parse_error("имя типа и переменной не может содержать команд отступа.");
 
-        if (type == NameTy::VAR)
-            term = new Variable(cad.lexems, mathType);
-        else if (type == NameTy::CONST)
-            term = new Constant(cad.lexems, mathType);
-
-        parent->registerName(type, cad.lexems, this);
+        term = new Variable(cad.lexems, mathType);
+        parent->registerName(NameTy::VAR, cad.lexems, this);
     }
     // вместо symName (напр. \Rightarrow ) теперь symForm (напр. {}\Rightarrow{} или другое обозначение инфиксности)
     // ещё примеры \sum_^{} \frac{}{} {}+{} A_{} (как  A_i v)

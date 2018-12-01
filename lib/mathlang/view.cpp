@@ -45,12 +45,6 @@ void PlainText::process(const Definition* def) {
                 " типа " + dv->getType()->getName() + ".");
             break;
         }
-        case NameTy::CONST : {
-            auto dc = def->getTerm();
-            value = ("Введена константа " + dc->getName() +
-                " типа " + dc->getType()->getName() + ".");
-            break;
-        }
         case NameTy::SYM : {
             auto ds = def->getMap();
             std::stringstream buf;
@@ -132,14 +126,6 @@ void AsJson::process(const Definition* def) {
                              } });
             break;
         }
-        case NameTy::CONST : {
-            auto dc = def->getTerm();
-            value.push_back({"DefConst", {
-                                 {"name", dc->getName()},
-                                 {"type", dc->getType()->getName()}
-                             } });
-            break;
-        }
         case NameTy::SYM : {
             auto ds = def->getMap();
             value.push_back({"DefSym", {
@@ -197,15 +183,6 @@ void AsMlObj::process(const Definition* def) {
             body << dv->getName() << "\\in " << dv->getType()->getName();
             buffer.push_back(
                 MlObj("def_var", def->getNumber(), body.str()).toJson()
-            );
-            break;
-        }
-        case NameTy::CONST : {
-            auto dc = def->getTerm();
-            std::stringstream body;
-            body << dc->getName() << "\\in " << dc->getType()->getName();
-            buffer.push_back(
-                MlObj("def_const", def->getNumber(), body.str()).toJson()
             );
             break;
         }

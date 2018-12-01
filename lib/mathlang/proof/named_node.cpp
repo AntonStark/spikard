@@ -28,10 +28,8 @@ NamedNode::NNType NamedNode::nntFromStr(std::string str) {
 
 void PrimaryNode::defType(const std::string& typeName)
 { new Definition(this, typeName); }
-void PrimaryNode::defConst(const std::string& constName, const std::string& typeName)
-{ new Definition(this, NameTy::CONST, constName, getType(index(), typeName)); }
 void PrimaryNode::defVar(const std::string& varName, const std::string& typeName)
-{ new Definition(this, NameTy::VAR,   varName, getType(index(), typeName)); }
+{ new Definition(this, varName, getType(index(), typeName)); }
 void PrimaryNode::defSym(
     const std::string& symForm, const std::vector<std::string>& argT,
     const std::string& retT) {
@@ -79,8 +77,6 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, Node* parent) {
                 nt = NameTy::MT;
             else if (type == "DefVar")
                 nt = NameTy::VAR;
-            else if (type == "DefConst")
-                nt = NameTy::CONST;
             else if (type == "DefSym")
                 nt = NameTy::SYM;
             Definition::fromJson(data, pn, nt);

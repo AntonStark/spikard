@@ -18,7 +18,7 @@ class NameSpaceIndex
 {
 public:
     typedef Parser2::LexemeSequence NamesType; // todo вынести в файл lexer_basic (как назвать?) и включать его, а не lexer.hpp
-    enum class NameTy {SYM, CONST, VAR, MT};
+    enum class NameTy {SYM, VAR, MT};
 private:
     std::map<NamesType, std::pair<NameTy, Definition*> > data;
 
