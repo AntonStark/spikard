@@ -30,7 +30,7 @@ class Parser
 {
 public:
     const Node* _where;
-    std::set<LexemeSequence> namesDefined;
+    std::vector<LexemeSequence> namesDefined;
 
     Parser(Node* where);
 

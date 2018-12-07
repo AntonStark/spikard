@@ -64,7 +64,7 @@ public:
 
         mtype = new PrimaryMT(typeName);
 
-        parent->registerName(NameTy::MT, cad.lexems, this);
+        parent->registerName(NameTy::MT, cad.filtered, this);
     }
     Definition(Node* parent, const std::string& name, const MathType* mathType)
         : Item(parent), defType(NameTy::VAR) {
@@ -74,8 +74,8 @@ public:
         if (cad.blankFound)
             throw parse_error("имя типа и переменной не может содержать команд отступа.");
 
-        term = new Variable(cad.lexems, mathType);
-        parent->registerName(NameTy::VAR, cad.lexems, this);
+        term = new Variable(cad.filtered, mathType);
+        parent->registerName(NameTy::VAR, cad.filtered, this);
     }
     // вместо symName (напр. \Rightarrow ) теперь symForm (напр. {}\Rightarrow{} или другое обозначение инфиксности)
     // ещё примеры \sum_^{} \frac{}{} {}+{} A_{} (как  A_i v)
@@ -90,12 +90,12 @@ public:
             throw parse_error(cad.res);
 
 //        term = Map::create(symForm, argT, retT);
-        term = new Map(cad.lexems, argT, retT);
+        term = new Map(cad.filtered, argT, retT);
         // todo подумать как быть с blank в символе. просто удалять? (позже, пока считаем, что blank cmd нет)
         /// ответ: проводим восстанавливающее преобразование (описывается в лексере, после ввода Lexeme::originOffset)
         /// [originOffset нужно для сообщения об ошибках в исходной строке]
         /// нужно выделить аргументные места (или их лексер распознает соотв. лексемами?)
-        parent->registerName(NameTy::SYM, cad.lexems, this);
+        parent->registerName(NameTy::SYM, cad.filtered, this);
     }
 
     std::string print(Representation* r, bool incremental) const override

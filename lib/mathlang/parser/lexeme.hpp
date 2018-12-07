@@ -73,6 +73,8 @@ struct Lexeme
     { return (_tok != Token::w
               ? _tok == other._tok
               : (other._tok == Token::w) && (_id == other._id) ); }
+    bool operator!= (const Lexeme& other) const
+    { return (!operator==(other)); }
 };
 typedef std::vector<Lexeme> LexemeSequence;
 
