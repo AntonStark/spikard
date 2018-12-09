@@ -7,6 +7,7 @@
 
 #include "../proof/definition.hpp"
 #include "../parser/lexer.hpp"
+#include "../proof/named_node.hpp"
 
 int main() {
     BranchNode course("Тестовый");
@@ -29,7 +30,7 @@ int main() {
     lecture->defVar("M", "Set");
     lecture->defSym("\\Leftrightarrow", {"Logical", "Logical"}, "Logical");
 //    lecture->defVar("x", "\\mathbb{N}"); // а x пусть будет нововведённым именем (используется без определения)
-    lecture->defConst("1", "\\mathbb{N}");
+//    lecture->defConst("1", "\\mathbb{N}");
     lecture->defSym("+", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
     lecture->defSym("**", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");
     lecture->defSym("\\times", {"\\mathbb{N}", "\\mathbb{N}"}, "\\mathbb{N}");

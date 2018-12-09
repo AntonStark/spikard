@@ -3,6 +3,7 @@
 //
 
 #include <string>
+#include <iostream>
 
 #include "../parser/lexer.hpp"
 
@@ -10,7 +11,7 @@ using namespace std;
 using namespace Parser2;
 
 int main() {
-    Lexer lex;
+    Lexer& lex = texLexer;
     string brackets = R"(\Bigg(\bigg[)"
                            R"(x\mapsto \delta_1\sum_{k=1}^s)"
                            R"(\big(v_{l,1}+v_{l,2}+v_{l,3}-a^*_{k,1}-a^*_{k,2}-a^*_{k,3})"
@@ -18,7 +19,7 @@ int main() {
                            R"(\delta_2\cdot\sum_{k=1}^s\sum_{l=1}^t)"
                            R"(det\Big(a_{k,i}(v_{l,j})\Big)\Bigg))";
 
-    CurAnalysisData data = CurAnalysisData(lex, brackets);
+    CurAnalysisData data = lex.recognize(brackets);
 
     /*for (const auto& bI : data.bracketInfo) {
         for (auto i = bI.first; i < bI.second + 1; ++i)

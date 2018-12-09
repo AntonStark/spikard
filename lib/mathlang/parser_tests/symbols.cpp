@@ -2,7 +2,9 @@
 // Created by anton on 03.09.18.
 //
 
+
 #include <string>
+#include <iostream>
 
 #include "../parser/lexer.hpp"
 
@@ -10,7 +12,7 @@ using namespace std;
 using namespace Parser2;
 
 CurAnalysisData e2eTest(Lexer& lex, string input) {
-    auto data = CurAnalysisData(lex, input);
+    auto data = lex.recognize(input);
     if (data.res.success)
         cout << "OK" << endl;
     else
@@ -19,9 +21,9 @@ CurAnalysisData e2eTest(Lexer& lex, string input) {
 };
 
 int main () {
-    Lexer lex;
+    Lexer& lex = texLexer;
     string source = R"(\Theta_{l,m_l}(\theta)=N_{l,m_l}P_l^{m_l}(\cos\theta))";
-    auto data = e2eTest(lex, source);
+    auto data = e2eTest(texLexer, source);
 
     for (const auto& L : data.layers) {
         for (const auto& l : L->getLexems())
