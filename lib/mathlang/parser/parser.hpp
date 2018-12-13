@@ -14,22 +14,22 @@ namespace Parser2
 {
 
 /// Отвечает за описание границ имени и его аргументных мест
-struct NameGaps
+/// Внимание: сейчас считается, что необработанного участка строки не остаётся (нет узлов сочинения)
+struct NameMatchInfo
 {
     typedef std::pair<size_t, size_t> GapBounds;
+    NamesType _name;
+    bool _varPlaces;
     std::vector<GapBounds> _args;
-    size_t _ownLength;
-    size_t _fullLen;
 
-    explicit NameGaps(size_t ownLength)
-        : _ownLength(ownLength), _fullLen(ownLength) {}
-    void add(size_t from, size_t to) {
-        _args.emplace_back(from, to);
-        _fullLen += (to - from);
-    }
-    size_t getFullLen()
-    { return _fullLen; }
+    explicit NameMatchInfo(const NamesType& name)
+        : _name(name), _varPlaces(false) {}
+    void add(size_t from, size_t to, bool isVarPlace = false);
+    bool hasVarPlaces() const
+    { return _varPlaces; }
 };
+
+std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, const LexemeSequence& target, const std::pair<size_t, size_t>& bounds);
 
 /**
  * Задача данного этапа - построить дерево разбора имён. Точнее семейство всех возможных деревьев.
@@ -46,17 +46,17 @@ struct NameGaps
  * - Метод для получения NSI в данном узле реализуется через рекурсивный вызов: родитель (узлу нужна ссылка
  *  на родителя) отдаёт свой NSI к которому добавлены (если ещё нет!) символы его родителя. Условие "если ещё нет" при
  *  обходе от потомков к родителю обеспечивает перегрузку имени.
- * - Если узел не предполгает введения новых имён, регистрация происход в родителе. Таким образом имя, определённое
+ * - Если узел не предполгает введения новых имён, регистрация происходит в родителе. Таким образом имя, определённое
  * в недрах терма-условия, будет видно в пределах символа, где оно ожидалось.
  * - В тех местах, где возможно сразу несколько вариантнов, дерево будет расслаиваться. То есть потомок может
  * превращаться в (виртуальный) узел расслоения.
  *
  * Устройство элемента:
- * 1) границы части строки за которую отвечает
- * 2) ссылка на родительский узел в виде индекса в treeStorage
- * 3) само имя LexemeSequence
- * 4) список потомков (или вариантов) в виде индексов в treeStorage (возможно пустой)
- * 5) отметка является ли виртуальным узлом расслоения
+ * 1) указатель на дерево (для получения родителя)
+ * 2) id элемента в дереве
+ * 3) границы части строки за которую отвечает
+ * 4) отметка является ли виртуальным узлом расслоения
+ * 5) само имя LexemeSequence
  * 6) отметка ожидается в данном узле ввод новых имён
  * 7) NSI
  *
@@ -75,20 +75,20 @@ struct NameGaps
  *
  * Элементу требуются функции:
  * - Конструктор от границ строки
+ * - Доступ к родителю
  * - Получение списка имён (index())
  * - Регистрация имени (registerName(name))
  * - Метод приписывания имени узлу с созданием потомков по информации о пропусках в имени и выставлением отметки для NSI
- * - Метод становления узла виртуальным с созданием случаев
+ * - Метод становления узла виртуальным (bundle) с созданием случаев
  * - Для последнего нужен конструктор от информации о символе и пропусках (используя тот метод приписывания)
- *
+ */
+
+/**
  * И последнее, что нужно использовать, это информация о Типах. Найдя подходящее имя, мы знаем
  * Типы его аргументов if any и можем сузить отсев имён на следующем шаге и не порождать заведомо ложные случаи.
  * Однако, имена, допускающие связывание (может быть полезно разделять на те, где связывание возможно и где обьязательно?), без
  * него имеют один Тип, а после другой. Например, Natural->Real становится просто Real.
- * Что если считать, что имя со связыванием имеет тот Тип, который будет после связывания?
- */
-
-/**
+ * Что если считать, что имя со связыванием имеет тот Тип, который будет после связывания? *
  * N.B. Функция! бывает запись f(x) а может быть (f+g)'(x)
  * при используемом методе работы с пропусками функция будет объявлена f(\cdot) и не будет признана подходящим
  * именем во втором случае.
@@ -102,47 +102,69 @@ struct NameGaps
  * Пусть пока будет any, без зависимых Типов можно пока обойтись.
  */
 
+struct NamesTree;
 struct NamesTreeElem
 {
-    std::pair<size_t, size_t> _bounds;
+    typedef std::pair<size_t, size_t> ElemBounds;
+    NamesTree* _tree;
+    size_t _id;
+    ElemBounds _bounds;
 
+    bool isBundle;
     LexemeSequence _name;
-    std::vector<size_t> _subElemsIndices;
-
-    size_t _parent;
     bool isSymbolVars;
-    NameSpaceIndex _ownNS;
+    std::vector<NamesType> _ownNS;
 
-    explicit NamesTreeElem(size_t from, size_t to)
-        : _bounds(std::make_pair(from, to)) {}
+    NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds)
+        : _tree(tree), _id(id), _bounds(bounds) {}
 
-    const NameSpaceIndex& index();
-    void registerName(const LexemeSequence& name);
+    NamesTreeElem& _getParent() const;
+    std::vector<NamesType> index() const;
+    void registerName(const NamesType& name);
+
+    void becomeNamed(const NameMatchInfo& nameMatchInfo);
+    void becomeBundle(const std::vector<NameMatchInfo>& matches);
+    void process();
 };
+
+/**
+ * Дерево содержит исходную последовательность, хранилище
+ * элементов, а также следующую информацию:
+ * - родителе каждого узла
+ * - список потомков узла
+ *
+ * Родитель это просто отображение индекса элемента в хранилище в индекс родителя (vector<size_t>)
+ * Список потомков аналогично - vector<Childrens>, где Childrens = vector<size_t>
+ */
 
 struct NamesTree
 {
     const LexemeSequence& _input;
     std::vector<NamesTreeElem> _treeStorage;
-    std::vector<size_t> _forProcess;
 
-    NamesTree(const LexemeSequence& input) : _input(input) {
-        _treeStorage.emplace_back(0, input.size());
-        _forProcess.push_back(0);
-    }
-};
+    typedef NamesTreeElem::ElemBounds ElemBounds;
+    struct Links
+    {
+        size_t parent;
+        std::vector<size_t> childrens;
+    };
+    typedef std::vector<size_t> Childrens;
+    // индексы
+    std::vector<size_t> _parent;
+    std::vector<Childrens> _childrens;
+    std::stack<size_t> _forProcess;
 
-struct PartialResolved
-{
-    typedef std::vector<LexemeSequence> result_type;
+    size_t _create(size_t parentId, const ElemBounds& bounds);
+    bool hasParent(size_t id) const;
+    NamesTreeElem& get(size_t id);
+    LexemeSequence part(const ElemBounds& bouds) const;
 
-    size_t indent;
-    result_type recognized;
+    NamesTree(const LexemeSequence& input, const std::vector<LexemeSequence>& namedDefined);
+    void grow();
 
-    PartialResolved(size_t indent, result_type recognized)
-        : indent(indent), recognized(std::move(recognized)) {}
-    bool operator< (const PartialResolved& two) const
-    { return (indent < two.indent); }
+    void createArgs(size_t parentId, const NameMatchInfo& matchInfo);
+    void createNamed(size_t parentId, const NameMatchInfo& matchInfo);
+    void createCases(size_t parentId, const std::vector<NameMatchInfo>& matches);
 };
 
 class Parser
@@ -150,6 +172,8 @@ class Parser
 public:
     const Node* _where;
     std::vector<LexemeSequence> namesDefined;
+
+    std::vector<LexemeSequence> collectNames(const NameSpaceIndex& index);
 
     Parser(Node* where);
 
