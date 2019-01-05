@@ -19,7 +19,8 @@ int main() {
     lecture->defSym(R"(\cdot(\cdot))", {"Map", "any"}, "any");
 
     lecture->defType("\\mathbb{N}");
-    lecture->defVar("dvc", "Map");  // todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N})
+    lecture->defVar("2", "\\mathbb{N}");
+    lecture->defVar("dvs", "Map");  // todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N}, \mathbb{N})
 
     lecture->defSym("#\\cdot", {"Set"}, "\\mathbb{N}");
     lecture->defSym(R"(\cdot = \cdot)", {"\\mathbb{N}", "\\mathbb{N}"}, "Logical");
@@ -35,15 +36,7 @@ int main() {
     Parser2::NamesTree namesTree(source.filtered, texParser.namesDefined);
     namesTree.grow();
 
-    for (const auto& elem : namesTree._treeStorage) {
-        std::cout << elem._id << ":\t";
-        std::cout << (elem.isBundle ? "[bundle]" : "[named]\t\t" + Parser2::texLexer.print(elem._name));
-        std::cout << std::endl << "\t{";
-        for (const auto& ch : namesTree._childrens[elem._id])
-            std::cout << ch << ',';
-        std::cout << "}";
-        std::cout << std::endl << "\t" << Parser2::texLexer.print(namesTree.part(elem._bounds)) << std::endl;
-    }
+    namesTree.debugPrint();
 
     return 0;
 }

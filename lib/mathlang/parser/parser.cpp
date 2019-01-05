@@ -8,7 +8,7 @@ namespace Parser2
 {
 
 void NameMatchInfo::add(size_t from, size_t to, bool isVarPlace) {
-    _args.emplace_back(from, to);
+    _args.emplace_back(from, to, isVarPlace);
     if (isVarPlace)
         _varPlaces = true;
 }
@@ -67,12 +67,14 @@ std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, c
     return filtered;
 }
 
-NamesTreeElem& NamesTreeElem::_getParent() const
-{ return _tree->get(_tree->_parent[_id]); }
+NamesTreeElem& NamesTreeElem::_getParent() const {
+    size_t parentId = tree->_links[_id].parent;
+    return tree->elem(parentId);
+}
 
 std::vector<NamesType> NamesTreeElem::index() const {
     std::vector<NamesType> own = _ownNS;
-    if (_tree->hasParent(_id)) {
+    if (tree->hasParent(_id)) {
         std::vector<NamesType> parent = _getParent().index();
         own.insert(own.end(), parent.begin(), parent.end());
     }
@@ -80,78 +82,98 @@ std::vector<NamesType> NamesTreeElem::index() const {
 }
 
 void NamesTreeElem::registerName(const NamesType& name) {
-    if (!isBundle)
+    if (isSymbolVars)
         _ownNS.push_back(name);
     else
-        _getParent().registerName(name);
+        _getParent().registerName(name); // todo определять через дерево в каком узле регистрировать
 }
 
 void NamesTreeElem::becomeNamed(const NameMatchInfo& nameMatchInfo) {
     _name = nameMatchInfo._name;
     isBundle = false;
     isSymbolVars = nameMatchInfo.hasVarPlaces();
-    _tree->createArgs(_id, nameMatchInfo);
+    tree->createArgs(_id, _nameExpected, nameMatchInfo);
 }
 
 void NamesTreeElem::becomeBundle(const std::vector<NameMatchInfo>& matches) {
     isBundle = true;
     isSymbolVars = false;
-    _tree->createCases(_id, matches);
+    tree->createCases(_id, matches);
 }
 
 /// Метод обработки отдельного узла, вызывается при появлении новых необработанных (под)строк
 void NamesTreeElem::process() {
     auto namesDefined = index();
-    const LexemeSequence& input = _tree->_input;
+    const LexemeSequence& input = tree->_input;
     std::vector<NameMatchInfo> matches = filter(namesDefined, input, _bounds);
-    if (matches.size() > 1)
-        becomeBundle(matches);
-    else if (matches.size() == 1)
-        becomeNamed(matches.front());
-    else
-        registerName(_tree->part(_bounds));
+
+    if (_nameExpected) {
+        if (matches.size() > 1)
+             tree->setError("Ввод имени \"" + texLexer.print(tree->part(_bounds)) +
+                             "\" допускает неоднозначный разбор. Не поддерживается.");
+        else if (matches.size() == 1)
+            becomeNamed(matches.front());
+        else {
+            LexemeSequence name = tree->part(_bounds);
+            registerName(name);
+            becomeNamed(NameMatchInfo(name));
+        }
+    } else {
+        if (matches.size() > 1)
+            becomeBundle(matches);
+        else if (matches.size() == 1)
+            becomeNamed(matches.front());
+        else
+            tree->detach(_id);
+    }
 }
 
 
-size_t NamesTree::_create(size_t parentId, const NamesTreeElem::ElemBounds& bounds) {
-    size_t elemCreatedId = _treeStorage.size();
-    _treeStorage.emplace_back(this, elemCreatedId, bounds);
-    _parent.push_back(parentId);
-    _childrens.emplace_back();
-    _childrens[parentId].push_back(elemCreatedId);
-    return elemCreatedId;
+size_t NamesTree::_create(size_t parentId, const ElemBounds& bounds, bool name) {
+    size_t thatElemId = _treeStorage.size();
+    _treeStorage.emplace_back(this, thatElemId, bounds, name);
+    _links.emplace_back(parentId);
+    _links[parentId].childrens.push_back(thatElemId);
+    return thatElemId;
 }
 
 bool NamesTree::hasParent(size_t id) const
-{ return (_parent[id] != id); }
+{ return (id != 0); }
 
-NamesTreeElem& NamesTree::get(size_t id)
+NamesTreeElem& NamesTree::elem(size_t id)
 { return _treeStorage[id]; }
 
 LexemeSequence NamesTree::part(const ElemBounds& bouds) const
 { return LexemeSequence(_input.begin()+bouds.first, _input.begin()+bouds.second); }
 
+void NamesTree::setError(const std::string& mess)
+{ errorStatus = std::make_pair(true, mess); }
+
 NamesTree::NamesTree(const LexemeSequence& input, const std::vector<LexemeSequence>& namedDefined) : _input(input) {
-    size_t elemCreatedId = _create(0, std::make_pair(0, input.size()));
+    _treeStorage.emplace_back(this, 0, std::make_pair(0, input.size()), false);
+    _links.emplace_back(size_t(-1));
+
     _treeStorage.back()._ownNS = namedDefined;
-    _forProcess.push(elemCreatedId);
+    _forProcess.push(std::make_pair(false, 0));
 }
 
 void NamesTree::grow() {
     while (not _forProcess.empty()) {
-        auto toProcess = _forProcess.top();
+        auto toProcess = _forProcess.top().second;
         _forProcess.pop();
-        _treeStorage[toProcess].process();
+        elem(toProcess).process();
+        if (errorStatus.first) {
+            std::cerr << errorStatus.second;
+            return;
+        }
     }
 }
 
 /// Этот метод вызывается когда нужно создать потомков именного узла
-void NamesTree::createArgs(size_t parentId, const NameMatchInfo& matchInfo) {
-    for (const auto& bounds : matchInfo._args) {
-        size_t elemCreatedId = _create(parentId, bounds);
-
-        _parent.push_back(parentId);
-        _forProcess.push(elemCreatedId); // это вызовет рекурсивнй вызов prosecc для соответсвующей подстроки
+void NamesTree::createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo) {
+    for (const auto& argInfo : matchInfo._args) {
+        size_t elemCreatedId = _create(namedId, argInfo.bounds, argInfo.nameExpected | nameExpAcsedant);
+        _forProcess.push(std::make_pair(argInfo.nameExpected, elemCreatedId)); // это вызовет рекурсивнй вызов process для соответсвующей подстроки
     }
 }
 
@@ -160,15 +182,47 @@ void NamesTree::createNamed(size_t parentId, const NameMatchInfo& matchInfo) {
     // для узла ветвления на случаи (bounds установлен) вызывается becomeBundle
     // далее вызывается NamesTree::createCases, который просто объединяет несколько вызовов NamesTree::createNamed
     // короче, bounds можно получить из parent, который becomeBundle
-    auto bounds = _treeStorage[parentId]._bounds;
-    size_t elemId = _create(parentId, bounds);
-    _treeStorage[elemId].becomeNamed(matchInfo);
+    NamesTreeElem parent = elem(parentId);
+    size_t elemId = _create(parentId, parent._bounds);
+    elem(elemId).becomeNamed(matchInfo);
 }
 
 /// Этот метод создаёт потомков узла случая
 void NamesTree::createCases(size_t parentId, const std::vector<NameMatchInfo>& matches) {
     for (const auto& m : matches)
         createNamed(parentId, m);
+}
+
+/**
+ * @brief Отцепить узел от дерева (тупиковый путь разбора)
+ * @param id элемент к удалению
+ * Если родительский узел - узел случаев, и у него есть дочерние кроме данного, данный
+ * вычеркивается из дочерних. Иначе вызывается detach(parent).
+ * Отцепленные элементы не удаляются, но больше не видны.
+ */
+void NamesTree::detach(size_t id) {
+    size_t parentId = _links[id].parent;
+    if (elem(parentId).isBundle) {
+        if (_links[parentId].hasOthers(id)) {
+            _links[parentId]._detach(id);
+        } else
+            detach(parentId);
+    } else
+        detach(parentId); // todo проверка что parent есть, а то ошибка разбора
+}
+
+void NamesTree::debugPrint() {
+    for (const auto& elem : _treeStorage) {
+        std::cout << elem._id << ":\t";
+        std::cout << (elem.isBundle ? "[bundle]" : "[named]\t\t" + Parser2::texLexer.print(elem._name) + "\t");
+        for (const auto& n : elem._ownNS)
+            std::cout << Parser2::texLexer.print(n) << ", ";
+        std::cout << std::endl << "\t{";
+        for (const auto& ch : _links[elem._id].childrens)
+            std::cout << ch << ',';
+        std::cout << "}";
+        std::cout << std::endl << "\t" << Parser2::texLexer.print(part(elem._bounds)) << std::endl;
+    }
 }
 
 
@@ -190,15 +244,6 @@ Parser::Parser(Node* where)
 Terms* Parser::parse(CurAnalysisData& source) {
     NamesTree namesTree(source.filtered, namesDefined);
     namesTree.grow();
-
-    /*for (const auto& elem : namesTree._treeStorage) {
-        std::cout << elem._id << " : {";
-        for (const auto& ch : namesTree._childrens[elem._id])
-            std::cout << ch << ',';
-        std::cout << "} " << std::endl;
-        std::cout << "\t\t" << texLexer.print(namesTree.part(elem._bounds)) << std::endl;
-        std::cout << (elem.isBundle ? "bundle" : texLexer.print(elem._name)) << std::endl << std::endl;
-    }*/
 }
 
 Terms* parse(Node* where, std::string source) {

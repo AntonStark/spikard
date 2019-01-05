@@ -13,14 +13,23 @@
 namespace Parser2
 {
 
+typedef std::pair<size_t, size_t> ElemBounds;
+
+struct NameArgInfo
+{
+    ElemBounds bounds;
+    bool nameExpected;
+    NameArgInfo(size_t from, size_t to, bool name)
+    : bounds(std::make_pair(from, to)), nameExpected(name) {}
+};
+
 /// Отвечает за описание границ имени и его аргументных мест
 /// Внимание: сейчас считается, что необработанного участка строки не остаётся (нет узлов сочинения)
 struct NameMatchInfo
 {
-    typedef std::pair<size_t, size_t> GapBounds;
     NamesType _name;
     bool _varPlaces;
-    std::vector<GapBounds> _args;
+    std::vector<NameArgInfo> _args;
 
     explicit NameMatchInfo(const NamesType& name)
         : _name(name), _varPlaces(false) {}
@@ -105,18 +114,18 @@ std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, c
 struct NamesTree;
 struct NamesTreeElem
 {
-    typedef std::pair<size_t, size_t> ElemBounds;
-    NamesTree* _tree;
+    NamesTree* tree;
     size_t _id;
     ElemBounds _bounds;
+    bool _nameExpected;
 
     bool isBundle;
     LexemeSequence _name;
     bool isSymbolVars;
     std::vector<NamesType> _ownNS;
 
-    NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds)
-        : _tree(tree), _id(id), _bounds(bounds) {}
+    NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds, bool nameExected)
+        : tree(tree), _id(id), _bounds(bounds), _nameExpected(nameExected) {}
 
     NamesTreeElem& _getParent() const;
     std::vector<NamesType> index() const;
@@ -139,32 +148,52 @@ struct NamesTreeElem
 
 struct NamesTree
 {
-    const LexemeSequence& _input;
-    std::vector<NamesTreeElem> _treeStorage;
-
-    typedef NamesTreeElem::ElemBounds ElemBounds;
     struct Links
     {
         size_t parent;
         std::vector<size_t> childrens;
-    };
-    typedef std::vector<size_t> Childrens;
-    // индексы
-    std::vector<size_t> _parent;
-    std::vector<Childrens> _childrens;
-    std::stack<size_t> _forProcess;
 
-    size_t _create(size_t parentId, const ElemBounds& bounds);
+        explicit Links(size_t parentId)
+        : parent(parentId) {}
+        void _detach(size_t child) {
+            for (auto it = childrens.begin(); it != childrens.end(); ++it) {
+                if (*it == child) {
+                    childrens.erase(it);
+                    return;
+                }
+            }
+        }
+
+        bool hasOthers(size_t child) {
+            for (const auto& ch : childrens) {
+                if (ch != child)
+                    return true;
+            }
+        }
+    };
+
+    const LexemeSequence& _input;
+    std::vector<NamesTreeElem> _treeStorage;
+    std::vector<Links> _links;
+    std::priority_queue<std::pair<bool, size_t> > _forProcess;
+
+    std::pair<bool, std::string> errorStatus;
+
+    size_t _create(size_t parentId, const ElemBounds& bounds, bool name = false);
     bool hasParent(size_t id) const;
-    NamesTreeElem& get(size_t id);
+    NamesTreeElem& elem(size_t id);
     LexemeSequence part(const ElemBounds& bouds) const;
+    void setError(const std::string& mess);
 
     NamesTree(const LexemeSequence& input, const std::vector<LexemeSequence>& namedDefined);
     void grow();
 
-    void createArgs(size_t parentId, const NameMatchInfo& matchInfo);
+    void createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo);
     void createNamed(size_t parentId, const NameMatchInfo& matchInfo);
     void createCases(size_t parentId, const std::vector<NameMatchInfo>& matches);
+    void detach(size_t id);
+
+    void debugPrint();
 };
 
 class Parser
