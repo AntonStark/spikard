@@ -28,7 +28,8 @@ Lexer Lexer::configureLatex() {
                                "\\Big", "\\Bigl", "\\Bigr", "\\right", "\\bigg",
                                "\\biggl", "\\biggr", "\\Bigg", "\\Biggl", "\\Biggr"};
     lex.storage["skipping_chars"] = {" ", "\t", "&"};
-    lex.storage["argument_place"] = {"\\cdot", "\\_"};
+    lex.storage["argument_place"] = {"\\cdot"};
+    lex.storage["variable_place"] = {"\\_"};
     return lex;
 }
 

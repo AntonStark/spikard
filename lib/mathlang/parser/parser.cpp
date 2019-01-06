@@ -30,20 +30,22 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
         if (inputEnd)
             return;
 
-        bool isArgPlace = (texLexer.storage.which(variant[v]._id) == "argument_place");
-        if (not isArgPlace) {
+        auto lexCat = texLexer.storage.which(variant[v]._id);
+        bool isArgPlace = (lexCat == "argument_place");
+        bool isVarPlace = (lexCat == "variable_place");
+        if (not (isArgPlace || isVarPlace)) {
             if (variant[v] == input[i]) {
                 ++i;
                 ++v;
             } else
                 return;
         } else {
-            bool isVarPlace = (texLexer.storage.get(variant[v]._id) == "\\_");
-            bool noNextLexeme = (v == variant.size() - 1);
+            bool variantEnding = (v == variant.size() - 1);
             // пропуск может стоять в конце (напр. \\cdot=\\cdot), тогда сразу успех
-            if (noNextLexeme) {
+            if (variantEnding) {
                 nameMatch.add(i, end, isVarPlace);
                 ++v;
+                i = end;
             } else {
                 const Lexeme& nextLexeme = variant[v+1];
                 size_t matchThat = findFirstFrom(nextLexeme, i, end);
@@ -57,7 +59,8 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
             }
         }
     }
-    forResults.push_back(nameMatch);
+    if (i == end)
+        forResults.push_back(nameMatch);
 }
 
 std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, const LexemeSequence& target, const std::pair<size_t, size_t>& bounds) {
