@@ -8,15 +8,8 @@
 // для типов и переменных (и констант) это означает однозначность определения по имени, для символов - по имени и сигнатуре
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name) {
     Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(name);
-    return index.get(NameTy::MT, cad.lexems)->getType();
+    return index.get(cad.lexems)->getType(); // fixme использовать запрос имён типа Type когда будет реализовано
 }
-/*NamedTerm* getVar (const NameSpaceIndex& index, const std::string& name)
-{ return index.get(NameTy::VAR, name)->getTerm(); }
-NamedTerm* getConst(const NameSpaceIndex& index, const std::string& name)
-{ return index.get(NameTy::CONST, name)->getTerm(); }
-NamedTerm* getSym(const NameSpaceIndex& index, const std::string& name)
-{ return index.get(NameTy::SYM, name)->getTerm(); }*/
-// todo эти методы действительно нужны новому парсеру?
 
 Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
     switch (type) {

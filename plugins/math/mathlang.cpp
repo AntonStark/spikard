@@ -73,7 +73,7 @@ void MathlangPlugin::resetStorage(NamedNode* _storage) {
 }
 
 void MathlangPlugin::tellTypeNames() {
-    json types = { {"types", current->index().getNamesStr(NameTy::MT)} };
+    json types = { {"types", current->index().getNamesStr()} };
     write(INFO_TYPE::NAME, types);
 }
 
@@ -450,7 +450,7 @@ void MathlangPlugin::viewTypes(vector<string> cmdArgs) {
         return;
 
     write(INFO_TYPE::TXT, "Определены следующие типы:");
-    for (const auto& n : current->index().getNamesStr(NameTy::MT))
+    for (const auto& n : current->index().getNamesStr())
         write(INFO_TYPE::TXT, n);
 }
 
@@ -458,7 +458,7 @@ void MathlangPlugin::viewSyms(vector<string> cmdArgs) {
     CALL_INFO("символы", "<символы> - перечислить уже определённые символы.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена символов:");
-    for (const auto& n : current->index().getNamesStr(NameTy::SYM))
+    for (const auto& n : current->index().getNamesStr())
         write(INFO_TYPE::TXT, n);
 }
 
@@ -466,7 +466,7 @@ void MathlangPlugin::viewVars(vector<string> cmdArgs) {
     CALL_INFO("переменные", "<переменные> - перечислить уже определённые переменные.")
 
     write(INFO_TYPE::TXT, "Опеределены следующие имена переменных:");
-    for (const auto& n : current->index().getNamesStr(NameTy::VAR))
+    for (const auto& n : current->index().getNamesStr())
         write(INFO_TYPE::TXT, n);
 }
 

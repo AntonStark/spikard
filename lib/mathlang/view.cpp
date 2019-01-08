@@ -34,6 +34,7 @@ void PlainText::process(const NamedNode* nn)
 }
 
 void PlainText::process(const Definition* def) {
+    typedef Definition::NameTy NameTy;
     switch (def->defType) {
         case NameTy::MT : {
             value = ("Объявлен тип " + def->getType()->getName() + ".");
@@ -110,6 +111,7 @@ void AsJson::process(const NamedNode* nn) {
 }
 
 void AsJson::process(const Definition* def) {
+    typedef Definition::NameTy NameTy;
     switch (def->defType) {
         case NameTy::MT : {
             auto dt = def->getType();
@@ -169,6 +171,7 @@ void AsMlObj::process(const NamedNode* nn) {
 }
 
 void AsMlObj::process(const Definition* def) {
+    typedef Definition::NameTy NameTy;
     switch (def->defType) {
         case NameTy::MT : {
             auto dt = def->getType();

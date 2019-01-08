@@ -72,6 +72,7 @@ PrimaryNode* PrimaryNode::fromJson(const json& j, Node* parent) {
         else if (type == "Inference")
             Inference::fromJson(data, pn);
         else {
+            typedef Definition::NameTy NameTy;
             NameTy nt;
             if (type == "DefType")
                 nt = NameTy::MT;

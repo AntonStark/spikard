@@ -17,38 +17,31 @@ public:
         : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
 };
 
-void NameSpaceIndex::add(NameSpaceIndex::NameTy type,
-                         const NamesType& name, Definition* where) {
-    if (isSomeType(name))
+void NameSpaceIndex::add(const NamesType& name, Definition* where) {
+    if (isThatName(name))
         throw name_doubling(Parser2::texLexer.print(name));
-    data[name] = std::make_pair(type, where);
+    data[name] = where;
 }
 
-bool NameSpaceIndex::isThatType(const NamesType& name, const NameTy& type) const {
-    auto search = data.find(name);
-    return (search != data.end() && search->second.first == type);
-}
-bool NameSpaceIndex::isSomeType(const NamesType& name) const
+bool NameSpaceIndex::isThatName(const NamesType& name) const
 { return (data.find(name) != data.end()); }
 
-std::set<NameSpaceIndex::NamesType> NameSpaceIndex::getNames(NameTy type) const {
-    std::set<NamesType> buf;
+std::vector<NameSpaceIndex::NamesType> NameSpaceIndex::getNames() const {
+    std::vector<NamesType> buf;
     for (auto& n : data)
-        if (n.second.first == type)
-            buf.insert(n.first);
+            buf.push_back(n.first);
     return buf;
 }
 
-std::set<std::string> NameSpaceIndex::getNamesStr(NameTy type) const {
+std::set<std::string> NameSpaceIndex::getNamesStr() const {
     std::set<std::string> buf;
     for (auto& n : data)
-        if (n.second.first == type)
-            buf.insert(Parser2::texLexer.print(n.first));
+        buf.insert(Parser2::texLexer.print(n.first));
     return buf;
 }
 
-Definition* NameSpaceIndex::get(NameTy type, const NamesType& name) const {
-    if (isThatType(name, type))
-        return data.at(name).second;
+Definition* NameSpaceIndex::get(const NamesType& name) const {
+    if (isThatName(name))
+        return data.at(name);
     throw no_name(Parser2::texLexer.print(name));
 }

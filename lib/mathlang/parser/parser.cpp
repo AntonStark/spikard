@@ -229,16 +229,8 @@ void NamesTree::debugPrint() {
 }
 
 
-std::vector<LexemeSequence> Parser::collectNames(const NameSpaceIndex& index) {
-    std::vector<LexemeSequence> storage;
-    typedef NameSpaceIndex::NameTy NType;
-    for (const auto& t : {NType::MT, NType::SYM, NType::VAR}) {
-        const auto& namesThisType = index.getNames(t);
-        for (const auto& name : namesThisType)
-            storage.emplace_back(name);
-    }
-    return storage;
-}
+std::vector<LexemeSequence> Parser::collectNames(const NameSpaceIndex& index)
+{ return index.getNames(); }
 
 Parser::Parser(Node* where)
     : _where(where),
