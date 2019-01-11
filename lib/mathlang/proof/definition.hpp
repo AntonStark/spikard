@@ -40,6 +40,7 @@ public:
 private:
     PrimaryMT* mtype; // fixme пока используется явный union
     NamedTerm* term;
+    std::set<Item*> _use;
 
     friend class PrimaryNode;
     static Hierarchy* fromJson(const json& j, Node* parent, NameTy type);
@@ -97,6 +98,11 @@ public:
     { r->process(this); return r->str(); }
     PrimaryMT* getType() const { return mtype; }
     NamedTerm* getTerm() const { return term; }
+    NamedTerm* use(Item* in) {
+        _use.insert(in);
+        return term;
+    }
+
     Map* getMap() const { return dynamic_cast<Map*>(term); }
 };
 
