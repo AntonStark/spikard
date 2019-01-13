@@ -15,7 +15,7 @@
 
 #include "../basics/mapterm.hpp"
 #include "../basics/mathtype.hpp"
-#include "../basics/terms.hpp"
+#include "../consepts/terms.hpp"
 
 #include "../parser/lexer.hpp"
 

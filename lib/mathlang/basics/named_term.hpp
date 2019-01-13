@@ -5,8 +5,8 @@
 #ifndef SPIKARD_NAMED_TERM_HPP
 #define SPIKARD_NAMED_TERM_HPP
 
-#include "abstractname.hpp"
-#include "terms.hpp"
+#include "../consepts/abstract_name.hpp"
+#include "../consepts/terms.hpp"
 
 class NamedTerm : public virtual Terms
 {

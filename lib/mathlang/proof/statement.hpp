@@ -7,7 +7,7 @@
 
 #include "../basics/contructed_term.hpp"
 #include "../basics/mapterm.hpp"
-#include "../basics/terms.hpp"
+#include "../consepts/terms.hpp"
 
 #include "definition.hpp"
 #include "names_strategies.hpp"

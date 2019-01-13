@@ -7,7 +7,7 @@
 
 #include "mathtype.hpp"
 #include "named_term.hpp"
-#include "abstractname.hpp"
+#include "../consepts/abstract_name.hpp"
 #include "texname.hpp"
 
 // Это реализация неоднородного символа.

@@ -6,7 +6,7 @@
 #define SPIKARD_MATHLANG_NAMED_NODE_HPP
 
 #include "../basics/mathtype.hpp"
-#include "../basics/terms.hpp"
+#include "../consepts/terms.hpp"
 
 #include "names_index.hpp"
 #include "names_strategies.hpp"

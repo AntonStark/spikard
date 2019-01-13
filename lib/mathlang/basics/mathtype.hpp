@@ -10,7 +10,7 @@
 #include <vector>
 #include <typeinfo>
 
-#include "terms.hpp"
+#include "../consepts/terms.hpp"
 #include "named_term.hpp"
 #include "texname.hpp"
 

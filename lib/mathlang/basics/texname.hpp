@@ -7,7 +7,7 @@
 #ifndef SPIKARD_TEXNAME_HPP
 #define SPIKARD_TEXNAME_HPP
 
-#include "abstractname.hpp"
+#include "../consepts/abstract_name.hpp"
 #include "../parser/lexeme.hpp"
 #include "../parser/lexer.hpp"
 

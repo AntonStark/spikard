@@ -5,7 +5,7 @@
 #ifndef SPIKARD_CONTRUCTEDTERM_HPP
 #define SPIKARD_CONTRUCTEDTERM_HPP
 
-#include "terms.hpp"
+#include "../consepts/terms.hpp"
 #include "mapterm.hpp"
 #include "named_term.hpp"
 
