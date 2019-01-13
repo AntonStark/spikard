@@ -17,31 +17,52 @@ public:
         : std::invalid_argument("Имя \"" + symName + "\" не определено.\n") {}
 };
 
-void NameSpaceIndex::add(const NamesType& name, Definition* where) {
-    if (isThatName(name))
-        throw name_doubling(Parser2::texLexer.print(name));
-    data[name] = where;
+bool NameSpaceIndex::exists(const std::string& str) const
+{ return (name2ID.find(str) != name2ID.end()); }
+
+void NameSpaceIndex::add(const NamedTerm* term, Definition* where) {
+    const auto& str = term->getName()->toStr();
+    const auto& type = term->getType()->getName();
+    if (!exists(str)) {
+        size_t id = names.size();
+        names.push_back(term->getName());
+        definitions.push_back(where);
+
+        auto searchTypeIDs = type2IDs.find(type);
+        if (searchTypeIDs == type2IDs.end())
+            type2IDs[type] = {id};
+        else
+            searchTypeIDs->second.push_back(id);
+        name2ID[str] = id;
+    } else
+        throw name_doubling(str);
 }
 
-bool NameSpaceIndex::isThatName(const NamesType& name) const
-{ return (data.find(name) != data.end()); }
+std::vector<const AbstractName*> NameSpaceIndex::getNames(const MathType* type) const {
+    if (type == nullptr)
+        return names;
 
-std::vector<NameSpaceIndex::NamesType> NameSpaceIndex::getNames() const {
-    std::vector<NamesType> buf;
-    for (auto& n : data)
-            buf.push_back(n.first);
+    std::vector<const AbstractName*> buf;
+    auto search = type2IDs.find(type->getName());
+    if (search != type2IDs.end()) {
+        const std::vector<size_t>& thatTypeIDs = search->second;
+        for (const auto& id : thatTypeIDs)
+            buf.push_back(names[id]);
+    }
     return buf;
 }
 
-std::set<std::string> NameSpaceIndex::getNamesStr() const {
-    std::set<std::string> buf;
-    for (auto& n : data)
-        buf.insert(Parser2::texLexer.print(n.first));
+std::vector<std::string> NameSpaceIndex::getNamesStr(const MathType* type) const {
+    const auto& names = getNames(type);
+    std::vector<std::string> buf;
+    for (auto& name : names)
+        buf.push_back(name->toStr());
     return buf;
 }
 
-Definition* NameSpaceIndex::get(const NamesType& name) const {
-    if (isThatName(name))
-        return data.at(name);
-    throw no_name(Parser2::texLexer.print(name));
+Definition* NameSpaceIndex::get(const AbstractName* name) const {
+    const auto& str = name->toStr();
+    if (exists(str))
+        return definitions[name2ID.at(str)];
+    throw no_name(name->toStr());
 }

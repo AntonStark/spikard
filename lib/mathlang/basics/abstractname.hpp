@@ -8,7 +8,7 @@
 
 #include <string>
 
-class NamesType
+class AbstractName
 {
     virtual void fromStr(const std::string& name) = 0;
 public:

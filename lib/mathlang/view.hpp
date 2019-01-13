@@ -10,7 +10,7 @@
 #include "proof/structure.hpp"
 #include "proof/named_node.hpp"
 
-class PlainText : public Representation
+/*class PlainText : public Representation
 {
 private:
     std::string value;
@@ -40,7 +40,7 @@ public:
     void process(const Definition* def) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
-};
+};*/
 
 class AsMlObj : public Representation
 {

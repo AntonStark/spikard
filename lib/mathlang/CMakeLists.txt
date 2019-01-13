@@ -2,6 +2,6 @@ add_library(mathlang basics/mathtype.cpp basics/mathtype.hpp basics/terms.hpp ba
         proof/structure.cpp proof/structure.hpp proof/names_index.cpp proof/names_index.hpp proof/names_strategies.cpp proof/names_strategies.hpp
         proof/definition.cpp proof/definition.hpp proof/statement.cpp proof/statement.hpp
         proof/named_node.cpp proof/named_node.hpp view.cpp view.hpp
-        parser/lexer.cpp parser/lexer.hpp parser/parser.cpp parser/parser.hpp parser/lexeme.cpp parser/lexeme.hpp basics/named_term.cpp basics/named_term.hpp basics/namestype.cpp basics/namestype.hpp basics/texname.cpp basics/texname.hpp)
+        parser/lexer.cpp parser/lexer.hpp parser/parser.cpp parser/parser.hpp parser/lexeme.cpp parser/lexeme.hpp basics/named_term.cpp basics/named_term.hpp basics/abstractname.cpp basics/abstractname.hpp basics/texname.cpp basics/texname.hpp)
 set_target_properties(mathlang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(parser_tests)

@@ -25,8 +25,8 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(const Parser2::LexemeSequence& name, Definition* where) override
-    { atTheEnd.add(name, where); }
+    void registerNamed(const NamedTerm* term, Definition* where) override
+    { atTheEnd.add(term, where); }
     std::string printType() const override { return "Hidden"; }
 };
 
@@ -46,9 +46,9 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerName(const Parser2::LexemeSequence& name, Definition* where) override {
-        _parent->registerName(name, where);
-        atTheEnd.add(name, where);
+    void registerNamed(const NamedTerm* term, Definition* where) override {
+        _parent->registerNamedTerm(term, where);
+        atTheEnd.add(term, where);
     }
     std::string printType() const override { return "Appending"; }
 };

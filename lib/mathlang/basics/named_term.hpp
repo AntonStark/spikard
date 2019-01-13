@@ -5,19 +5,15 @@
 #ifndef SPIKARD_NAMED_TERM_HPP
 #define SPIKARD_NAMED_TERM_HPP
 
-#include "../parser/lexeme.hpp"
-#include "../parser/lexer.hpp"
-
+#include "abstractname.hpp"
 #include "terms.hpp"
 
-typedef Parser2::LexemeSequence NamesType;
-
-class NamedTerm : public Terms
+class NamedTerm : public virtual Terms
 {
 private:
-    NamesType _name;
+    const AbstractName* _name; // todo попробовать unique_pointer
 public:
-    NamedTerm(NamesType name) : _name(name) {}
+    NamedTerm(const AbstractName* name) : _name(name) {}
     NamedTerm(const NamedTerm& one): _name(one._name) {}
     virtual ~NamedTerm() = default;
 
@@ -26,8 +22,7 @@ public:
     bool operator< (const NamedTerm& other) const
     { return (_name < other._name); }
 
-    std::string getName() const { return Parser2::texLexer.print(_name); }
-//    void setName(const std::string& name) { _name = name; }
+    const AbstractName* const getName() const { return _name; }
     virtual bool comp(const Terms* other) const override;
 
     const Terms* get(Path path) const override;
@@ -45,7 +40,7 @@ class Variable : public NamedTerm
 private:
     const MathType* _type;
 public:
-    Variable(NamesType name, const MathType* type)
+    Variable(AbstractName* name, const MathType* type)
         : NamedTerm(name), _type(type) {}
     Variable(const Variable& one)
         : NamedTerm(one) { _type = one.getType()->clone(); }
@@ -53,7 +48,7 @@ public:
 
     const MathType* getType() const override { return _type; }
     Variable* clone() const override { return new Variable(*this); }
-    std::string print() const override { return getName(); }
+    std::string print() const override { return getName()->toStr(); }
 };
 
 #endif //SPIKARD_NAMED_TERM_HPP

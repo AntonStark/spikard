@@ -4,11 +4,9 @@
 
 #include "definition.hpp"
 
-// NB вообще можно вводить сущность с тем же именем (перегрузка), если ещё нет идентичной сущности:
-// для типов и переменных (и констант) это означает однозначность определения по имени, для символов - по имени и сигнатуре
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name) {
-    Parser2::CurAnalysisData cad = Parser2::texLexer.recognize(name);
-    return index.get(cad.lexems)->getType(); // fixme использовать запрос имён типа Type когда будет реализовано
+    auto* texName = new TexName(name);
+    return index.get(texName)->getType(); // fixme использовать запрос имён типа Type когда будет реализовано
 }
 
 Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {

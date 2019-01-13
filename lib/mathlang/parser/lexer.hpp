@@ -124,9 +124,9 @@ public:
 
 struct parse_error : public std::invalid_argument {
     parse_error(const Parser2::ParseStatus& errRes)
-        : std::invalid_argument("Ошибка на " + std::to_string(errRes.at) + " символе: " + errRes.mess) {}
+        : std::invalid_argument("Ошибка разбора на " + std::to_string(errRes.at) + " символе: " + errRes.mess) {}
     parse_error(const std::string& mess)
-        : std::invalid_argument("Ошибка: " + mess) {}
+        : std::invalid_argument("Ошибка разбора: " + mess) {}
 };
 
 extern Lexer texLexer;

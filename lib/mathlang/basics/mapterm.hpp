@@ -5,9 +5,10 @@
 #ifndef SPIKARD_MATHLANG_MAPTERM_HPP
 #define SPIKARD_MATHLANG_MAPTERM_HPP
 
-#include "../parser/lexeme.hpp"
-
+#include "mathtype.hpp"
 #include "named_term.hpp"
+#include "abstractname.hpp"
+#include "texname.hpp"
 
 // Это реализация неоднородного символа.
 // Подходит для символов малой арности, но не каких-нубудь R^n->R^m
@@ -21,8 +22,8 @@ public:
 private:
     MapMT _type;
 public:
-    Map(const NamesType& symForm, ProductMT argT, const MathType* retT);
-    Map(const NamesType& symForm, size_t arity,
+    Map(const AbstractName* symForm, ProductMT argT, const MathType* retT);
+    Map(const AbstractName* symForm, size_t arity,
         const MathType* argT, const MathType* retT)
         : Map(symForm, ProductMT({arity, argT}), retT) {}
     Map(const Map&) = default;
@@ -37,7 +38,7 @@ public:
     { return _type.getArgs()->matchArgType(otherArgT); }
 
     Terms* clone() const override { return new Map(*this); }
-    std::string print() const { return getName(); }
+    std::string print() const { return getName()->toStr(); }
 };
 
 #endif //SPIKARD_MATHLANG_MAPTERM_HPP

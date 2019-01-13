@@ -4,7 +4,7 @@
 
 #include "view.hpp"
 
-void PlainText::process(const ListStorage* ls) {
+/*void PlainText::process(const ListStorage* ls) {
     std::stringstream buf;
     auto e = ls->end();
     indent+=2;
@@ -152,7 +152,7 @@ void AsJson::process(const Inference* inf) {
                          {"premise2", pathToStr(inf->premises.at(1))},
                          {"type", inf->getTypeAsStr()}
                      } });
-}
+}*/
 
 
 void AsMlObj::process(const ListStorage* ls) {

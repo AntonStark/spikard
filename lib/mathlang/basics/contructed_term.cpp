@@ -31,7 +31,7 @@ std::string Term::printQ() const {
     std::stringstream buf;
     buf << '(' << _f.print();
     // по пострению arg(1) действительно Variable
-    auto var = static_cast<const Variable*>(arg(1));
+    auto var = dynamic_cast<const Variable*>(arg(1));
     buf << var->getName() << "\\in " << var->getType()->getName();
     buf << arg(2)->print() << ')';
     return buf.str();
@@ -153,9 +153,9 @@ void Term::boundVar(Variable var) {
                                     "свободной перменной.\n");
 }
 
-std::map<Term::QType, const NamesType>
-    Term::qword = { {Term::QType::FORALL, Parser2::texLexer.recognize("\\forall\\cdot\\cdot").lexems},
-                    {Term::QType::EXISTS, Parser2::texLexer.recognize("\\exists\\cdot\\cdot").lexems} };
+std::map<Term::QType, const AbstractName*>
+    Term::qword = { {Term::QType::FORALL, new TexName(R"(\forall\cdot\cdot)")},
+                    {Term::QType::EXISTS, new TexName(R"(\exists\cdot\cdot)")} };
 Map forall(Term::qword[Term::QType::FORALL],
            ProductMT({&any_mt, &logical_mt}), &logical_mt);
 Map exists(Term::qword[Term::QType::EXISTS],
@@ -190,7 +190,7 @@ Terms* ForallTerm::replace(const Terms* x, const Terms* t) const {
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ForallTerm(
-        static_cast<Variable*>(arg(1)->clone()),
+        dynamic_cast<Variable*>(arg(1)->clone()),
         termReplaced);
 }
 
@@ -206,6 +206,6 @@ Terms* ExistsTerm::replace(const Terms* x, const Terms* t) const {
 
     Terms* termReplaced = arg(2)->replace(x, t);
     return new ExistsTerm(
-        static_cast<Variable*>(arg(1)->clone()),
+        dynamic_cast<Variable*>(arg(1)->clone()),
         termReplaced);
 }

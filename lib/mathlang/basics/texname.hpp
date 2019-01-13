@@ -7,17 +7,24 @@
 #ifndef SPIKARD_TEXNAME_HPP
 #define SPIKARD_TEXNAME_HPP
 
-#include "namestype.hpp"
+#include "abstractname.hpp"
 #include "../parser/lexeme.hpp"
+#include "../parser/lexer.hpp"
 
-class TexName : public NamesType
+class TexName : public AbstractName
 {
 private:
-    Parser2::LexemeSequence _nameSeq;
+    Parser2::CurAnalysisData _data;
+    Parser2::LexemeSequence _lexSeq;
     void fromStr(const std::string& name) override;
 public:
-    TexName(const std::string& name) { fromStr(name); }
+    TexName(const std::string& name, bool noBlanks = false);
+    TexName(Parser2::LexemeSequence lexSeq);
+
     std::string toStr() const override;
+
+    long countArgPlaces() const;
+    const Parser2::LexemeSequence& getSeq() const;
 };
 
 #endif //SPIKARD_TEXNAME_HPP

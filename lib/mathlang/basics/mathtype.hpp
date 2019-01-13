@@ -10,38 +10,30 @@
 #include <vector>
 #include <typeinfo>
 
-class MathType
+#include "terms.hpp"
+#include "named_term.hpp"
+#include "texname.hpp"
+
+class PrimaryMT : public MathType, public NamedTerm
 {
 public:
-    virtual ~MathType() {};
-    virtual bool isPrimary() const = 0;
-    virtual bool operator== (const MathType& other) const = 0;
-    bool operator!= (const MathType& other) const
-    { return !(*this == other); }
-    virtual bool operator< (const MathType& other) const = 0;
-
-    virtual MathType* clone() const = 0;
-    virtual std::string getName() const = 0;
-    typedef std::vector<const MathType*> MTVector;
-};
-
-class PrimaryMT : public MathType
-{
-private:
-    std::string _type;
-public:
-    PrimaryMT(std::string type) : _type(move(type)) {}
+    PrimaryMT(const AbstractName* typeName) : NamedTerm(typeName) {}
     PrimaryMT(const PrimaryMT&) = default;
     ~PrimaryMT() override = default;
 
     bool operator== (const MathType& other) const override;
-    bool operator<(const MathType& other) const;
+    bool operator<(const MathType& other) const override;
     bool isPrimary() const override { return true; }
 
-    MathType* clone() const override { return new PrimaryMT(*this); }
-    std::string getName() const override { return _type; }
+    PrimaryMT* clone() const override { return new PrimaryMT(*this); }
+    std::string getName() const override { return NamedTerm::getName()->toStr(); }
+
+    const MathType* getType() const override;
+
+    std::string print() const override;
 };
 
+extern MathType* typeOfTypes;
 extern PrimaryMT any_mt;
 extern PrimaryMT logical_mt;
 

@@ -27,18 +27,19 @@ struct NameArgInfo
 /// Внимание: сейчас считается, что необработанного участка строки не остаётся (нет узлов сочинения)
 struct NameMatchInfo
 {
-    NamesType _name;
+    const AbstractName* _name;
     bool _varPlaces;
     std::vector<NameArgInfo> _args;
 
-    explicit NameMatchInfo(const NamesType& name)
+    explicit NameMatchInfo(const AbstractName* name)
         : _name(name), _varPlaces(false) {}
     void add(size_t from, size_t to, bool isVarPlace = false);
     bool hasVarPlaces() const
     { return _varPlaces; }
 };
 
-std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, const LexemeSequence& target, const std::pair<size_t, size_t>& bounds);
+std::vector<NameMatchInfo> filter(const std::vector<const AbstractName*>& variants,
+                                  const LexemeSequence& target, const std::pair<size_t, size_t>& bounds);
 
 /**
  * Задача данного этапа - построить дерево разбора имён. Точнее семейство всех возможных деревьев.
@@ -120,17 +121,18 @@ struct NamesTreeElem
     bool _nameExpected;
 
     bool isBundle;
-    LexemeSequence _name;
+    const AbstractName* _name;
     bool isSymbolVars;
-    std::vector<NamesType> _ownNS;
+    std::vector<const AbstractName*> _ownNS;
 
     NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds, bool nameExected)
         : tree(tree), _id(id), _bounds(bounds), _nameExpected(nameExected) {}
 
     NamesTreeElem& _getParent() const;
-    std::vector<NamesType> index() const;
-    void registerName(const NamesType& name);
+    std::vector<const AbstractName*> index() const;
+    void registerName(const AbstractName* name);
 
+    void becomeNamed(const AbstractName* name);
     void becomeNamed(const NameMatchInfo& nameMatchInfo);
     void becomeBundle(const std::vector<NameMatchInfo>& matches);
     void process();
@@ -185,7 +187,7 @@ struct NamesTree
     LexemeSequence part(const ElemBounds& bouds) const;
     void setError(const std::string& mess);
 
-    NamesTree(const LexemeSequence& input, const std::vector<LexemeSequence>& namedDefined);
+    NamesTree(const LexemeSequence& input, const std::vector<const AbstractName*>& namedDefined);
     void grow();
 
     void createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo);
@@ -200,9 +202,9 @@ class Parser
 {
 public:
     const Node* _where;
-    std::vector<LexemeSequence> namesDefined;
+    std::vector<const AbstractName*> namesDefined;
 
-    std::vector<LexemeSequence> collectNames(const NameSpaceIndex& index);
+    std::vector<const AbstractName*> collectNames(const NameSpaceIndex& index);
 
     Parser(Node* where);
 

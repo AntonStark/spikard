@@ -4,8 +4,9 @@
 
 #include "mathtype.hpp"
 
-PrimaryMT any_mt("any");
-PrimaryMT logical_mt("Logical");
+MathType* typeOfTypes = new PrimaryMT(new TexName("Type"));
+PrimaryMT any_mt(new TexName("any"));
+PrimaryMT logical_mt(new TexName("Logical"));
 
 bool PrimaryMT::operator==(const MathType& one) const {
     if (getName() == "any")
@@ -26,6 +27,12 @@ bool PrimaryMT::operator<(const MathType& other) const {
     else
         return true;
 }
+
+const MathType* PrimaryMT::getType() const
+{ return typeOfTypes; }
+
+std::string PrimaryMT::print() const
+{ return getName(); }
 
 bool ProductMT::operator==(const MathType& one) const {
     if (one.isPrimary()) {
@@ -140,3 +147,15 @@ std::string MapMT::getName() const {
     buf << _argsT->getName() << " -> " << _retT->getName();
     return buf.str();
 }
+
+/*const MathType* MathType::getType() const
+{ return typeOfTypes; }
+
+std::string MathType::print() const
+{ return getName(); }*/
+
+
+//bool MathType::comp(const Terms* other) const { return false; }
+//const Terms* MathType::get(Terms::Path path) const { return nullptr; }
+//Terms* MathType::replace(Terms::Path path, const Terms* by) const { return nullptr; }
+//Terms* MathType::replace(const Terms* x, const Terms* t) const { return nullptr; }

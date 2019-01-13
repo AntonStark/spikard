@@ -71,7 +71,7 @@ Inference::InfTy infTyFromStr(const std::string& type) {
         return InfTy::GEN;
 }
 
-Map standardImpl(Parser2::texLexer.recognize("\\cdot\\Rightarrow\\cdot").lexems, ProductMT({2, &logical_mt}), &logical_mt);
+Map standardImpl(new TexName(R"(\cdot\Rightarrow\cdot)"), ProductMT({2, &logical_mt}), &logical_mt);
 
 Terms* modusPonens(const Terms* premise, const Terms* impl) {
     if (const auto* tI = dynamic_cast<const Term*>(impl))
@@ -115,7 +115,7 @@ Terms::Path findVarFirstUsage(Variable var, const Term* term) {
 }
 
 const Terms* moveQuantorIntoImpl(const Term* quantedImpl) {
-    const auto* topQVar = static_cast<const Variable*>(quantedImpl->arg(1));
+    const auto* topQVar = dynamic_cast<const Variable*>(quantedImpl->arg(1));
     const Terms* topQuanted = quantedImpl->arg(2);
     Terms::Path toInnerConseq;
     const Terms* innerConseq = topQuanted;
@@ -134,7 +134,7 @@ Terms* application(const Terms* term, const Terms* theorem) {
         const Terms* foralledPremise = innerPremise(fT);
         if (!foralledPremise) // theorem должна содержать импликацию внутри
             return nullptr;
-        const Variable var = *static_cast<const Variable*>(fT->arg(1));
+        const Variable var = *dynamic_cast<const Variable*>(fT->arg(1));
         if (auto v = dynamic_cast<const Variable*>(foralledPremise)) {
             if (*v == var)
                 theorem = specialization(theorem, term);

@@ -14,7 +14,7 @@ void NameMatchInfo::add(size_t from, size_t to, bool isVarPlace) {
 }
 
 void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>& bounds,
-                   const LexemeSequence& variant, std::vector<NameMatchInfo>& forResults) {
+                   const AbstractName* variant, std::vector<NameMatchInfo>& forResults) {
     auto findFirstFrom = [&input] (const Lexeme& find, size_t from, size_t to) -> size_t {
         for (size_t i = from; i < to; ++i)
             if (input[i] == find)
@@ -24,30 +24,31 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
 
     size_t start = bounds.first, end = bounds.second;
     NameMatchInfo nameMatch(variant);
+    const LexemeSequence& variantLexems = dynamic_cast<const TexName*>(variant)->getSeq(); // todo вместо AbstractName лучше явно везде использовать TexName
     size_t i = start, v = 0;
-    while (v < variant.size()) {
+    while (v < variantLexems.size()) {
         bool inputEnd = (i == end);
         if (inputEnd)
             return;
 
-        auto lexCat = texLexer.storage.which(variant[v]._id);
+        auto lexCat = texLexer.storage.which(variantLexems[v]._id);
         bool isArgPlace = (lexCat == "argument_place");
         bool isVarPlace = (lexCat == "variable_place");
         if (not (isArgPlace || isVarPlace)) {
-            if (variant[v] == input[i]) {
+            if (variantLexems[v] == input[i]) {
                 ++i;
                 ++v;
             } else
                 return;
         } else {
-            bool variantEnding = (v == variant.size() - 1);
+            bool variantEnding = (v == variantLexems.size() - 1);
             // пропуск может стоять в конце (напр. \\cdot=\\cdot), тогда сразу успех
             if (variantEnding) {
                 nameMatch.add(i, end, isVarPlace);
                 ++v;
                 i = end;
             } else {
-                const Lexeme& nextLexeme = variant[v+1];
+                const Lexeme& nextLexeme = variantLexems[v+1];
                 size_t matchThat = findFirstFrom(nextLexeme, i, end);
                 if (matchThat == size_t(-1)) {
                     return;
@@ -63,7 +64,8 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
         forResults.push_back(nameMatch);
 }
 
-std::vector<NameMatchInfo> filter(const std::vector<LexemeSequence>& variants, const LexemeSequence& target, const std::pair<size_t, size_t>& bounds) {
+std::vector<NameMatchInfo> filter(const std::vector<const AbstractName*>& variants,
+                                  const LexemeSequence& target, const std::pair<size_t, size_t>& bounds) {
     std::vector<NameMatchInfo> filtered;
     for (const auto& variant : variants)
         matchWithGaps(target, bounds, variant, filtered);
@@ -75,25 +77,29 @@ NamesTreeElem& NamesTreeElem::_getParent() const {
     return tree->elem(parentId);
 }
 
-std::vector<NamesType> NamesTreeElem::index() const {
-    std::vector<NamesType> own = _ownNS;
+std::vector<const AbstractName*> NamesTreeElem::index() const {
+    std::vector<const AbstractName*> own = _ownNS;
     if (tree->hasParent(_id)) {
-        std::vector<NamesType> parent = _getParent().index();
-        own.insert(own.end(), parent.begin(), parent.end());
+        const auto& parentNS = _getParent().index();
+        own.insert(own.end(), parentNS.begin(), parentNS.end());
     }
     return own;
 }
 
-void NamesTreeElem::registerName(const NamesType& name) {
+void NamesTreeElem::registerName(const AbstractName* name) {
     if (isSymbolVars)
         _ownNS.push_back(name);
     else
         _getParent().registerName(name); // todo определять через дерево в каком узле регистрировать
 }
 
-void NamesTreeElem::becomeNamed(const NameMatchInfo& nameMatchInfo) {
-    _name = nameMatchInfo._name;
+void NamesTreeElem::becomeNamed(const AbstractName* name) {
+    _name = name;
     isBundle = false;
+}
+
+void NamesTreeElem::becomeNamed(const NameMatchInfo& nameMatchInfo) {
+    becomeNamed(nameMatchInfo._name);
     isSymbolVars = nameMatchInfo.hasVarPlaces();
     tree->createArgs(_id, _nameExpected, nameMatchInfo);
 }
@@ -118,8 +124,9 @@ void NamesTreeElem::process() {
             becomeNamed(matches.front());
         else {
             LexemeSequence name = tree->part(_bounds);
-            registerName(name);
-            becomeNamed(NameMatchInfo(name));
+            auto* texName = new TexName(name);  // fixme имя, объявленное таким образом, сдыхает as soon as
+            registerName(texName);
+            becomeNamed(texName);
         }
     } else {
         if (matches.size() > 1)
@@ -152,7 +159,7 @@ LexemeSequence NamesTree::part(const ElemBounds& bouds) const
 void NamesTree::setError(const std::string& mess)
 { errorStatus = std::make_pair(true, mess); }
 
-NamesTree::NamesTree(const LexemeSequence& input, const std::vector<LexemeSequence>& namedDefined) : _input(input) {
+NamesTree::NamesTree(const LexemeSequence& input, const std::vector<const AbstractName*>& namedDefined) : _input(input) {
     _treeStorage.emplace_back(this, 0, std::make_pair(0, input.size()), false);
     _links.emplace_back(size_t(-1));
 
@@ -217,9 +224,9 @@ void NamesTree::detach(size_t id) {
 void NamesTree::debugPrint() {
     for (const auto& elem : _treeStorage) {
         std::cout << elem._id << ":\t";
-        std::cout << (elem.isBundle ? "[bundle]" : "[named]\t\t" + Parser2::texLexer.print(elem._name) + "\t");
+        std::cout << (elem.isBundle ? "[bundle]" : "[named]\t\t" + (elem._name != nullptr ? elem._name->toStr() : "") + "\t");
         for (const auto& n : elem._ownNS)
-            std::cout << Parser2::texLexer.print(n) << ", ";
+            std::cout << n->toStr() << ", ";
         std::cout << std::endl << "\t{";
         for (const auto& ch : _links[elem._id].childrens)
             std::cout << ch << ',';
@@ -229,7 +236,7 @@ void NamesTree::debugPrint() {
 }
 
 
-std::vector<LexemeSequence> Parser::collectNames(const NameSpaceIndex& index)
+std::vector<const AbstractName*> Parser::collectNames(const NameSpaceIndex& index)
 { return index.getNames(); }
 
 Parser::Parser(Node* where)
