@@ -21,7 +21,7 @@ const Terms* Inference::getTerms(Path pathToTerm) {
     if (auto t = dynamic_cast<Statement*>(termItem))
         return t->get();
     else if (auto v = dynamic_cast<Definition*>(termItem))
-        return v->getTerm();
+        return v->use(this);
     else
         return nullptr;
 }
@@ -171,9 +171,9 @@ Term* generalization(const Terms* toGen, const Terms* x) {
         return nullptr;
 }
 
-Hierarchy* TermsBox::fromJson(const json& j, Node* parent)
+/*Hierarchy* TermsBox::fromJson(const json& j, Node* parent)
 { return new TermsBox(parent, j.at("axiom")); }
 
 Hierarchy* Inference::fromJson(const json& j, Node* parent)
 { return new Inference(parent, mkPath(j.at("premise1")),
-                       mkPath(j.at("premise2")), infTyFromStr(j.at("type"))); }
+                       mkPath(j.at("premise2")), infTyFromStr(j.at("type"))); }*/

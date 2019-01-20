@@ -5,15 +5,16 @@
 #ifndef SPIKARD_MATHLANG_STATEMENT_HPP
 #define SPIKARD_MATHLANG_STATEMENT_HPP
 
+#include "../consepts/terms.hpp"
+
 #include "../basics/contructed_term.hpp"
 #include "../basics/mapterm.hpp"
-#include "../consepts/terms.hpp"
+
+#include "../parser/parser.hpp"
 
 #include "definition.hpp"
 #include "names_strategies.hpp"
 #include "structure.hpp"
-
-#include "../parser/parser.hpp"
 
 class Statement
 {
@@ -29,8 +30,7 @@ private:
     const Terms* data;
     TermsBox(Node* parent, std::string source);
 
-    friend class PrimaryNode;
-    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
+//    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
 public:
     ~TermsBox() override = default;
     TermsBox(const TermsBox&) = delete;
@@ -39,6 +39,8 @@ public:
     const Terms* get() const override { return data; }
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
+    static TermsBox* create(PrimaryNode* parent, std::string source)
+    { return new TermsBox(parent, source); }
 };
 
 class Inference : public Item, public Statement
@@ -59,7 +61,7 @@ public:
     Inference(const Inference&) = delete;
     Inference& operator=(const Inference&) = delete;
 
-    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
+//    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
     Inference(Node* naming, Path pArg1, Path pArg2,  InfTy _type);
 
     const Terms* get() const override { return data; }

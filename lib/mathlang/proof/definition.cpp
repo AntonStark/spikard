@@ -5,11 +5,11 @@
 #include "definition.hpp"
 
 PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name) {
-    auto* texName = new TexName(name);
-    return index.get(texName)->getType(); // fixme использовать запрос имён типа Type когда будет реализовано
+    auto* texName = new TexName(name); // fixme shared_pointers для имён
+    return index.get(texName)->getType();
 }
 
-Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
+/*Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
     switch (type) {
         case NameTy::MT : {
             return new Definition(parent, j.at("name"));
@@ -27,4 +27,4 @@ Hierarchy* Definition::fromJson(const json& j, Node* parent, NameTy type) {
             return new Definition(parent, j.at("name"), argT, retT);
         }
     }
-}
+}*/

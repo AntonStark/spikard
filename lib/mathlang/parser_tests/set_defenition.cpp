@@ -3,29 +3,32 @@
 //
 
 #include "../proof/named_node.hpp"
+#include "../proof/definition.hpp"
+#include "../parser/parser.hpp"
 
 int main() {
+    Parser2::texLexer = Parser2::Lexer::configureLatex();
     BranchNode cource("Курс");
-    cource.startLecture("Лекция");
-    auto lecture = cource.getSub(1);
+    PrimaryNode* lecture = PrimaryNode::create(&cource, "Лекция",
+                                               NameStoringStrategy::BasicNSSTypes::Appending);
 
-    lecture->defType("any");
+    auto typeAny = Definition::create(lecture, "any");
 
-    lecture->defType("Set");
-    lecture->defType("Logical");
-    lecture->defSym(R"(\cdot\in\cdot)", {"any", "Set"}, "Logical");
+    auto typeSet = Definition::create(lecture, "Set");
+    auto typeLogical = Definition::create(lecture, "Logical");
+    Definition::create(lecture, R"(\cdot\in\cdot)", {typeAny, typeSet}, typeLogical);
 
-    lecture->defType("Map");
-    lecture->defSym(R"(\cdot(\cdot))", {"Map", "any"}, "any");
+    auto typeMap = Definition::create(lecture, "Map");
+    Definition::create(lecture, R"(\cdot(\cdot))", {typeMap, typeAny}, typeAny);
 
-    lecture->defType("\\mathbb{N}");
-    lecture->defVar("2", "\\mathbb{N}");
-    lecture->defVar("dvs", "Map");  // todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N}, \mathbb{N})
+    auto typeN = Definition::create(lecture, "\\mathbb{N}");
+    Definition::create(lecture, "2", typeN);
+    Definition::create(lecture, "dvs", typeMap); // todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N}, \mathbb{N})
 
-    lecture->defSym("#\\cdot", {"Set"}, "\\mathbb{N}");
-    lecture->defSym(R"(\cdot = \cdot)", {"\\mathbb{N}", "\\mathbb{N}"}, "Logical");
+    Definition::create(lecture, "#\\cdot", {typeSet}, typeN);
+    Definition::create(lecture, R"(\cdot = \cdot)", {typeN, typeN}, typeLogical);
     
-    lecture->defSym(R"(\{ \_ | \cdot \})", {"any", "any"}, "Set"); // fixme вместо последнего "any" должен ->
+    Definition::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet); // fixme вместо последнего "any" должен ->
     // быть тип P: elem(Set) -> Logical, где elem(Set) обозначает тип элементов множества из второго аргумента
 
 //    lecture->addTerm(R"(\{ n \in \mathbb{N} | #dvs(n) = 2 \})");      // { n \in \mathbb{N} | dvs(n) = {1, n} }

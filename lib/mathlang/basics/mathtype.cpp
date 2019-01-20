@@ -4,9 +4,9 @@
 
 #include "mathtype.hpp"
 
-MathType* typeOfTypes = new PrimaryMT(new TexName("Type"));
-PrimaryMT any_mt(new TexName("any"));
-PrimaryMT logical_mt(new TexName("Logical"));
+MathType* typeOfTypes = new PrimaryMT(new StringName("Type"));
+PrimaryMT any_mt(new StringName("any"));
+PrimaryMT logical_mt(new StringName("Logical"));
 
 bool PrimaryMT::operator==(const MathType& one) const {
     if (getName() == "any")

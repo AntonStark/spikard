@@ -46,6 +46,7 @@ class NameStoringStrategy
 /// Интерфейс работы с именами со стороны узлов
 {
 public:
+    enum class BasicNSSTypes {Appending, Hidden};
     virtual const NameSpaceIndex& index() const = 0;
     friend class Definition;
     virtual void registerNamed(const NamedTerm* term, Definition* where) = 0;

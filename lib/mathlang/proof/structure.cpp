@@ -72,6 +72,11 @@ Hierarchy* Node::getByPass(Path path) {
     return this;
 }
 
+Definition* Node::get(const std::string& name) {
+    auto* texName = new TexName(name); // fixme shared_pointers для имён
+    return index().get(texName);
+}
+
 Hierarchy::Path mkPath(std::string source)
 {
     // string  ->  stack<size_t>

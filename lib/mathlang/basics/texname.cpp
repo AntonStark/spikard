@@ -1,11 +1,9 @@
-#include <utility>
 
 //
 // Created by anton on 07.01.19.
 //
 
 #include "texname.hpp"
-#include "../parser/lexer.hpp"
 
 void TexName::fromStr(const std::string& name) {
     _data = Parser2::texLexer.recognize(name);

@@ -11,8 +11,11 @@
 #include <typeinfo>
 
 #include "../consepts/terms.hpp"
+
+#include "../parser/lexer.hpp"
+
 #include "named_term.hpp"
-#include "texname.hpp"
+#include "string_name.hpp"
 
 class PrimaryMT : public MathType, public NamedTerm
 {

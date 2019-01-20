@@ -23,6 +23,8 @@ private:
     MapMT _type;
 public:
     Map(const AbstractName* symForm, ProductMT argT, const MathType* retT);
+    Map(const AbstractName* symForm, const MathType* argT, const MathType* retT)
+        : NamedTerm(symForm), _type(ProductMT({argT}), retT) {}
     Map(const AbstractName* symForm, size_t arity,
         const MathType* argT, const MathType* retT)
         : Map(symForm, ProductMT({arity, argT}), retT) {}

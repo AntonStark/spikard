@@ -11,6 +11,8 @@
 
 #include "../../../json.hpp"
 
+#include "../basics/texname.hpp"
+
 #include "names_index.hpp"
 
 using json = nlohmann::json;
@@ -92,6 +94,7 @@ public:
     virtual void registerNamedTerm(const NamedTerm* term, Definition* where)
     { _naming->registerNamed(term, where); }
 
+    Definition* get(const std::string& name);
     virtual std::string print(Representation* r, bool incremental = true) const override
     { return ListStorage::print(r, incremental); }
     std::string nssType() const { return _naming->printType(); }

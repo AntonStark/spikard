@@ -53,6 +53,8 @@ public:
     std::string printType() const override { return "Appending"; }
 };
 
+typedef NameStoringStrategy::BasicNSSTypes NssType;
 NameStoringStrategy* nssFromStr(std::string str, Node* parent);
+NameStoringStrategy* nssFromNSSType(NssType type, Node* parent);
 
 #endif //SPIKARD_MATHLANG_NAMES_STRATEGIES_HPP
