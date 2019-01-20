@@ -7,9 +7,8 @@
 #include "../parser/parser.hpp"
 
 int main() {
-    Parser2::texLexer = Parser2::Lexer::configureLatex();
-    BranchNode cource("Курс");
-    PrimaryNode* lecture = PrimaryNode::create(&cource, "Лекция",
+    BranchNode* cource = new BranchNode("Курс");
+    PrimaryNode* lecture = PrimaryNode::create(cource, "Лекция",
                                                NameStoringStrategy::BasicNSSTypes::Appending);
 
     auto typeAny = Definition::create(lecture, "any");
@@ -41,5 +40,6 @@ int main() {
 
     namesTree.debugPrint();
 
+    delete cource;
     return 0;
 }
