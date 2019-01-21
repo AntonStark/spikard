@@ -6,11 +6,11 @@
 #define SPIKARD_CONNECTIVES_HPP
 
 #include "../consepts/abstract_name.hpp"
-#include "../consepts/abstract_complificator.hpp"
+#include "../consepts/abstract_connective.hpp"
 
-#include "../consepts/complex.hpp"
+#include "complex.hpp"
 
-class UnaryOperation : public AbstractComplificator
+class UnaryOperation : public AbstractConnective
 {
 private:
     const MathType* _operandType;
@@ -26,11 +26,11 @@ public:
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
-    Complex* compose(TermsVector args) const override;
+    TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
 };
 
-class BinaryOperation : public AbstractComplificator
+class BinaryOperation : public AbstractConnective
 {
 public:
     enum class Notation {PREFIX, INFIX, POSTFIX};
@@ -49,7 +49,7 @@ public:
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
-    Complex* compose(TermsVector args) const override;
+    TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
 };
 

@@ -11,9 +11,9 @@
 class AbstractConnective
 {
 public:
-    typedef std::vector<Terms*> TermsVector;
+    virtual size_t getArity() const = 0;
     virtual bool check(TermsVector args) const = 0;
-    virtual Terms* compose(TermsVector args) const = 0;
+    virtual TermsVector compose(TermsVector args) const = 0;
     virtual const MathType* resultType() const = 0;
     virtual std::string print(TermsVector args) const = 0;
 };

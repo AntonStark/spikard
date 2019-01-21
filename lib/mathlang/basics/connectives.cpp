@@ -6,15 +6,11 @@
 
 const MathType* UnaryOperation::resultType() const
 { return _resultType; }
-bool UnaryOperation::check(AbstractConnective::TermsVector args) const
+bool UnaryOperation::check(TermsVector args) const
 { return (args.size() == 1 && args.front()->getType() == _operandType); }
-Complex* UnaryOperation::compose(AbstractConnective::TermsVector args) const {
-    if (check(args))
-        return new Complex(this, args);
-    else
-        return nullptr;
-}
-std::string UnaryOperation::print(AbstractConnective::TermsVector args) const {
+TermsVector UnaryOperation::compose(TermsVector args) const
+{ return args; }
+std::string UnaryOperation::print(TermsVector args) const {
     if (!check(args))
         return "";
     else {
@@ -28,20 +24,16 @@ std::string UnaryOperation::print(AbstractConnective::TermsVector args) const {
 const MathType* BinaryOperation::resultType() const
 { return _resultType; }
 
-bool BinaryOperation::check(AbstractConnective::TermsVector args) const {
+bool BinaryOperation::check(TermsVector args) const {
     return (args.size() == 2
             && args.at(0)->getType() == _leftType
             && args.at(1)->getType() == _rightType);
 }
 
-Complex* BinaryOperation::compose(AbstractConnective::TermsVector args) const {
-    if (check(args))
-        return new Complex(this, args);
-    else
-        return nullptr;
-}
+TermsVector BinaryOperation::compose(TermsVector args) const
+{ return args; }
 
-std::string BinaryOperation::print(AbstractConnective::TermsVector args) const {
+std::string BinaryOperation::print(TermsVector args) const {
     if (!check(args))
         return "";
     else {

@@ -55,5 +55,6 @@ public:
 
     virtual std::string print() const = 0;
 };
+typedef std::vector<Terms*> TermsVector;
 
 #endif //TEST_BUILD_LOGIC_HPP
