@@ -11,6 +11,7 @@
 class AbstractConnective
 {
 public:
+    virtual ~AbstractConnective() = default;
     virtual size_t getArity() const = 0;
     virtual bool check(TermsVector args) const = 0;
     virtual TermsVector compose(TermsVector args) const = 0;

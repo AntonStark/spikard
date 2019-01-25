@@ -11,96 +11,135 @@
 #include <utility>
 #include <vector>
 #include <sstream>
+
 #include "../../../json.hpp"
 
+#include "../consepts/abstract_connective.hpp"
 #include "../consepts/terms.hpp"
 
+#include "../basics/function.hpp"
 #include "../basics/mapterm.hpp"
 #include "../basics/mathtype.hpp"
 #include "../basics/texname.hpp"
 
 #include "../parser/lexer.hpp"
 
-#include "names_index.hpp"
 #include "structure.hpp"
 
 using json = nlohmann::json;
 
-PrimaryMT* getType(const NameSpaceIndex& index, const std::string& name);
-
-class Definition : public Item
-/// Это базовый класс определений.
-/// Отвечает за регистрацию (тип, имя, опр-е) в Namespace и хранение терма
-/// Именно в этом классе может (и, похоже, семантически должен) происходить
-/// перевод строки (от клиента) в LexemeSequence для NSI
+/**
+ * @brief Это абстрактный класс определений.
+ *
+ * Отвечает за отслеживание использований определения.
+ */
+class Definition
 {
-public:
-    enum class NameTy {SYM, VAR, MT};
 private:
-    NamedTerm* term;
     std::set<Item*> _use;
+protected:
+    void addUsage(Item* in)
+    { _use.insert(in); }
+    virtual NamedTerm* _get() = 0;
+public:
+    virtual NamedTerm* use(Item* in) = 0;
+};
 
-//    friend class PrimaryNode;
-//    static Hierarchy* fromJson(const json& j, Node* parent, NameTy type);
-    // todo посмотреть может после редукции NameTy разные конструкторы можно объединить и нужен ли defType
-    Definition(Node* parent, const std::string& typeName)
-        : Item(parent), defType(NameTy::MT) {
-        auto* name = new TexName(typeName, true);
-        term = new PrimaryMT(name);
-        parent->registerNamedTerm(term, this);
-    }
-    Definition(Node* parent, const std::string& varName, Definition* mathType)
-        : Item(parent), defType(NameTy::VAR) {
-        auto* name = new TexName(varName, true);
-        auto* type = dynamic_cast<MathType*>(mathType->use(this));
-        term = new Variable(name, type);
-        parent->registerNamedTerm(term, this);
-    }
-    // вместо symName (напр. \Rightarrow ) теперь symForm (напр. {}\Rightarrow{} или другое обозначение инфиксности)
-    // ещё примеры \sum_^{} \frac{}{} {}+{} A_{} (как  A_i v)
-    // пустой формат (symForm = f) соответствует функциональной форме записи аргументов (арность брать из описания сигнатуры)
-    // в то же время синтаксис задания множества можно описать как: \{{}\in {} | {}\}
-    // где три аргументных места и ProductMT argT = any x Set x (any -> Logical)
-    Definition(Node* parent, const std::string& symForm,
-               const std::vector<Definition*>& argT, Definition* retT)
-        : Item(parent), defType(NameTy::SYM) {
+class DefType : public Item, public Definition
+{
+private:
+    PrimaryMT* type;
+    DefType(Node* parent, const std::string& typeName);
+protected:
+    PrimaryMT* _get() override
+    { return type; }
+public:
+    ~DefType() override;
+    static DefType* create(Node* parent, const std::string& typeName)
+    { return new DefType(parent, typeName); }
+
+    PrimaryMT* use(Item* in) override;
+    std::string print(Representation* r, bool incremental) const override;
+};
+
+class DefAtom : public Item, public Definition
+{
+private:
+    Variable* atom;
+    DefAtom(Node* parent, const std::string& varName, DefType* mathType);
+
+protected:
+    Variable* _get() override
+    { return atom; }
+public:
+    ~DefAtom() override;
+    static DefAtom* create(Node* parent, const std::string& varName, DefType* mathType)
+    { return new DefAtom(parent, varName, mathType); }
+
+    Variable* use(Item* in) override;
+    std::string print(Representation* r, bool incremental) const override;
+};
+
+/**
+ * @brief Класс для определений обычных функций одного аргумента.
+ */
+class DefFunct : public Item, public Definition
+{
+private:
+    Map* funct;
+    DefFunct(Node* parent, const std::string& fName,
+             DefType* argT, DefType* retT);
+protected:
+    Map* _get() override
+    { return funct; }
+public:
+    ~DefFunct() override;
+    static DefFunct* create(Node* parent, const std::string& symForm,
+        const std::vector<DefType*>& argT, DefType* retT)
+    { return new DefFunct(parent, symForm, argT, retT); }
+
+    Map* use(Item* in) override;
+    std::string print(Representation* r, bool incremental) const override;
+};
+
+/**
+ * @brief Класс для определения связок: унарных и бинарных операций, а также нестандартных конструкций.
+ *
+ * Пока используется механизм определения формы записи через аргументные места, которые обозначаются с
+ * помощью TeX-команд \cdot и \_. Последняя означает аргументное место с вводом новых имён. Например:
+ *  \cdot+\cdot    A_\_\cdot    \sum_\_^\cdot\cdot    \{\_|\cdot\}
+ */
+class DefConnective : public Item, public Definition
+{
+private:
+    AbstractConnective* connective;
+    DefConnective(Node* parent, const std::string& sym, bool prefix,
+                  DefType* argT, DefType* retT);
+    DefConnective(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
+                  DefType* leftT, DefType* rightT, DefType* retT);
+    /*
+     * для особых связок, после todo SpecialConnective
+    DefConnective(Node* parent, const std::string& form,
+        const std::vector<DefType*>& argT, DefType* retT)
+    : Item(parent) {
         MathType::MTVector argTypes;
         for (auto* d : argT)
-            argTypes.push_back(dynamic_cast<MathType*>(d->use(this)));
+            argTypes.push_back(d->use(this));
         auto argType = ProductMT(argTypes);
-        auto retType = dynamic_cast<MathType*>(retT->use(this));
-        auto* name = new TexName(symForm);
-        term = new Map(name, argType, retType);
-        // todo подумать как быть с blank в символе. просто удалять? (позже, пока считаем, что blank cmd нет)
-        /// ответ: проводим восстанавливающее преобразование (описывается в лексере, после ввода Lexeme::originOffset)
-        /// [originOffset нужно для сообщения об ошибках в исходной строке]
-        /// нужно выделить аргументные места (или их лексер распознает соотв. лексемами?)
-        parent->registerNamedTerm(term, this);
-    }
+
+        auto retType = retT->use(this);
+        auto* name = new TexName(form);
+        connective = new Map(name, argType, retType);
+    }*/
 public:
-    const NameTy defType;
-    ~Definition() override = default;
-    Definition(const Definition&) = delete;
-    Definition& operator=(const Definition&) = delete;
-
-    static Definition* create(Node* parent, const std::string& typeName)
-    { return new Definition(parent, typeName); }
-    static Definition* create(Node* parent, const std::string& varName, Definition* mathType)
-    { return new Definition(parent, varName, mathType); }
-    static Definition* create(Node* parent, const std::string& symForm,
-                              const std::vector<Definition*>& argT, Definition* retT)
-    { return new Definition(parent, symForm, argT, retT); }
-
-    std::string print(Representation* r, bool incremental) const override
-    { r->process(this); return r->str(); }
-    PrimaryMT* getType() const { return dynamic_cast<PrimaryMT*>(term); }
-    NamedTerm* getTerm() const { return term; }
-    NamedTerm* use(Item* in) {
-        _use.insert(in);
-        return term;
-    }
-
-    Map* getMap() const { return dynamic_cast<Map*>(term); }
+    ~DefConnective() override;
+    static DefConnective* create(Node* parent, const std::string& sym, bool prefix,
+                                 DefType* argT, DefType* retT)
+    { return new DefConnective(parent, sym, prefix, argT, retT); }
+    static DefConnective* create(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
+                                 DefType* leftT, DefType* rightT, DefType* retT)
+    { return new DefConnective(parent, sym, notation, leftT, rightT, retT); }
+    std::string print(Representation* r, bool incremental) const override;
 };
 
 #endif //SPIKARD_MATHLANG_DEFINITION_HPP

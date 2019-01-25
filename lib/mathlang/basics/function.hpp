@@ -19,8 +19,9 @@ class Function : public NamedTerm, public UnaryOperation
     const MathType* _mapType;
 public:
     Function(const AbstractName* name, const MathType* argT, const MathType* retT)
-        : NamedTerm(name), UnaryOperation(argT, retT, name) {}
+        : NamedTerm(name), UnaryOperation(name, argT, retT, false) {}
     Function(const AbstractName* name, const MathType* mapMT);
+
 };
 
 #endif //SPIKARD_FUNCTION_HPP

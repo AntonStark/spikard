@@ -11,23 +11,21 @@ int main() {
     PrimaryNode* lecture = PrimaryNode::create(cource, "Лекция",
                                                NameStoringStrategy::BasicNSSTypes::Appending);
 
-    auto typeAny = Definition::create(lecture, "any");
+    auto typeAny = DefType::create(lecture, "any");
 
-    auto typeSet = Definition::create(lecture, "Set");
-    auto typeLogical = Definition::create(lecture, "Logical");
-    Definition::create(lecture, R"(\cdot\in\cdot)", {typeAny, typeSet}, typeLogical);
+    auto typeSet = DefType::create(lecture, "Set");
+    auto typeLogical = DefType::create(lecture, "Logical");
+    DefConnective::create(lecture, "\\in", BinaryOperation::Notation::INFIX, typeAny, typeSet, typeLogical);
 
-    auto typeMap = Definition::create(lecture, "Map");
-    Definition::create(lecture, R"(\cdot(\cdot))", {typeMap, typeAny}, typeAny);
+    auto typeN = DefType::create(lecture, "\\mathbb{N}");
+    DefAtom::create(lecture, "2", typeN);
+    auto typeMap = DefType::create(lecture, "Map");
+    Definition::create(lecture, "dvs", typeMap); // fixme Function todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N}, \mathbb{N})
 
-    auto typeN = Definition::create(lecture, "\\mathbb{N}");
-    Definition::create(lecture, "2", typeN);
-    Definition::create(lecture, "dvs", typeMap); // todo по-хорошему тут должен быть уточняющий зависимый тип: не просто Map, а Map(\mathbb{N}, \mathbb{N})
-
-    Definition::create(lecture, "#\\cdot", {typeSet}, typeN);
-    Definition::create(lecture, R"(\cdot = \cdot)", {typeN, typeN}, typeLogical);
+    DefConnective::create(lecture, "#", true, typeSet, typeN);
+    DefConnective::create(lecture, "=", BinaryOperation::Notation::INFIX, typeN, typeN, typeLogical);
     
-    Definition::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet); // fixme вместо последнего "any" должен ->
+    Definition::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet); // fixme SpecialConnective fixme вместо последнего "any" должен ->
     // быть тип P: elem(Set) -> Logical, где elem(Set) обозначает тип элементов множества из второго аргумента
 
 //    lecture->addTerm(R"(\{ n \in \mathbb{N} | #dvs(n) = 2 \})");      // { n \in \mathbb{N} | dvs(n) = {1, n} }

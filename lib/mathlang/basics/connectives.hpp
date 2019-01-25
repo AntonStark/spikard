@@ -13,21 +13,20 @@
 class UnaryOperation : public AbstractConnective
 {
 private:
-    const MathType* _operandType;
-    const MathType* _resultType;
-
     const AbstractName* _name;
     bool _prefix;
+
+    const MathType* _operandType;
+    const MathType* _resultType;
 public:
-    UnaryOperation(const MathType* operandType, const MathType* resultType,
-                   const AbstractName* name, bool prefix = true)
-        : _operandType(operandType), _resultType(resultType),
-          _name(name), _prefix(prefix) {}
+    UnaryOperation(const AbstractName* name,
+                   const MathType* operandType, const MathType* resultType, bool prefix = true);
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
     TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
+    size_t getArity() const override;
 };
 
 class BinaryOperation : public AbstractConnective
@@ -35,22 +34,22 @@ class BinaryOperation : public AbstractConnective
 public:
     enum class Notation {PREFIX, INFIX, POSTFIX};
 private:
+    const AbstractName* _name;
+    Notation _notation;
+
     const MathType* _leftType;
     const MathType* _rightType;
     const MathType* _resultType;
-
-    const AbstractName* _name;
-    Notation _notation;
 public:
-    BinaryOperation(const MathType* leftType, const MathType* rightType, const MathType* resultType,
-                    const AbstractName* name, Notation notation = Notation::INFIX)
-        : _leftType(leftType), _rightType(rightType), _resultType(resultType),
-          _name(name), _notation(notation) {}
+    BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
+                    const MathType* resultType, Notation notation = Notation::INFIX);
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
     TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
+
+    size_t getArity() const override;
 };
 
 #endif //SPIKARD_CONNECTIVES_HPP
