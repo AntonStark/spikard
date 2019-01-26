@@ -9,8 +9,16 @@
 #include "../consepts/abstract_connective.hpp"
 
 #include "complex.hpp"
+#include "texname.hpp"
 
-class UnaryOperation : public AbstractConnective
+class PrintableConnective : public AbstractConnective, public NamedEntity
+{
+public:
+    PrintableConnective(const AbstractName* name) : NamedEntity(name) {}
+    ~PrintableConnective() override = default;
+};
+
+class UnaryOperation : public PrintableConnective
 {
 private:
     const AbstractName* _name;
@@ -27,9 +35,11 @@ public:
     TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
     size_t getArity() const override;
+
+    static const AbstractName* produceSymForm(const AbstractName* ownName, bool prefix);
 };
 
-class BinaryOperation : public AbstractConnective
+class BinaryOperation : public PrintableConnective
 {
 public:
     enum class Notation {PREFIX, INFIX, POSTFIX};
@@ -48,8 +58,14 @@ public:
     bool check(TermsVector args) const override;
     TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
-
     size_t getArity() const override;
+
+    static const AbstractName* produceSymForm(const AbstractName* ownName, Notation notation);
+};
+
+class SpecialConnective : public PrintableConnective
+{
+
 };
 
 #endif //SPIKARD_CONNECTIVES_HPP

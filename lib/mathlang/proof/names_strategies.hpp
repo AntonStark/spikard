@@ -25,8 +25,8 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerNamed(const NamedTerm* term, Definition* where) override
-    { atTheEnd.add(term, where); }
+    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override
+    { atTheEnd.add(named, type, where); }
     std::string printType() const override { return "Hidden"; }
 };
 
@@ -46,9 +46,9 @@ public:
     }
 
     const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerNamed(const NamedTerm* term, Definition* where) override {
-        _parent->registerNamedTerm(term, where);
-        atTheEnd.add(term, where);
+    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override {
+        _parent->registerNamed(named, type, where);
+        atTheEnd.add(named, type, where);
     }
     std::string printType() const override { return "Appending"; }
 };

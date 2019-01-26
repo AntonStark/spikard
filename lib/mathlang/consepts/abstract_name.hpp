@@ -19,7 +19,7 @@ public:
 class NamedEntity
 {
 private:
-    const AbstractName* _name;
+    const AbstractName* _name; // todo использовать shred_pointer полученный из NSI
 public:
     ~NamedEntity() = default;
     NamedEntity(const AbstractName* name);

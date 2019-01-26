@@ -14,14 +14,13 @@
  * Реализуются функции одного аргумента.
  * g(x, y) понимается как g от упорядоченной пары x, y
  */
-class Function : public NamedTerm, public UnaryOperation
+class Function : public Primary, public NamedEntity, public UnaryOperation
 {
     const MathType* _mapType;
 public:
     Function(const AbstractName* name, const MathType* argT, const MathType* retT)
-        : NamedTerm(name), UnaryOperation(name, argT, retT, false) {}
+        : NamedEntity(name), UnaryOperation(name, argT, retT, false) {}
     Function(const AbstractName* name, const MathType* mapMT);
-
 };
 
 #endif //SPIKARD_FUNCTION_HPP

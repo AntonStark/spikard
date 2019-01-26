@@ -35,7 +35,7 @@ private:
 
     bool exists(const std::string& str) const;
 public:
-    void add(const NamedTerm* term, Definition* where);
+    void add(const NamedEntity* named, const MathType* type, Definition* where);
 
     std::vector<const AbstractName*> getNames(const MathType* type = nullptr) const;
     std::vector<std::string> getNamesStr(const MathType* type = nullptr) const;
@@ -49,7 +49,7 @@ public:
     enum class BasicNSSTypes {Appending, Hidden};
     virtual const NameSpaceIndex& index() const = 0;
     friend class Definition;
-    virtual void registerNamed(const NamedTerm* term, Definition* where) = 0;
+    virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) = 0;
 
     virtual std::string printType() const = 0;
 };

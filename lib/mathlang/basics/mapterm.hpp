@@ -15,7 +15,7 @@
 // Отображения сами являются термами, поскольку есть отображения отображений.
 // Например, символ взятия производной.
 
-class Map : public NamedTerm
+class Map : public NamedEntity, public Primary
 {
 public:
     typedef MathType::MTVector MTVector;
@@ -24,7 +24,7 @@ private:
 public:
     Map(const AbstractName* symForm, ProductMT argT, const MathType* retT);
     Map(const AbstractName* symForm, const MathType* argT, const MathType* retT)
-        : NamedTerm(symForm), _type(ProductMT({argT}), retT) {}
+        : NamedEntity(symForm), _type(ProductMT({argT}), retT) {}
     Map(const AbstractName* symForm, size_t arity,
         const MathType* argT, const MathType* retT)
         : Map(symForm, ProductMT({arity, argT}), retT) {}
@@ -39,6 +39,7 @@ public:
     bool matchArgType(const MTVector& otherArgT) const
     { return _type.getArgs()->matchArgType(otherArgT); }
 
+    bool comp(const Terms* other) const override;
     Terms* clone() const override { return new Map(*this); }
     std::string print() const { return getName()->toStr(); }
 };

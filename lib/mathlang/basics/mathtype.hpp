@@ -17,10 +17,10 @@
 #include "named_term.hpp"
 #include "string_name.hpp"
 
-class PrimaryMT : public MathType, public NamedTerm
+class PrimaryMT : public MathType, public NamedEntity, public Primary
 {
 public:
-    PrimaryMT(const AbstractName* typeName) : NamedTerm(typeName) {}
+    PrimaryMT(const AbstractName* typeName) : NamedEntity(typeName) {}
     PrimaryMT(const PrimaryMT&) = default;
     ~PrimaryMT() override = default;
 
@@ -28,8 +28,10 @@ public:
     bool operator<(const MathType& other) const override;
     bool isPrimary() const override { return true; }
 
+    bool comp(const Terms* other) const override;
+
     PrimaryMT* clone() const override { return new PrimaryMT(*this); }
-    std::string getName() const override { return NamedTerm::getName()->toStr(); }
+    std::string getName() const override { return NamedEntity::getName()->toStr(); }
 
     const MathType* getType() const override;
 

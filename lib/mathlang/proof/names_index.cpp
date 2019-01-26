@@ -20,17 +20,17 @@ public:
 bool NameSpaceIndex::exists(const std::string& str) const
 { return (name2ID.find(str) != name2ID.end()); }
 
-void NameSpaceIndex::add(const NamedTerm* term, Definition* where) {
-    const auto& str = term->getName()->toStr();
-    const auto& type = term->getType()->getName();
+void NameSpaceIndex::add(const NamedEntity* named, const MathType* type, Definition* where) {
+    const auto& str = named->getName()->toStr();
+    const auto& typeName = type->getName();
     if (!exists(str)) {
         size_t id = names.size();
-        names.push_back(term->getName());
+        names.push_back(named->getName());
         definitions.push_back(where);
 
-        auto searchTypeIDs = type2IDs.find(type);
+        auto searchTypeIDs = type2IDs.find(typeName);
         if (searchTypeIDs == type2IDs.end())
-            type2IDs[type] = {id};
+            type2IDs[typeName] = {id};
         else
             searchTypeIDs->second.push_back(id);
         name2ID[str] = id;

@@ -91,8 +91,8 @@ public:
 
     virtual const NameSpaceIndex& index() const
     { return _naming->index(); }
-    virtual void registerNamedTerm(const NamedTerm* term, Definition* where)
-    { _naming->registerNamed(term, where); }
+    virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where)
+    { _naming->registerNamed(named, type, where); }
 
     Definition* get(const std::string& name);
     virtual std::string print(Representation* r, bool incremental = true) const override

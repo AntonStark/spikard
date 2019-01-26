@@ -40,9 +40,9 @@ private:
 protected:
     void addUsage(Item* in)
     { _use.insert(in); }
-    virtual NamedTerm* _get() = 0;
+    virtual NamedEntity* _get() = 0;
 public:
-    virtual NamedTerm* use(Item* in) = 0;
+    virtual NamedEntity* use(Item* in) = 0;
 };
 
 class DefType : public Item, public Definition
@@ -112,7 +112,7 @@ public:
 class DefConnective : public Item, public Definition
 {
 private:
-    AbstractConnective* connective;
+    PrintableConnective* connective;
     DefConnective(Node* parent, const std::string& sym, bool prefix,
                   DefType* argT, DefType* retT);
     DefConnective(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
@@ -131,6 +131,9 @@ private:
         auto* name = new TexName(form);
         connective = new Map(name, argType, retType);
     }*/
+protected:
+    PrintableConnective* _get() override
+    { return connective; }
 public:
     ~DefConnective() override;
     static DefConnective* create(Node* parent, const std::string& sym, bool prefix,
@@ -139,6 +142,8 @@ public:
     static DefConnective* create(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
                                  DefType* leftT, DefType* rightT, DefType* retT)
     { return new DefConnective(parent, sym, notation, leftT, rightT, retT); }
+
+    NamedEntity* use(Item* in) override;
     std::string print(Representation* r, bool incremental) const override;
 };
 

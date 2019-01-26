@@ -34,6 +34,14 @@ const MathType* PrimaryMT::getType() const
 std::string PrimaryMT::print() const
 { return getName(); }
 
+bool PrimaryMT::comp(const Terms* other) const {
+    if (auto otherPrimary = dynamic_cast<const PrimaryMT*>(other))
+        return (*getType() == *otherPrimary->getType()
+                && getName() == otherPrimary->getName());
+    else
+        return false;
+}
+
 bool ProductMT::operator==(const MathType& one) const {
     if (one.isPrimary()) {
         auto& pmt = dynamic_cast<const PrimaryMT&>(one);

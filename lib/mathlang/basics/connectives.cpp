@@ -6,7 +6,7 @@
 
 UnaryOperation::UnaryOperation(const AbstractName* name, const MathType* operandType,
                                const MathType* resultType, bool prefix)
-    : _name(name), _operandType(operandType),
+    : PrintableConnective(produceSymForm(name, prefix)), _name(name), _operandType(operandType),
       _resultType(resultType), _prefix(prefix) {}
 const MathType* UnaryOperation::resultType() const
 { return _resultType; }
@@ -27,9 +27,17 @@ std::string UnaryOperation::print(TermsVector args) const {
 size_t UnaryOperation::getArity() const
 { return 1; }
 
+const AbstractName* UnaryOperation::produceSymForm(const AbstractName* ownName, bool prefix) {
+    auto name = ownName->toStr();
+    if (prefix)
+        return new TexName(name + "\\cdot");
+    else
+        return new TexName("\\cdot" + name);
+}
+
 BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
                                  const MathType* resultType, BinaryOperation::Notation notation)
-    : _name(name), _leftType(leftType), _rightType(rightType),
+    : PrintableConnective(produceSymForm(name, notation)), _name(name), _leftType(leftType), _rightType(rightType),
       _resultType(resultType), _notation(notation) {}
 const MathType* BinaryOperation::resultType() const
 { return _resultType; }
@@ -56,3 +64,15 @@ std::string BinaryOperation::print(TermsVector args) const {
 }
 size_t BinaryOperation::getArity() const
 { return 2; }
+
+const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName, BinaryOperation::Notation notation) {
+    switch (notation) {
+        case Notation::PREFIX :
+            return new TexName(ownName->toStr() + R"(\cdot\cdot)");
+        case Notation::INFIX :
+            return new TexName("\\cdot" + ownName->toStr() + "\\cdot");
+        case Notation::POSTFIX :
+            return new TexName(R"(\cdot\cdot)" + ownName->toStr());
+    }
+}
+

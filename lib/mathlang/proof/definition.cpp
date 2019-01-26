@@ -28,7 +28,7 @@ DefType::DefType(Node* parent, const std::string& typeName)
     : Item(parent) {
     auto* name = new TexName(typeName, true);
     type = new PrimaryMT(name);
-    parent->registerNamedTerm(type, this);
+    parent->registerNamed(type, type->getType(), this);
 }
 PrimaryMT* DefType::use(Item* in) {
     addUsage(in);
@@ -44,7 +44,7 @@ DefAtom::DefAtom(Node* parent, const std::string& varName, DefType* mathType)
     auto* name = new TexName(varName, true);
     auto* type = mathType->use(this);
     atom = new Variable(name, type);
-    parent->registerNamedTerm(atom, this);
+    parent->registerNamed(atom, type, this);
 }
 Variable* DefAtom::use(Item* in) {
     addUsage(in);
@@ -61,7 +61,7 @@ DefFunct::DefFunct(Node* parent, const std::string& fName, DefType* argT, DefTyp
     auto retType = retT->use(this);
     auto* name = new TexName(fName);
     funct = new Function(name, argType, retType);
-    parent->registerNamedTerm(funct, this);
+    parent->registerNamed(funct, funct->getType(), this);
 }
 Map* DefFunct::use(Item* in) {
     addUsage(in);
@@ -79,6 +79,7 @@ DefConnective::DefConnective(Node* parent, const std::string& sym, bool prefix,
     auto retType = retT->use(this);
     auto* name = new TexName(sym);
     connective = new UnaryOperation(name, argType, retType, prefix);
+    parent->registerNamed(connective, connective->resultType(), this);
 }
 DefConnective::DefConnective(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
     DefType* leftT, DefType* rightT, DefType* retT)
@@ -88,7 +89,13 @@ DefConnective::DefConnective(Node* parent, const std::string& sym, BinaryOperati
     auto retType = retT->use(this);
     auto* name = new TexName(sym);
     connective = new BinaryOperation(name, leftType, rightType, retType, notation);
+    parent->registerNamed(connective, connective->resultType(), this);
 }
-DefConnective::~DefConnective() { delete connective; }
-std::string DefFunct::print(Representation* r, bool incremental) const
+NamedEntity* DefConnective::use(Item* in) {
+    addUsage(in);
+    return _get();
+}
+std::string DefConnective::print(Representation* r, bool incremental) const
 { r->process(this); return r->str(); }
+DefConnective::~DefConnective()
+{ delete connective; }
