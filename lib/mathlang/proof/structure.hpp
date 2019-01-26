@@ -102,7 +102,10 @@ public:
 
 
 class NamedNode;
-class Definition;
+class DefType;
+class DefAtom;
+class DefFunct;
+class DefConnective;
 class TermsBox;
 class Inference;
 
@@ -116,7 +119,10 @@ public:
     // имеет смысл (т.е. для конкретных классов иерархии)
     virtual void process(const ListStorage*) = 0;
     virtual void process(const NamedNode*) = 0;
-    virtual void process(const Definition*) = 0;
+    virtual void process(const DefType*) = 0;
+    virtual void process(const DefAtom*) = 0;
+    virtual void process(const DefFunct*) = 0;
+    virtual void process(const DefConnective*) = 0;
     virtual void process(const TermsBox*) = 0;
     virtual void process(const Inference*) = 0;
 };

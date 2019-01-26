@@ -86,19 +86,19 @@ public:
 class DefFunct : public Item, public Definition
 {
 private:
-    Map* funct;
+    Function* funct;
     DefFunct(Node* parent, const std::string& fName,
              DefType* argT, DefType* retT);
 protected:
-    Map* _get() override
+    Function* _get() override
     { return funct; }
 public:
     ~DefFunct() override;
-    static DefFunct* create(Node* parent, const std::string& symForm,
-        const std::vector<DefType*>& argT, DefType* retT)
-    { return new DefFunct(parent, symForm, argT, retT); }
+    static DefFunct* create(Node* parent, const std::string& fName,
+                            DefType* argT, DefType* retT)
+    { return new DefFunct(parent, fName, argT, retT); }
 
-    Map* use(Item* in) override;
+    Function* use(Item* in) override;
     std::string print(Representation* r, bool incremental) const override;
 };
 

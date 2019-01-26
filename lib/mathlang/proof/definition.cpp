@@ -63,7 +63,7 @@ DefFunct::DefFunct(Node* parent, const std::string& fName, DefType* argT, DefTyp
     funct = new Function(name, argType, retType);
     parent->registerNamed(funct, funct->getType(), this);
 }
-Map* DefFunct::use(Item* in) {
+Function* DefFunct::use(Item* in) {
     addUsage(in);
     return _get();
 }

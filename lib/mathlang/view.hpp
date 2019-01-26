@@ -82,7 +82,10 @@ public:
 
     void process(const ListStorage* ls) override;
     void process(const NamedNode* nn) override;
-    void process(const Definition* def) override;
+    void process(const DefType* dt) override;
+    void process(const DefAtom* da) override;
+    void process(const DefFunct* df) override;
+    void process(const DefConnective* dc) override;
     void process(const TermsBox* ax) override;
     void process(const Inference* inf) override;
 };

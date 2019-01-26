@@ -11,3 +11,10 @@
  * значит нужна бинарная операция \times (и ещё \mapsto заодно)
  *
  */
+bool Function::comp(const Terms* other) const {
+    if (auto otherFunction = dynamic_cast<const Function*>(other))
+        return (*getType() == *otherFunction->getType()
+                && *getName() == *otherFunction->getName());
+    else
+        return false;
+}

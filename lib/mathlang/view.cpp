@@ -170,7 +170,12 @@ void AsMlObj::process(const NamedNode* nn) {
     );
 }
 
-void AsMlObj::process(const Definition* def) {
+void AsMlObj::process(const DefType* dt) {}
+void AsMlObj::process(const DefAtom* da) {}
+void AsMlObj::process(const DefFunct* df) {}
+void AsMlObj::process(const DefConnective* dc) {}
+
+/*void AsMlObj::process(const Definition* def) {
     typedef Definition::NameTy NameTy;
     switch (def->defType) {
         case NameTy::MT : {
@@ -208,7 +213,7 @@ void AsMlObj::process(const Definition* def) {
             break;
         }
     }
-}
+}*/
 
 void AsMlObj::process(const TermsBox* ax) {
     buffer.push_back(

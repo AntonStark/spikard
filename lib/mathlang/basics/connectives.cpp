@@ -3,6 +3,8 @@
 //
 
 #include "connectives.hpp"
+#include "string_name.hpp"
+#include "mathtype.hpp"
 
 UnaryOperation::UnaryOperation(const AbstractName* name, const MathType* operandType,
                                const MathType* resultType, bool prefix)
@@ -76,3 +78,5 @@ const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName,
     }
 }
 
+BinaryOperation* cartesian_product = new BinaryOperation(new StringName("\\times"), typeOfTypes, typeOfTypes, typeOfTypes);
+BinaryOperation* map_symbol   = new BinaryOperation(new StringName("\\rightarrow"), typeOfTypes, typeOfTypes, typeOfTypes);

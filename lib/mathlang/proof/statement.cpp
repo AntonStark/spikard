@@ -17,12 +17,12 @@ public:
 };
 
 const Terms* Inference::getTerms(Path pathToTerm) {
-    Hierarchy* termItem = getParent()->getByPass(pathToTerm);
+    /*Hierarchy* termItem = getParent()->getByPass(pathToTerm);
     if (auto t = dynamic_cast<Statement*>(termItem))
         return t->get();
     else if (auto v = dynamic_cast<Definition*>(termItem))
         return v->use(this);
-    else
+    else*/
         return nullptr;
 }
 const Terms* Inference::inference() {

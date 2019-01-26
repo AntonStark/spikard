@@ -26,13 +26,14 @@ private:
 
     const MathType* _operandType;
     const MathType* _resultType;
+protected:
+    TermsVector compose(TermsVector args) const override;
 public:
     UnaryOperation(const AbstractName* name,
                    const MathType* operandType, const MathType* resultType, bool prefix = true);
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
-    TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
     size_t getArity() const override;
 
@@ -50,22 +51,25 @@ private:
     const MathType* _leftType;
     const MathType* _rightType;
     const MathType* _resultType;
+protected:
+    TermsVector compose(TermsVector args) const override;
 public:
     BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
                     const MathType* resultType, Notation notation = Notation::INFIX);
 
     const MathType* resultType() const override;
     bool check(TermsVector args) const override;
-    TermsVector compose(TermsVector args) const override;
     std::string print(TermsVector args) const override;
     size_t getArity() const override;
 
     static const AbstractName* produceSymForm(const AbstractName* ownName, Notation notation);
 };
+extern BinaryOperation* cartesian_product;
+extern BinaryOperation* map_symbol;
 
-class SpecialConnective : public PrintableConnective
+/*class SpecialConnective : public PrintableConnective
 {
 
-};
+};*/
 
 #endif //SPIKARD_CONNECTIVES_HPP
