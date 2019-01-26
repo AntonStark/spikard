@@ -35,19 +35,26 @@ public:
  *
  * // todo поддержка Contraint
  */
-class Variable : public NamedTerm
+class Variable : public NamedEntity, public virtual Terms
 {
 private:
     const MathType* _type;
 public:
     Variable(AbstractName* name, const MathType* type)
-        : NamedTerm(name), _type(type) {}
+        : NamedEntity(name), _type(type) {}
     Variable(const Variable& one)
-        : NamedTerm(one) { _type = one.getType()->clone(); }
+        : NamedEntity(one) { _type = one.getType()->clone(); }
     ~Variable() override = default;
 
     const MathType* getType() const override { return _type; }
+    virtual bool comp(const Terms* other) const override;
     Variable* clone() const override { return new Variable(*this); }
+    const Terms* get(Path path) const override
+    { return (path.empty() ? this : nullptr); }
+    Terms* replace(Path path, const Terms* by) const override
+    { return (path.empty() ? by->clone() : nullptr); }
+    Terms* replace(const Terms* x, const Terms* t) const override
+    { return (comp(x) ? t->clone() : this->clone()); }
     std::string print() const override { return getName()->toStr(); }
 };
 

@@ -7,6 +7,8 @@
 #ifndef SPIKARD_TEXNAME_HPP
 #define SPIKARD_TEXNAME_HPP
 
+#include <typeinfo>
+
 #include "../consepts/abstract_name.hpp"
 
 #include "../parser/lexeme.hpp"
@@ -23,6 +25,8 @@ public:
     TexName(Parser2::LexemeSequence lexSeq);
 
     std::string toStr() const override;
+
+    bool operator==(const AbstractName& other) const override;
 
     long countArgPlaces() const;
     const Parser2::LexemeSequence& getSeq() const;

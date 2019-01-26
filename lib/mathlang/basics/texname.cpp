@@ -23,7 +23,8 @@ TexName::TexName(const std::string& name, bool noBlanks) {
     }
 }
 
-TexName::TexName(Parser2::LexemeSequence lexSeq) : _lexSeq(std::move(lexSeq)) {}
+TexName::TexName(Parser2::LexemeSequence lexSeq)
+: _lexSeq(std::move(lexSeq)) {}
 
 long TexName::countArgPlaces() const {
     return std::count_if(_data.filtered.begin(), _data.filtered.end(),
@@ -35,3 +36,10 @@ long TexName::countArgPlaces() const {
 
 const Parser2::LexemeSequence& TexName::getSeq() const
 { return _lexSeq; }
+bool TexName::operator==(const AbstractName& other) const {
+    try {
+        auto otherTexName = dynamic_cast<const TexName&>(other);
+        return (getSeq() == otherTexName.getSeq());
+    } catch (std::bad_cast&)
+    { return false; }
+}

@@ -5,6 +5,8 @@
 #ifndef SPIKARD_STRING_NAME_HPP
 #define SPIKARD_STRING_NAME_HPP
 
+#include <typeinfo>
+
 #include "../consepts/abstract_name.hpp"
 
 class StringName : public AbstractName
@@ -17,6 +19,7 @@ public:
     { fromStr(name); }
 
     std::string toStr() const override;
+    bool operator==(const AbstractName& other) const override;
 };
 
 #endif //SPIKARD_STRING_NAME_HPP

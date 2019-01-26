@@ -43,7 +43,9 @@ public:
 class Terms
 {
 public:
+    virtual ~Terms() = default;
     typedef std::stack<size_t> Path;
+    typedef std::vector<Terms*> Vector;
 
     virtual const MathType* getType() const = 0;
     virtual bool comp(const Terms* other) const = 0;

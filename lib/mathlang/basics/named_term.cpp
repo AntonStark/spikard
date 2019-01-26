@@ -20,3 +20,11 @@ Terms* NamedTerm::replace(Path path, const Terms* by) const
 
 Terms* NamedTerm::replace(const Terms* x, const Terms* t) const
 { return (comp(x) ? t->clone() : this->clone()); }
+
+bool Variable::comp(const Terms* other) const {
+    if (auto otherVariable = dynamic_cast<const Variable*>(other))
+        return (*getType() == *otherVariable->getType()
+                && *getName() == *otherVariable->getName());
+    else
+        return false;
+}

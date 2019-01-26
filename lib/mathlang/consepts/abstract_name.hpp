@@ -13,7 +13,20 @@ class AbstractName
     virtual void fromStr(const std::string& name) = 0;
 public:
     virtual std::string toStr() const = 0;
+    virtual bool operator==(const AbstractName& other) const = 0;
 };
 
+class NamedEntity
+{
+private:
+    const AbstractName* _name;
+public:
+    ~NamedEntity() = default;
+    NamedEntity(const AbstractName* name);
+
+    bool operator== (const NamedEntity& one) const;
+    bool operator< (const NamedEntity& other) const;
+    const AbstractName* const getName() const;
+};
 
 #endif //SPIKARD_NAMESTYPE_HPP
