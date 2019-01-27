@@ -117,20 +117,8 @@ private:
                   DefType* argT, DefType* retT);
     DefConnective(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
                   DefType* leftT, DefType* rightT, DefType* retT);
-    /*
-     * для особых связок, после todo SpecialConnective
     DefConnective(Node* parent, const std::string& form,
-        const std::vector<DefType*>& argT, DefType* retT)
-    : Item(parent) {
-        MathType::MTVector argTypes;
-        for (auto* d : argT)
-            argTypes.push_back(d->use(this));
-        auto argType = ProductMT(argTypes);
-
-        auto retType = retT->use(this);
-        auto* name = new TexName(form);
-        connective = new Map(name, argType, retType);
-    }*/
+        const std::vector<DefType*>& argT, DefType* retT);
 protected:
     PrintableConnective* _get() override
     { return connective; }
@@ -142,6 +130,9 @@ public:
     static DefConnective* create(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
                                  DefType* leftT, DefType* rightT, DefType* retT)
     { return new DefConnective(parent, sym, notation, leftT, rightT, retT); }
+    static DefConnective* create(Node* parent, const std::string& form,
+                                 const std::vector<DefType*>& argT, DefType* retT)
+    { return new DefConnective(parent, form, argT, retT); }
 
     NamedEntity* use(Item* in) override;
     std::string print(Representation* r, bool incremental) const override;

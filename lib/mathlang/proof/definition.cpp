@@ -62,6 +62,7 @@ DefFunct::DefFunct(Node* parent, const std::string& fName, DefType* argT, DefTyp
     auto* name = new TexName(fName);
     funct = new Function(name, argType, retType);
     parent->registerNamed(funct, funct->getType(), this);
+    // todo двойная регистрация: с возвращаемым типом как связки и как переменной функционального типа
 }
 Function* DefFunct::use(Item* in) {
     addUsage(in);
@@ -89,6 +90,16 @@ DefConnective::DefConnective(Node* parent, const std::string& sym, BinaryOperati
     auto retType = retT->use(this);
     auto* name = new TexName(sym);
     connective = new BinaryOperation(name, leftType, rightType, retType, notation);
+    parent->registerNamed(connective, connective->resultType(), this);
+}
+DefConnective::DefConnective(Node* parent, const std::string& form, const std::vector<DefType*>& argT, DefType* retT)
+    : Item(parent) {
+    MathType::Vector argTypes;
+    for (auto* d : argT)
+        argTypes.push_back(d->use(this));
+    auto retType = retT->use(this);
+    auto* name = new TexName(form);
+    connective = new SpecialConnective(name, argTypes, retType);
     parent->registerNamed(connective, connective->resultType(), this);
 }
 NamedEntity* DefConnective::use(Item* in) {

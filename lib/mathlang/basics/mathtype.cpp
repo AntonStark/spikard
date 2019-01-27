@@ -83,7 +83,7 @@ bool ProductMT::operator<(const MathType& other) const {
 }
 
 MathType* ProductMT::clone() const {
-    MTVector newSubTypes;
+    Vector newSubTypes;
     for (const auto& t : _subTypes)
         newSubTypes.push_back(t->clone());
     return new ProductMT(newSubTypes);
@@ -111,7 +111,7 @@ std::vector<std::string> ProductMT::getNames() const {
     return buf;
 }
 
-bool ProductMT::matchArgType(const MTVector& otherMTV) const {
+bool ProductMT::matchArgType(const Vector& otherMTV) const {
     if (otherMTV.size() != _subTypes.size())
         return false;
     for (size_t i = 0; i < _subTypes.size(); ++i)

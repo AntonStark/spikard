@@ -45,9 +45,9 @@ extern PrimaryMT logical_mt;
 class ProductMT : public MathType
 {
 private:
-    MTVector _subTypes;
+    Vector _subTypes;
 public:
-    ProductMT(MTVector subTypes) : _subTypes(subTypes) {};
+    ProductMT(Vector subTypes) : _subTypes(subTypes) {};
     ProductMT(const ProductMT&) = default;
     ~ProductMT() override = default;
 
@@ -59,7 +59,7 @@ public:
     std::string getName() const override;
     std::vector<std::string> getNames() const;
     size_t getArity() const { return _subTypes.size(); }
-    bool matchArgType(const MTVector& otherMTV) const;
+    bool matchArgType(const Vector& otherMTV) const;
 };
 
 class MapMT : public MathType

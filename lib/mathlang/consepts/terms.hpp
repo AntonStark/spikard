@@ -28,7 +28,7 @@ public:
 
     virtual MathType* clone() const = 0;
     virtual std::string getName() const = 0;
-    typedef std::vector<const MathType*> MTVector;
+    typedef std::vector<const MathType*> Vector;
 
 //    const MathType* getType() const override;
 //    std::string print() const override;

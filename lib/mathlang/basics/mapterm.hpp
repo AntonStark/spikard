@@ -18,7 +18,7 @@
 class Map : public NamedEntity, public Primary
 {
 public:
-    typedef MathType::MTVector MTVector;
+    typedef MathType::Vector MTVector;
 private:
     MapMT _type;
 public:

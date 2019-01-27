@@ -19,12 +19,12 @@ int main() {
 
     auto typeN = DefType::create(lecture, "\\mathbb{N}");
     DefAtom::create(lecture, "2", typeN);
-    DefFunct::create(lecture, "dvs", typeN, typeN);
+    DefFunct::create(lecture, "dvs", typeN, typeSet);
 
     DefConnective::create(lecture, "\\#", true, typeSet, typeN);
     DefConnective::create(lecture, "=", BinaryOperation::Notation::INFIX, typeN, typeN, typeLogical);
-    
-    Definition::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet); // fixme SpecialConnective fixme вместо последнего "any" должен ->
+
+    DefConnective::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet);
     // быть тип P: elem(Set) -> Logical, где elem(Set) обозначает тип элементов множества из второго аргумента
 
 //    lecture->addTerm(R"(\{ n \in \mathbb{N} | #dvs(n) = 2 \})");      // { n \in \mathbb{N} | dvs(n) = {1, n} }

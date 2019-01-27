@@ -6,17 +6,19 @@
 #include "string_name.hpp"
 #include "mathtype.hpp"
 
+/**
+ * // fixme оптимизировать регистрацию Connectives в NSI
+ * Поскольку в PrintableConnective передаётся symForm, приходится
+ * во-1 генерировать её
+ * во-2 хранить для печати имя в чистом виде
+ *  двойная работа
+*/
+
 UnaryOperation::UnaryOperation(const AbstractName* name, const MathType* operandType,
                                const MathType* resultType, bool prefix)
     : PrintableConnective(produceSymForm(name, prefix)), _name(name), _operandType(operandType),
       _resultType(resultType), _prefix(prefix) {}
-const MathType* UnaryOperation::resultType() const
-{ return _resultType; }
-bool UnaryOperation::check(TermsVector args) const
-{ return (args.size() == 1 && args.front()->getType() == _operandType); }
-TermsVector UnaryOperation::compose(TermsVector args) const
-{ return args; }
-std::string UnaryOperation::print(TermsVector args) const {
+std::string UnaryOperation::print(Terms::Vector args) const {
     if (!check(args))
         return "";
     else {
@@ -26,8 +28,6 @@ std::string UnaryOperation::print(TermsVector args) const {
             return (args.front()->print() + _name->toStr());
     }
 }
-size_t UnaryOperation::getArity() const
-{ return 1; }
 
 const AbstractName* UnaryOperation::produceSymForm(const AbstractName* ownName, bool prefix) {
     auto name = ownName->toStr();
@@ -37,20 +37,17 @@ const AbstractName* UnaryOperation::produceSymForm(const AbstractName* ownName, 
         return new TexName("\\cdot" + name);
 }
 
+
 BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
                                  const MathType* resultType, BinaryOperation::Notation notation)
     : PrintableConnective(produceSymForm(name, notation)), _name(name), _leftType(leftType), _rightType(rightType),
       _resultType(resultType), _notation(notation) {}
-const MathType* BinaryOperation::resultType() const
-{ return _resultType; }
-bool BinaryOperation::check(TermsVector args) const {
+bool BinaryOperation::check(Terms::Vector args) const {
     return (args.size() == 2
-            && args.at(0)->getType() == _leftType
-            && args.at(1)->getType() == _rightType);
+            && *args.at(0)->getType() == *_leftType
+            && *args.at(1)->getType() == *_rightType);
 }
-TermsVector BinaryOperation::compose(TermsVector args) const
-{ return args; }
-std::string BinaryOperation::print(TermsVector args) const {
+std::string BinaryOperation::print(Terms::Vector args) const {
     if (!check(args))
         return "";
     else {
@@ -64,8 +61,6 @@ std::string BinaryOperation::print(TermsVector args) const {
         }
     }
 }
-size_t BinaryOperation::getArity() const
-{ return 2; }
 
 const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName, BinaryOperation::Notation notation) {
     switch (notation) {
@@ -76,6 +71,21 @@ const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName,
         case Notation::POSTFIX :
             return new TexName(R"(\cdot\cdot)" + ownName->toStr());
     }
+}
+
+
+bool SpecialConnective::check(Terms::Vector args) const {
+    if (args.size() != getArity())
+        return false;
+    
+    for (size_t i = 0; i < getArity(); ++i)
+        if (*args[i]->getType() != *_argTypes[i])
+            return false;
+    return true;
+}
+
+std::string SpecialConnective::print(Terms::Vector args) const {
+    return std::string(); // todo
 }
 
 BinaryOperation* cartesian_product = new BinaryOperation(new StringName("\\times"), typeOfTypes, typeOfTypes, typeOfTypes);
