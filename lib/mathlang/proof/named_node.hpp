@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by anton on 21.09.18.
 //
@@ -15,20 +17,11 @@
 class NamedNode : public Node
 {
 public:
-    enum class NNType {COURSE, SECTION, LECTURE, CLOSURE};
-    const NNType _type;
     std::string _title;
 
     ~NamedNode() override = default;
-    NamedNode(Node* parent, NameStoringStrategy* nss,
-              NNType type, const std::string& title)
-        : Node(parent, nss), _type(type), _title(title) {}
-    NamedNode(Node* parent, NameStoringStrategy* nss,
-              std::string type, const std::string& title)
-        : NamedNode(parent, nss, nntFromStr(type), title) {}
-
-    static std::string typeToStr(NNType nnt);
-    static NNType nntFromStr(std::string str);
+    NamedNode(Node* parent, NameStoringStrategy* nss, std::string title)
+        : Node(parent, nss), _title(std::move(title)) {}
 
     std::string getName() const { return _title; }
     void setName(std::string name) { _title = std::move(name); }
@@ -40,28 +33,15 @@ class BranchNode : public NamedNode
 /// Это класс для группировки групп
 {
 protected:
-    BranchNode(BranchNode* parent, NameStoringStrategy* nss,
-               std::string type, const std::string& title)
-        : NamedNode(parent, nss, type, title) {}
-    BranchNode(BranchNode* parent, NameStoringStrategy* nss,
-               NamedNode::NNType type, const std::string& title)
-        : NamedNode(parent, nss, type, title) {}
-//    static BranchNode* fromJson(const json& j, BranchNode* parent);
+    BranchNode(BranchNode* parent, NameStoringStrategy* nss, const std::string& title)
+        : NamedNode(parent, nss, title) {}
 public:
     BranchNode(const std::string& title)
-        : BranchNode(nullptr, new Hidden(), NNType::COURSE, title) {}
-//    static BranchNode* fromJson(const json& j) { return fromJson(j, nullptr); }
+        : BranchNode(nullptr, new Hidden(), title) {}
     ~BranchNode() override = default;
-    static BranchNode* create(BranchNode* parent,
-                       const std::string& title, NameStoringStrategy::BasicNSSTypes nssType)
-    { return new BranchNode(parent, nssFromNSSType(nssType, parent), NNType::SECTION, title); }
-
-//    void startCourse (const std::string& title = "")
-//    { new BranchNode(this, new Hidden(this), NNType::COURSE, title); }
-//    void startSection(const std::string& title = "")
-//    { new BranchNode(this, new Appending(this), NNType::SECTION, title); }
-//    void startLecture(const std::string& title = "")
-//    { new PrimaryNode(this, new Appending(this), NNType::LECTURE, title); }
+    static BranchNode* create(BranchNode* parent, const std::string& title,
+                              NameStoringStrategy::BasicNSSTypes nssType)
+    { return new BranchNode(parent, nssFromNSSType(nssType, parent), title); }
 
     Node* getSub(size_t number)
     { return static_cast<Node*>(getByNumber(number)); }
@@ -72,14 +52,8 @@ class PrimaryNode : public NamedNode
 {
 protected:
     PrimaryNode(Node* parent, NameStoringStrategy* nss,
-                std::string type, const std::string& title)
-        : NamedNode(parent, nss, type, title) {}
-    PrimaryNode(Node* parent, NameStoringStrategy* nss,
-                NamedNode::NNType type, const std::string& title)
-        : NamedNode(parent, nss, type, title) {}
-
-    friend class BranchNode;
-//    static PrimaryNode* fromJson(const json& j, Node* parent = nullptr);
+                const std::string& title)
+        : NamedNode(parent, nss, title) {}
 public:
     ~PrimaryNode() override = default;
     //  Таким образом есть два варианта организации размещения
@@ -92,13 +66,9 @@ public:
     //  элементов, что сильно осложняет расширение. Поэтому, возврат к 1)
     static PrimaryNode* create(BranchNode* parent,
                         const std::string& title, NameStoringStrategy::BasicNSSTypes nssType)
-    { return new PrimaryNode(parent, nssFromNSSType(nssType, parent), NNType::LECTURE, title); }
-    /*void defType (const std::string& typeName);
-    void defVar  (const std::string& varName, const std::string& typeName);
-    void defSym  (const std::string& symForm,
-                  const std::vector<std::string>& argT, const std::string& retT);*/
-//    void addTerm(const std::string& term);
-    /*void doMP   (const std::string& pPremise, const std::string& pImpl);
+    { return new PrimaryNode(parent, nssFromNSSType(nssType, parent), title); }
+/*    void addTerm(const std::string& term);
+    void doMP   (const std::string& pPremise, const std::string& pImpl);
     void doSpec (const std::string& pToSpec,  const std::string& termVar);
     void doApply(const std::string& pTerm,    const std::string& pTheorem);
     void doEqual(const std::string& pTerm,    const std::string& pEquality);
