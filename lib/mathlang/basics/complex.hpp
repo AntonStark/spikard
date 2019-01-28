@@ -1,5 +1,3 @@
-#include <utility>
-
 //
 // Created by anton on 20.01.19.
 //
@@ -10,7 +8,7 @@
 #include "../consepts/terms.hpp"
 #include "../consepts/abstract_connective.hpp"
 
-#include "mathtype.hpp"
+#include "primary.hpp"
 
 class Complex : public Terms
 {

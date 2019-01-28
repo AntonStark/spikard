@@ -7,9 +7,6 @@
 
 #include "../consepts/terms.hpp"
 
-#include "../basics/contructed_term.hpp"
-#include "../basics/mapterm.hpp"
-
 #include "../parser/parser.hpp"
 
 #include "definition.hpp"
@@ -70,12 +67,12 @@ public:
     { r->process(this); return r->str(); }
 };
 
-extern Map standardImpl;
+//extern Map standardImpl;
 
-Terms* modusPonens(const Terms* premise, const Terms* impl);
+/*Terms* modusPonens(const Terms* premise, const Terms* impl);
 Terms* specialization(const Terms* general, const Terms* t);
 Terms* application(const Terms* term, const Terms* theorem);
 Terms* equalSubst(const Terms* term, const Terms* equality);
-Term* generalization(const Terms* toGen, const Terms* x);
+Term* generalization(const Terms* toGen, const Terms* x);*/
 
 #endif //SPIKARD_MATHLANG_STATEMENT_HPP

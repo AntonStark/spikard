@@ -3,7 +3,6 @@
 //
 
 #include "complex.hpp"
-#include "mathtype.hpp"
 
 bool Complex::comp(const Terms* other) const {
     if (auto otherComplex = dynamic_cast<const Complex*>(other))

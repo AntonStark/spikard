@@ -1,5 +1,3 @@
-#include <utility>
-
 //
 // Created by anton on 21.09.18.
 //
@@ -9,7 +7,7 @@
 
 #include "../consepts/terms.hpp"
 
-#include "../basics/mathtype.hpp"
+#include "../basics/primary.hpp"
 
 #include "names_strategies.hpp"
 #include "structure.hpp"

@@ -9,7 +9,7 @@
 #include <map>
 #include <set>
 
-#include "../basics/named_term.hpp"
+#include "../basics/primary.hpp"
 
 class Definition;
 class AbstractName;

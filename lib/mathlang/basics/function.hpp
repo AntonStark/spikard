@@ -5,7 +5,7 @@
 #ifndef SPIKARD_FUNCTION_HPP
 #define SPIKARD_FUNCTION_HPP
 
-#include "named_term.hpp"
+#include "primary.hpp"
 #include "connectives.hpp"
 
 /**

@@ -163,7 +163,7 @@ void AsMlObj::process(const ListStorage* ls) {
 
 void AsMlObj::process(const NamedNode* nn) {
     std::stringstream body;
-    body << nn->getNumber() << ". " << NamedNode::typeToStr(nn->_type)
+    body << nn->getNumber() << ". " /*<< NamedNode::typeToStr(nn->_type)*/
          << " \"" << nn->getName() << "\".";
     buffer.push_back(
         MlObj("named_node", nn->getNumber(), body.str()).toJson()

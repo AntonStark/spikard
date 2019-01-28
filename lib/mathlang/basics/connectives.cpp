@@ -3,8 +3,8 @@
 //
 
 #include "connectives.hpp"
+#include "primary.hpp"
 #include "string_name.hpp"
-#include "mathtype.hpp"
 
 /**
  * // fixme оптимизировать регистрацию Connectives в NSI

@@ -18,8 +18,7 @@
 #include "../consepts/terms.hpp"
 
 #include "../basics/function.hpp"
-#include "../basics/mapterm.hpp"
-#include "../basics/mathtype.hpp"
+#include "../basics/primary.hpp"
 #include "../basics/texname.hpp"
 
 #include "../parser/lexer.hpp"

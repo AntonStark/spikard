@@ -28,7 +28,8 @@ const Terms* Inference::getTerms(Path pathToTerm) {
 const Terms* Inference::inference() {
     const Terms* arg1 = getTerms(premises[0]);
     const Terms* arg2 = getTerms(premises[1]);
-    switch (type) {
+    return nullptr;
+    /*switch (type) {
         case InfTy::MP   :
             return modusPonens   (arg1, arg2);
         case InfTy::SPEC :
@@ -39,7 +40,7 @@ const Terms* Inference::inference() {
             return equalSubst(arg1, arg2);
         case InfTy::GEN  :
             return generalization(arg1, arg2);
-    }
+    }*/
 }
 Inference::Inference(Node* naming,
                      Path pArg1, Path pArg2, Inference::InfTy _type)
@@ -71,8 +72,8 @@ Inference::InfTy infTyFromStr(const std::string& type) {
         return InfTy::GEN;
 }
 
-Map standardImpl(new TexName(R"(\cdot\Rightarrow\cdot)"), ProductMT({2, &logical_mt}), &logical_mt);
-
+//Map standardImpl(new TexName(R"(\cdot\Rightarrow\cdot)"), ProductMT({2, &logical_mt}), &logical_mt);
+/*
 Terms* modusPonens(const Terms* premise, const Terms* impl) {
     if (const auto* tI = dynamic_cast<const Term*>(impl))
         if ((tI->getSym() == standardImpl) && tI->arg(1)->comp(premise))
@@ -169,7 +170,7 @@ Term* generalization(const Terms* toGen, const Terms* x) {
     }
     else
         return nullptr;
-}
+}*/
 
 /*Hierarchy* TermsBox::fromJson(const json& j, Node* parent)
 { return new TermsBox(parent, j.at("axiom")); }
