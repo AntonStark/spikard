@@ -10,7 +10,7 @@
 
 #include "primary.hpp"
 
-class Complex : public Terms
+class Complex : public virtual Terms
 {
 private:
     const AbstractConnective* _symbol;
@@ -48,15 +48,13 @@ public:
         : Complex(symbol, args) {}
     ~ComplexMT() override = default;
 
-    bool isPrimary() const override { return false; }
-    bool operator==(const MathType& other) const override;
-    bool operator<(const MathType& other) const override;
+    bool isPrimary() const override
+    { return false; }
+    const MathType* getType() const override
+    { return typeOfTypes; }
 
     std::string getName() const override
     { return print(); }
-
-    const MathType* getType() const override
-    { return typeOfTypes; }
     ComplexMT* clone() const override
     { return new ComplexMT(*this); }
 };

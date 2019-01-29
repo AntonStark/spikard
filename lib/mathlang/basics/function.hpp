@@ -19,8 +19,8 @@ class Function : public Primary, public UnaryOperation
     const MathType* _mapType;
 public:
     Function(const AbstractName* name, const MathType* argT, const MathType* retT)
-        : UnaryOperation(name, argT, retT)/*, _mapType(new ComplexMT(map_symbol, {}))*/ {}
-//    Function(const AbstractName* name, const MathType* mapMT)
+        : UnaryOperation(name, argT, retT), _mapType(new ComplexMT(map_symbol, {argT, retT})) {}
+//    Function(const AbstractName* name, const ComplexMT* mapMT);
     ~Function() override = default;
 
     const MathType* getType() const override

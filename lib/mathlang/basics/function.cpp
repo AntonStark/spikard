@@ -13,7 +13,7 @@
  */
 bool Function::comp(const Terms* other) const {
     if (auto otherFunction = dynamic_cast<const Function*>(other))
-        return (*getType() == *otherFunction->getType()
+        return (getType()->comp(otherFunction->getType())
                 && *getName() == *otherFunction->getName());
     else
         return false;

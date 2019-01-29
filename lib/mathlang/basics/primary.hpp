@@ -10,6 +10,8 @@
 
 #include "string_name.hpp"
 
+extern MathType* typeOfTypes;
+
 class Primary : public virtual Terms
 {
 public:
@@ -18,28 +20,27 @@ public:
     Terms* replace(const Terms* x, const Terms* t) const override;
 };
 
-class PrimaryMT : public MathType, public NamedEntity, public Primary
+class PrimaryMT : public NamedEntity, public MathType, public Primary
 {
 public:
     PrimaryMT(const AbstractName* typeName) : NamedEntity(typeName) {}
     PrimaryMT(const PrimaryMT&) = default;
     ~PrimaryMT() override = default;
 
-    bool operator== (const MathType& other) const override;
-    bool operator<(const MathType& other) const override;
-    bool isPrimary() const override { return true; }
-
+    bool isPrimary() const override
+    { return true; }
+    const MathType* getType() const override
+    { return typeOfTypes; }
     bool comp(const Terms* other) const override;
 
-    PrimaryMT* clone() const override { return new PrimaryMT(*this); }
-    std::string getName() const override { return NamedEntity::getName()->toStr(); }
-
-    const MathType* getType() const override;
+    PrimaryMT* clone() const override
+    { return new PrimaryMT(*this); }
+    std::string getName() const override
+    { return NamedEntity::getName()->toStr(); }
 
     std::string print() const override;
 };
 
-extern MathType* typeOfTypes;
 extern PrimaryMT any_mt;
 extern PrimaryMT logical_mt;
 

@@ -44,8 +44,8 @@ BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftT
       _resultType(resultType), _notation(notation) {}
 bool BinaryOperation::check(Terms::Vector args) const {
     return (args.size() == 2
-            && *args.at(0)->getType() == *_leftType
-            && *args.at(1)->getType() == *_rightType);
+            &&  _leftType->comp(args.at(0)->getType())
+            && _rightType->comp(args.at(1)->getType()));
 }
 std::string BinaryOperation::print(Terms::Vector args) const {
     if (!check(args))
@@ -79,7 +79,7 @@ bool SpecialConnective::check(Terms::Vector args) const {
         return false;
     
     for (size_t i = 0; i < getArity(); ++i)
-        if (*args[i]->getType() != *_argTypes[i])
+        if (not _argTypes[i]->comp(args[i]->getType()))
             return false;
     return true;
 }

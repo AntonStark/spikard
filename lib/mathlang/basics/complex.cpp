@@ -18,8 +18,8 @@ const Terms* Complex::get(Terms::Path path) const {
         return (p > _symbol->getArity() ? nullptr : arg(p)->get(path));
     }
 }
-TermsVector replace(TermsVector args, Terms::Path path, const Terms* by) {
-    TermsVector updated;
+Terms::Vector replace(const Terms::Vector& args, Terms::Path path, const Terms* by) {
+    Terms::Vector updated;
     auto p = path.top();
     path.pop();
     for (size_t i = 0; i < args.size(); ++i)
@@ -32,26 +32,4 @@ Terms* Complex::replace(Terms::Path path, const Terms* by) const {
     if (path.top() > _symbol->getArity())
         return nullptr;
     return new Complex(_symbol, ::replace(_args, path, by));
-}
-
-
-bool ComplexMT::operator==(const MathType& other) const {
-    try {
-        auto otherComplexMT = dynamic_cast<const ComplexMT&>(other);
-        return comp(&otherComplexMT);
-    }
-    catch (std::bad_cast& e)
-    { return false; }
-}
-bool ComplexMT::operator<(const MathType& other) const {
-    if (other.isPrimary())
-        return false;
-    else {
-        try {
-            auto otherComplexMT = dynamic_cast<const ComplexMT&>(other);
-            return (print() < otherComplexMT.print());
-        }
-        catch (std::bad_cast& e)
-        { return false; }
-    }
 }

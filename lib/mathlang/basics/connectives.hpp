@@ -38,7 +38,7 @@ public:
     { return _resultType; }
 
     bool check(Terms::Vector args) const override
-    { return (args.size() == 1 && *args.front()->getType() == *_operandType); }
+    { return (args.size() == 1 && _operandType->comp(args.front()->getType())); }
 
     std::string print(Terms::Vector args) const override;
     size_t getArity() const override
