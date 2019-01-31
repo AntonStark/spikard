@@ -4,8 +4,8 @@
 
 #include <string>
 
-#include "../proof/definition.hpp"
-#include "../parser/lexer.hpp"
+#include "../../proof/definition.hpp"
+#include "../lexer.hpp"
 
 using namespace Parser2;
 int main() {

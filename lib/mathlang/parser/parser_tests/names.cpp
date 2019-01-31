@@ -5,9 +5,9 @@
 #include <string>
 #include <algorithm>
 
-#include "../proof/definition.hpp"
-#include "../parser/lexer.hpp"
-#include "../proof/named_node.hpp"
+#include "../../proof/definition.hpp"
+#include "../lexer.hpp"
+#include "../../proof/named_node.hpp"
 
 int main() {
     BranchNode course("Тестовый");

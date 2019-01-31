@@ -1,18 +1,18 @@
 //
-// Created by anton on 13.06.18.
+// Created by anton on 14.06.18.
 //
 
 #include "gtest/gtest.h"
 
 #include <string>
 
-#include "../parser/lexer.hpp"
+#include "../lexer.hpp"
 
 using namespace std;
 using namespace Parser2;
 
-TEST(ParserTests, Sum) {
-    std::string source = R"(\sum_{i=0}^\inf a_i)";
+TEST(ParserTests, Integral) {
+    string source = R"(\int_a^b \! f(x, y) \, \mathrm{d}x)";
 
     Lexer lex;
     LexemeSequence lexems;
@@ -21,9 +21,9 @@ TEST(ParserTests, Sum) {
     vector<string> result;
     transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
               [&lex] (const Lexeme& l) -> string { return (lex.print(l)); });
-    
-    vector<string> expected = {"\\sum", 
-                       "_", "{", "i", "=", "0", "}", 
-                       "^", "\\inf", "a", "_", "i"};
+
+    vector<string> expected = {"\\int", "_", "a", "^", "b", "\\!",
+                                "f", "(", "x", ",", "y", ")", "\\,",
+                                "\\mathrm", "{", "d", "}", "x"};
     ASSERT_EQ(result, expected);
 }

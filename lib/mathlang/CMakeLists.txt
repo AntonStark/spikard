@@ -12,4 +12,4 @@ add_library(mathlang
         proof/definition.cpp proof/definition.hpp proof/statement.cpp proof/statement.hpp
         proof/theorem_node.cpp proof/theorem_node.hpp)
 set_target_properties(mathlang PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_subdirectory(parser_tests)
+add_subdirectory(parser/parser_tests)

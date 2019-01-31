@@ -2,9 +2,9 @@
 // Created by anton on 27.10.18.
 //
 
-#include "../proof/named_node.hpp"
-#include "../proof/definition.hpp"
-#include "../parser/parser.hpp"
+#include "../../proof/named_node.hpp"
+#include "../../proof/definition.hpp"
+#include "../parser.hpp"
 
 int main() {
     BranchNode* cource = new BranchNode("Курс");

@@ -6,13 +6,13 @@
 
 #include <string>
 
-#include "../parser/lexer.hpp"
+#include "../lexer.hpp"
 
 using namespace std;
 using namespace Parser2;
 
-TEST(ParserTests, Integral) {
-    string source = R"(\int_a^b \! f(x, y) \, \mathrm{d}x)";
+TEST(ParserTests, Limit) {
+    string source = R"(\lim_{n\rightarrow\infty} f(x) = \ell)";
 
     Lexer lex;
     LexemeSequence lexems;
@@ -21,9 +21,9 @@ TEST(ParserTests, Integral) {
     vector<string> result;
     transform(lexems.begin(), lexems.end(), inserter(result, result.begin()),
               [&lex] (const Lexeme& l) -> string { return (lex.print(l)); });
-
-    vector<string> expected = {"\\int", "_", "a", "^", "b", "\\!",
-                                "f", "(", "x", ",", "y", ")", "\\,",
-                                "\\mathrm", "{", "d", "}", "x"};
+    
+    vector<string> expected = {"\\lim", "_",
+                                "{", "n", "\\rightarrow", "\\infty", "}",
+                                "f", "(", "x", ")", "=", "\\ell"};
     ASSERT_EQ(result, expected);
 }
