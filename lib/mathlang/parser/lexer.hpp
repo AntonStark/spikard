@@ -105,7 +105,6 @@ class Lexer
     std::map<Token, std::string> tokenPrints;
 public:
     LexemStorage storage;
-    Lexer() {}
     static Lexer configureLatex();
     CurAnalysisData recognize(const std::string& toParse);
     inline std::string print(const Lexeme& l) const
@@ -128,8 +127,6 @@ struct parse_error : public std::invalid_argument {
     parse_error(const std::string& mess)
         : std::invalid_argument("Ошибка разбора: " + mess) {}
 };
-
-extern Lexer texLexer;
 
 }
 

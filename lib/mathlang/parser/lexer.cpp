@@ -244,6 +244,4 @@ std::string Lexer::print(const Parser2::LexemeSequence& lSeq) const {
     return buf.str();
 }
 
-Lexer texLexer = Lexer::configureLatex();
-
 }

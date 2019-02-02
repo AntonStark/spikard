@@ -231,7 +231,7 @@ void NamesTree::debugPrint() {
         for (const auto& ch : _links[elem._id].childrens)
             std::cout << ch << ',';
         std::cout << "}";
-        std::cout << std::endl << "\t" << Parser2::texLexer.print(part(elem._bounds)) << std::endl;
+        std::cout << std::endl << "\t" << texLexer.print(part(elem._bounds)) << std::endl;
     }
 }
 

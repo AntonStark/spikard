@@ -2,7 +2,7 @@ add_library(mathlang
         consepts/terms.hpp consepts/terms.cpp consepts/abstract_name.cpp consepts/abstract_name.hpp consepts/abstract_connective.cpp consepts/abstract_connective.hpp
 
         basics/primary.cpp basics/primary.hpp basics/complex.cpp basics/complex.hpp
-        basics/texname.cpp basics/texname.hpp  basics/string_name.cpp basics/string_name.hpp
+        basics/tex_name.cpp basics/tex_name.hpp basics/string_name.cpp basics/string_name.hpp
         basics/connectives.cpp basics/connectives.hpp basics/function.cpp basics/function.hpp
 
         parser/lexeme.cpp parser/lexeme.hpp parser/lexer.cpp parser/lexer.hpp parser/parser.cpp parser/parser.hpp

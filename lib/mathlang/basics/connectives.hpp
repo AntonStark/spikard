@@ -9,7 +9,7 @@
 #include "../consepts/abstract_connective.hpp"
 
 #include "complex.hpp"
-#include "texname.hpp"
+#include "tex_name.hpp"
 
 class PrintableConnective : public AbstractConnective, public NamedEntity
 {

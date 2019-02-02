@@ -11,7 +11,7 @@
 
 #include "../../../json.hpp"
 
-#include "../basics/texname.hpp"
+#include "../basics/tex_name.hpp"
 
 #include "names_index.hpp"
 

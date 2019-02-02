@@ -19,7 +19,7 @@
 
 #include "../basics/function.hpp"
 #include "../basics/primary.hpp"
-#include "../basics/texname.hpp"
+#include "../basics/tex_name.hpp"
 
 #include "../parser/lexer.hpp"
 

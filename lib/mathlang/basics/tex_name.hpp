@@ -1,5 +1,3 @@
-#include <utility>
-
 //
 // Created by anton on 07.01.19.
 //
@@ -31,5 +29,7 @@ public:
     long countArgPlaces() const;
     const Parser2::LexemeSequence& getSeq() const;
 };
+
+extern Parser2::Lexer texLexer;
 
 #endif //SPIKARD_TEXNAME_HPP
