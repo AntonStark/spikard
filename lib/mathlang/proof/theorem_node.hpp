@@ -14,7 +14,7 @@ class TheoremNode : public BranchNode
 private:
     PrimaryNode *names, *conditions, *conclusions; // shared_pointers
 public:
-    TheoremNode(BranchNode* parent, const std::string& title)
+    TheoremNode(PrimaryNode* parent, const std::string& title)
         : BranchNode(parent, new Hidden(parent), title) {
         names       = PrimaryNode::create(this, "Имена",   NameStoringStrategy::BasicNSSTypes::Appending);
         conditions  = PrimaryNode::create(this, "Условия", NameStoringStrategy::BasicNSSTypes::Appending);
@@ -31,6 +31,13 @@ public:
 
     void assertConclusion(const std::string& conclusion)
     { TermsBox::create(conclusions, conclusion); }
+
+    static TheoremNode* create(PrimaryNode* parent, const std::string& title) {
+        // todo регистрация в индексе теорем
+        //      ключ - название, значение - сам узел
+        //      узел нужен, чтобы иметь акутуальную информацию о кол-ве имён
+        return new TheoremNode(parent, title);
+    }
 };
 
 #endif //SPIKARD_THEOREM_NODE_HPP

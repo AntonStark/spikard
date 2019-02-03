@@ -31,13 +31,13 @@ class BranchNode : public NamedNode
 /// Это класс для группировки групп
 {
 protected:
-    BranchNode(BranchNode* parent, NameStoringStrategy* nss, const std::string& title)
+    BranchNode(NamedNode* parent, NameStoringStrategy* nss, const std::string& title)
         : NamedNode(parent, nss, title) {}
 public:
     BranchNode(const std::string& title)
         : BranchNode(nullptr, new Hidden(), title) {}
     ~BranchNode() override = default;
-    static BranchNode* create(BranchNode* parent, const std::string& title,
+    static BranchNode* create(NamedNode* parent, const std::string& title,
                               NameStoringStrategy::BasicNSSTypes nssType)
     { return new BranchNode(parent, nssFromNSSType(nssType, parent), title); }
 

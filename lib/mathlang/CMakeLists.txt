@@ -13,3 +13,4 @@ add_library(mathlang
         proof/theorem_node.cpp proof/theorem_node.hpp)
 set_target_properties(mathlang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(parser/parser_tests)
+add_subdirectory(proof/tests)
