@@ -15,16 +15,16 @@ using namespace std;
 
 int main(void)
 {
-    PrimaryMT natural("Natural");
-    PrimaryMT set("Set");
+    PrimaryType natural("Natural");
+    PrimaryType set("Set");
 
     /*Map n("\\lnot ", {&logical_mt}, &logical_mt); //можно и без {скобок}
     Map o({"\\lor ", {2, &logical_mt}, &logical_mt});
     Map a({"\\land ", {2, &logical_mt}, &logical_mt});
     Map r({"\\Rightarrow ", {2, &logical_mt}, &logical_mt});
 
-    PrimaryMT group("Group");
-    PrimaryMT real("Real");
+    PrimaryType group("Group");
+    PrimaryType real("Real");
     Variable x("x", &real);
     Variable one("1", &real);
 
@@ -33,7 +33,7 @@ int main(void)
 
     Map gr({">", {&real, &real}, &logical_mt});
     Term t(gr, {&x, &one});
-    const Terms* sdf = new ForallTerm(&x, &t);
+    const AbstractTerm* sdf = new ForallTerm(&x, &t);
 //    std::cerr << "sdf is ForalTerm: " << (dynamic_cast<const ForallTerm*>(sdf) != nullptr) << std::endl;
 
     Map ze({"0", {}, &real});

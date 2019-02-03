@@ -11,7 +11,7 @@
  * значит нужна бинарная операция \times (и ещё \mapsto заодно)
  *
  */
-bool Function::comp(const Terms* other) const {
+bool Function::comp(const AbstractTerm* other) const {
     if (auto otherFunction = dynamic_cast<const Function*>(other))
         return (getType()->comp(otherFunction->getType())
                 && *getName() == *otherFunction->getName());

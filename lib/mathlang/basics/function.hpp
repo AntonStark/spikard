@@ -14,18 +14,18 @@
  * Реализуются функции одного аргумента.
  * g(x, y) понимается как g от упорядоченной пары x, y
  */
-class Function : public Primary, public UnaryOperation
+class Function : public PrimaryTerm, public UnaryOperation
 {
     const MathType* _mapType;
 public:
     Function(const AbstractName* name, const MathType* argT, const MathType* retT)
-        : UnaryOperation(name, argT, retT), _mapType(new ComplexMT(map_symbol, {argT, retT})) {}
-//    Function(const AbstractName* name, const ComplexMT* mapMT);
+        : UnaryOperation(name, argT, retT), _mapType(new ComplexType(map_symbol, {argT, retT})) {}
+//    Function(const AbstractName* name, const ComplexType* mapMT);
     ~Function() override = default;
 
     const MathType* getType() const override
     { return /*_mapType*/resultType(); } // fixme заглушка
-    bool comp(const Terms* other) const override;
+    bool comp(const AbstractTerm* other) const override;
     Function* clone() const override
     { return new Function(*this); }
     std::string print() const override

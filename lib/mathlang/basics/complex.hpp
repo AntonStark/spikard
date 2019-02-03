@@ -10,43 +10,43 @@
 
 #include "primary.hpp"
 
-class Complex : public virtual Terms
+class ComplexTerm : public virtual AbstractTerm
 {
 private:
     const AbstractConnective* _symbol;
-    const Terms::Vector _args;
+    const AbstractTerm::Vector _args;
 public:
-    Complex(const AbstractConnective* symbol, Terms::Vector args)
+    ComplexTerm(const AbstractConnective* symbol, AbstractTerm::Vector args)
         : _symbol(symbol), _args(symbol->apply(std::move(args))) {}
-    Complex(const Complex& other) = default;
+    ComplexTerm(const ComplexTerm& other) = default;
 
     const AbstractConnective* getSym() const
     { return _symbol; }
     const MathType* getType() const override
     { return _symbol->resultType(); }
-    bool comp(const Terms* other) const override;
+    bool comp(const AbstractTerm* other) const override;
 
-    Terms* clone() const override
-    { return new Complex(*this); }
+    AbstractTerm* clone() const override
+    { return new ComplexTerm(*this); }
 
-    const Terms* arg(size_t oneTwoThree) const
+    const AbstractTerm* arg(size_t oneTwoThree) const
     { return _args.at(oneTwoThree-1); }
-    const Terms* get(Path path) const override;
+    const AbstractTerm* get(Path path) const override;
 
-    Terms* replace(Path path, const Terms* by) const override;
-    Terms* replace(const Terms* x, const Terms* t) const override
+    AbstractTerm* replace(Path path, const AbstractTerm* by) const override;
+    AbstractTerm* replace(const AbstractTerm* x, const AbstractTerm* t) const override
     { return nullptr; } // fixme заглушка, убрать вовсе
 
     std::string print() const override
     { _symbol->print(_args); }
 };
 
-class ComplexMT : public MathType, public Complex
+class ComplexType : public MathType, public ComplexTerm
 {
 public:
-    ComplexMT(const AbstractConnective* symbol, Terms::Vector args)
-        : Complex(symbol, args) {}
-    ~ComplexMT() override = default;
+    ComplexType(const AbstractConnective* symbol, AbstractTerm::Vector args)
+        : ComplexTerm(symbol, args) {}
+    ~ComplexType() override = default;
 
     bool isPrimary() const override
     { return false; }
@@ -55,8 +55,8 @@ public:
 
     std::string getName() const override
     { return print(); }
-    ComplexMT* clone() const override
-    { return new ComplexMT(*this); }
+    ComplexType* clone() const override
+    { return new ComplexType(*this); }
 };
 
 #endif //SPIKARD_COMPLEX_HPP

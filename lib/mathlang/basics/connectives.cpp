@@ -18,7 +18,7 @@ UnaryOperation::UnaryOperation(const AbstractName* name, const MathType* operand
                                const MathType* resultType, bool prefix)
     : PrintableConnective(produceSymForm(name, prefix)), _name(name), _operandType(operandType),
       _resultType(resultType), _prefix(prefix) {}
-std::string UnaryOperation::print(Terms::Vector args) const {
+std::string UnaryOperation::print(AbstractTerm::Vector args) const {
     if (!check(args))
         return "";
     else {
@@ -42,12 +42,12 @@ BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftT
                                  const MathType* resultType, BinaryOperation::Notation notation)
     : PrintableConnective(produceSymForm(name, notation)), _name(name), _leftType(leftType), _rightType(rightType),
       _resultType(resultType), _notation(notation) {}
-bool BinaryOperation::check(Terms::Vector args) const {
+bool BinaryOperation::check(AbstractTerm::Vector args) const {
     return (args.size() == 2
             &&  _leftType->comp(args.at(0)->getType())
             && _rightType->comp(args.at(1)->getType()));
 }
-std::string BinaryOperation::print(Terms::Vector args) const {
+std::string BinaryOperation::print(AbstractTerm::Vector args) const {
     if (!check(args))
         return "";
     else {
@@ -74,7 +74,7 @@ const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName,
 }
 
 
-bool SpecialConnective::check(Terms::Vector args) const {
+bool SpecialConnective::check(AbstractTerm::Vector args) const {
     if (args.size() != getArity())
         return false;
     
@@ -84,7 +84,7 @@ bool SpecialConnective::check(Terms::Vector args) const {
     return true;
 }
 
-std::string SpecialConnective::print(Terms::Vector args) const {
+std::string SpecialConnective::print(AbstractTerm::Vector args) const {
     return std::string(); // todo
 }
 

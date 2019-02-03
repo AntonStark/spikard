@@ -27,7 +27,7 @@ private:
     const MathType* _operandType;
     const MathType* _resultType;
 protected:
-    Terms::Vector compose(Terms::Vector args) const override
+    AbstractTerm::Vector compose(AbstractTerm::Vector args) const override
     { return args; }
 public:
     UnaryOperation(const AbstractName* name,
@@ -37,10 +37,10 @@ public:
     const MathType* resultType() const override
     { return _resultType; }
 
-    bool check(Terms::Vector args) const override
+    bool check(AbstractTerm::Vector args) const override
     { return (args.size() == 1 && _operandType->comp(args.front()->getType())); }
 
-    std::string print(Terms::Vector args) const override;
+    std::string print(AbstractTerm::Vector args) const override;
     size_t getArity() const override
     { return 1; }
 
@@ -59,7 +59,7 @@ private:
     const MathType* _rightType;
     const MathType* _resultType;
 protected:
-    Terms::Vector compose(Terms::Vector args) const override
+    AbstractTerm::Vector compose(AbstractTerm::Vector args) const override
     { return args; }
 public:
     BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
@@ -69,8 +69,8 @@ public:
     const MathType* resultType() const override
     { return _resultType; }
 
-    bool check(Terms::Vector args) const override;
-    std::string print(Terms::Vector args) const override;
+    bool check(AbstractTerm::Vector args) const override;
+    std::string print(AbstractTerm::Vector args) const override;
     size_t getArity() const override
     { return 2; }
 
@@ -87,7 +87,7 @@ private:
     const MathType::Vector _argTypes;
     const MathType* _resultType;
 protected:
-    Terms::Vector compose(Terms::Vector args) const override 
+    AbstractTerm::Vector compose(AbstractTerm::Vector args) const override
     { return args; }
 public:
     SpecialConnective(const AbstractName* form,
@@ -98,8 +98,8 @@ public:
     const MathType* resultType() const override 
     { return _resultType; }
 
-    bool check(Terms::Vector args) const override;
-    std::string print(Terms::Vector args) const override;
+    bool check(AbstractTerm::Vector args) const override;
+    std::string print(AbstractTerm::Vector args) const override;
     size_t getArity() const override
     { return _argTypes.size(); }
 };

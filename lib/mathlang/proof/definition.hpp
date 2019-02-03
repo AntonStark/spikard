@@ -47,17 +47,17 @@ public:
 class DefType : public Item, public Definition
 {
 private:
-    PrimaryMT* type;
+    PrimaryType* type;
     DefType(Node* parent, const std::string& typeName);
 protected:
-    PrimaryMT* _get() override
+    PrimaryType* _get() override
     { return type; }
 public:
     ~DefType() override;
     static DefType* create(Node* parent, const std::string& typeName)
     { return new DefType(parent, typeName); }
 
-    PrimaryMT* use(Item* in) override;
+    PrimaryType* use(Item* in) override;
     std::string print(Representation* r, bool incremental) const override;
 };
 

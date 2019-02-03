@@ -27,10 +27,10 @@
 DefType::DefType(Node* parent, const std::string& typeName)
     : Item(parent) {
     auto* name = new TexName(typeName, true);
-    type = new PrimaryMT(name);
+    type = new PrimaryType(name);
     parent->registerNamed(type, type->getType(), this);
 }
-PrimaryMT* DefType::use(Item* in) {
+PrimaryType* DefType::use(Item* in) {
     addUsage(in);
     return _get();
 }

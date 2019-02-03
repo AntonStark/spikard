@@ -71,7 +71,7 @@ public:
     void doApply(const std::string& pTerm,    const std::string& pTheorem);
     void doEqual(const std::string& pTerm,    const std::string& pEquality);
     void doGen  (const std::string& pToGen,   const std::string& pToVar);*/
-//    PrimaryMT* getType(const std::string& name);
+//    PrimaryType* getType(const std::string& name);
 };
 
 #endif //SPIKARD_MATHLANG_NAMED_NODE_HPP

@@ -18,25 +18,25 @@
 
 class MathType;
 
-class Terms
+class AbstractTerm
 {
 public:
-    virtual ~Terms() = default;
+    virtual ~AbstractTerm() = default;
     typedef std::stack<size_t> Path;
-    typedef std::vector<const Terms*> Vector;
+    typedef std::vector<const AbstractTerm*> Vector;
 
     virtual const MathType* getType() const = 0;
-    virtual bool comp(const Terms* other) const = 0;
+    virtual bool comp(const AbstractTerm* other) const = 0;
 
-    virtual Terms* clone() const = 0;
-    virtual const Terms* get(Path path) const = 0;
-    virtual Terms* replace(Path path, const Terms* by) const = 0;
-    virtual Terms* replace(const Terms* x, const Terms* t) const = 0;
+    virtual AbstractTerm* clone() const = 0;
+    virtual const AbstractTerm* get(Path path) const = 0;
+    virtual AbstractTerm* replace(Path path, const AbstractTerm* by) const = 0;
+    virtual AbstractTerm* replace(const AbstractTerm* x, const AbstractTerm* t) const = 0;
 
     virtual std::string print() const = 0;
 };
 
-class MathType : public virtual Terms
+class MathType : public virtual AbstractTerm
 {
 public:
     virtual ~MathType() {};
@@ -54,9 +54,9 @@ public:
 //    std::string print() const override;
 
     // fixme временные заглушки
-//    const Terms* get(Path path) const override;
-//    Terms* replace(Path path, const Terms* by) const override;
-//    Terms* replace(const Terms* x, const Terms* t) const override;
+//    const AbstractTerm* get(Path path) const override;
+//    AbstractTerm* replace(Path path, const AbstractTerm* by) const override;
+//    AbstractTerm* replace(const AbstractTerm* x, const AbstractTerm* t) const override;
 };
 
 #endif //TEST_BUILD_LOGIC_HPP

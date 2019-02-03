@@ -243,12 +243,12 @@ Parser::Parser(Node* where)
     : _where(where),
       namesDefined(collectNames(where->index())) {}
 
-Terms* Parser::parse(CurAnalysisData& source) {
+AbstractTerm* Parser::parse(CurAnalysisData& source) {
     NamesTree namesTree(source.filtered, namesDefined);
     namesTree.grow();
 }
 
-Terms* parse(Node* where, std::string source) {
+AbstractTerm* parse(Node* where, std::string source) {
     Parser texParser(where);
     auto cad = texLexer.recognize(source);
     return texParser.parse(cad);

@@ -4,27 +4,27 @@
 
 #include "primary.hpp"
 
-const Terms* Primary::get(Path path) const
+const AbstractTerm* PrimaryTerm::get(Path path) const
 { return (path.empty() ? this : nullptr); }
-Terms* Primary::replace(Path path, const Terms* by) const
+AbstractTerm* PrimaryTerm::replace(Path path, const AbstractTerm* by) const
 { return (path.empty() ? by->clone() : nullptr); }
-Terms* Primary::replace(const Terms* x, const Terms* t) const
+AbstractTerm* PrimaryTerm::replace(const AbstractTerm* x, const AbstractTerm* t) const
 { return (comp(x) ? t->clone() : this->clone()); }
 
-MathType* typeOfTypes = new PrimaryMT(new StringName("Type"));
-PrimaryMT any_mt(new StringName("any"));
-PrimaryMT logical_mt(new StringName("Logical"));
+MathType* typeOfTypes = new PrimaryType(new StringName("Type"));
+PrimaryType any_mt(new StringName("any"));
+PrimaryType logical_mt(new StringName("Logical"));
 
-std::string PrimaryMT::print() const
+std::string PrimaryType::print() const
 { return getName(); }
-bool PrimaryMT::comp(const Terms* other) const {
-    if (auto otherPrimary = dynamic_cast<const PrimaryMT*>(other))
+bool PrimaryType::comp(const AbstractTerm* other) const {
+    if (auto otherPrimary = dynamic_cast<const PrimaryType*>(other))
         return (getName() == otherPrimary->getName());
     else
         return false;
 }
 
-bool Variable::comp(const Terms* other) const {
+bool Variable::comp(const AbstractTerm* other) const {
     if (auto otherVariable = dynamic_cast<const Variable*>(other))
         return (getType()->comp(otherVariable->getType())
                 && *getName() == *otherVariable->getName());

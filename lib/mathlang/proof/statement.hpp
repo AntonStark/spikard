@@ -16,7 +16,7 @@
 class Statement
 {
 public:
-    virtual const Terms* get() const = 0;
+    virtual const AbstractTerm* get() const = 0;
 };
 
 class TermsBox : public Node, public Statement
@@ -24,7 +24,7 @@ class TermsBox : public Node, public Statement
 /// Наследование от Node из-за необходиомости хранить имена при кванторах
 {
 private:
-    const Terms* data;
+    const AbstractTerm* data;
     TermsBox(Node* parent, std::string source);
 
 //    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
@@ -33,7 +33,7 @@ public:
     TermsBox(const TermsBox&) = delete;
     TermsBox& operator=(const TermsBox&) = delete;
 
-    const Terms* get() const override { return data; }
+    const AbstractTerm* get() const override { return data; }
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
     static TermsBox* create(PrimaryNode* parent, std::string source)
@@ -49,10 +49,10 @@ public:
 
     const std::vector<Path> premises;
     const InfTy type;
-    const Terms* data;
+    const AbstractTerm* data;
 protected:
-    const Terms* getTerms(Path pathToTerm);
-    const Terms* inference();
+    const AbstractTerm* getTerms(Path pathToTerm);
+    const AbstractTerm* inference();
 public:
     ~Inference() override = default;
     Inference(const Inference&) = delete;
@@ -61,7 +61,7 @@ public:
 //    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
     Inference(Node* naming, Path pArg1, Path pArg2,  InfTy _type);
 
-    const Terms* get() const override { return data; }
+    const AbstractTerm* get() const override { return data; }
     std::string getTypeAsStr() const;
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
@@ -69,10 +69,10 @@ public:
 
 //extern Map standardImpl;
 
-/*Terms* modusPonens(const Terms* premise, const Terms* impl);
-Terms* specialization(const Terms* general, const Terms* t);
-Terms* application(const Terms* term, const Terms* theorem);
-Terms* equalSubst(const Terms* term, const Terms* equality);
-Term* generalization(const Terms* toGen, const Terms* x);*/
+/*AbstractTerm* modusPonens(const AbstractTerm* premise, const AbstractTerm* impl);
+AbstractTerm* specialization(const AbstractTerm* general, const AbstractTerm* t);
+AbstractTerm* application(const AbstractTerm* term, const AbstractTerm* theorem);
+AbstractTerm* equalSubst(const AbstractTerm* term, const AbstractTerm* equality);
+Term* generalization(const AbstractTerm* toGen, const AbstractTerm* x);*/
 
 #endif //SPIKARD_MATHLANG_STATEMENT_HPP

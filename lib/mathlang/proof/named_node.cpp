@@ -65,7 +65,7 @@ void PrimaryNode::doGen (const std::string& pToGen,  const std::string& pToVar)
     return pn;
 }*/
 
-/*PrimaryMT* PrimaryNode::getType(const std::string& name)
+/*PrimaryType* PrimaryNode::getType(const std::string& name)
 { return get(name)->getType(); }*/
 
 /*BranchNode* BranchNode::fromJson(const json& j, BranchNode* parent) {
