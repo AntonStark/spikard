@@ -21,7 +21,7 @@ class NamedEntity
 private:
     const AbstractName* _name; // todo использовать shred_pointer полученный из NSI
 public:
-    ~NamedEntity() = default;
+    virtual ~NamedEntity() = default;
     NamedEntity(const AbstractName* name);
 
     bool operator== (const NamedEntity& one) const;

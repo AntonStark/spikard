@@ -11,13 +11,6 @@
 #include "complex.hpp"
 #include "tex_name.hpp"
 
-class PrintableConnective : public AbstractConnective, public NamedEntity
-{
-public:
-    PrintableConnective(const AbstractName* name) : NamedEntity(name) {}
-    ~PrintableConnective() override = default;
-};
-
 class UnaryOperation : public PrintableConnective
 {
 private:

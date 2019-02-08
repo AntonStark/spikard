@@ -7,6 +7,7 @@
 
 
 #include "terms.hpp"
+#include "abstract_name.hpp"
 
 class AbstractConnective
 {
@@ -26,5 +27,11 @@ public:
     virtual std::string print(AbstractTerm::Vector args) const = 0;
 };
 
+class PrintableConnective : public AbstractConnective, public NamedEntity
+{
+public:
+    PrintableConnective(const AbstractName* name) : NamedEntity(name) {}
+    ~PrintableConnective() override = default;
+};
 
 #endif //SPIKARD_ABSTRACTCONNECTIVE_HPP
