@@ -21,43 +21,45 @@ bool NameSpaceIndex::exists(const std::string& str) const
 { return (name2ID.find(str) != name2ID.end()); }
 
 void NameSpaceIndex::add(const NamedEntity* named, const MathType* type, Definition* where) {
-    const auto& str = named->getName()->toStr();
+    const auto& name = named->getName();
+    const auto& str = name->toStr();
     const auto& typeName = type->getName();
     if (!exists(str)) {
-        size_t id = names.size();
-        names.push_back(named->getName());
+        size_t id = definitions.size();
         definitions.push_back(where);
-
-        auto searchTypeIDs = type2IDs.find(typeName);
-        if (searchTypeIDs == type2IDs.end())
-            type2IDs[typeName] = {id};
-        else
-            searchTypeIDs->second.push_back(id);
         name2ID[str] = id;
+
+        size_t storageIndex;
+        auto searchStorage = type2Storage.find(typeName);
+        if (searchStorage == type2Storage.end()) {
+            size_t newStorID = names.size();
+            names.emplace_back();
+            type2Storage[typeName] = newStorID;
+            storageIndex = newStorID;
+        } else
+            storageIndex = searchStorage->second;
+        names[storageIndex].push_back(name);
     } else
         throw name_doubling(str);
 }
 
-std::vector<const AbstractName*> NameSpaceIndex::getNames(const MathType* type) const {
-    if (type == nullptr)
-        return names;
-
-    std::vector<const AbstractName*> buf;
-    auto search = type2IDs.find(type->getName());
-    if (search != type2IDs.end()) {
-        const std::vector<size_t>& thatTypeIDs = search->second;
-        for (const auto& id : thatTypeIDs)
-            buf.push_back(names[id]);
-    }
-    return buf;
+NameSpaceIndex::NamesSameType NameSpaceIndex::getNames(const MathType* type) const {
+    const auto& typeName = type->getName();
+    auto search = type2Storage.find(typeName);
+    if (search != type2Storage.end())
+        return names[search->second];
+    else
+        return {};
 }
 
 std::vector<std::string> NameSpaceIndex::getNamesStr(const MathType* type) const {
-    const auto& names = getNames(type);
-    std::vector<std::string> buf;
-    for (auto& name : names)
-        buf.push_back(name->toStr());
-    return buf;
+    const auto& namesAbs = getNames(type);
+
+    size_t nCount = namesAbs.size();
+    std::vector<std::string> namesStr(nCount);
+    for (size_t i = 0; i < nCount; ++i)
+        namesStr[i] = namesAbs.at(i)->toStr();
+    return namesStr;
 }
 
 Definition* NameSpaceIndex::get(const AbstractName* name) const {

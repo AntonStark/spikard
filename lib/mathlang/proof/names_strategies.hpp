@@ -8,6 +8,24 @@
 #include "names_index.hpp"
 #include "structure.hpp"
 #include "../parser/lexeme.hpp"
+#include "../basics/connectives.hpp"
+
+struct IndexCollection
+{
+    NameSpaceIndex primary;
+    NameSpaceIndex connectives;
+
+    void add(const NamedEntity* named, Definition* where) {
+        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
+            connectives.add(conn, conn->resultType(), where);
+        else if (auto var = dynamic_cast<const Variable*>(named))
+            primary.add(var, var->getType(), where);
+        else if (auto pty = dynamic_cast<const PrimaryType*>(named))
+            primary.add(pty, pty->getType(), where);
+        // fixme возможно, тут должно быть исключение
+    }
+};
+
 
 class Hidden : public NameStoringStrategy
 /// Стратегия внутреннего хранения имён как в Теоремах и Курсах

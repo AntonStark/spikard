@@ -8,12 +8,14 @@
 #include <string>
 #include <map>
 #include <set>
+#include <vector>
 
-#include "../basics/primary.hpp"
+#include "../consepts/abstract_connective.hpp"
+#include "../consepts/abstract_name.hpp"
+#include "../consepts/terms.hpp"
 
 class Definition;
 class AbstractName;
-class MathType;
 
 /**
  * @brief Отвечает за эффективное хранение информации о именах и их типах
@@ -23,11 +25,13 @@ class MathType;
  */
 class NameSpaceIndex
 {
+public:
+    typedef std::vector<const AbstractName*> NamesSameType;
 private:
-    std::vector<const AbstractName*> names;
+    std::vector<NamesSameType> names;
     std::vector<Definition*> definitions;
 
-    std::map<std::string, std::vector<size_t> > type2IDs;
+    std::map<std::string, size_t> type2Storage;
     std::map<std::string, size_t> name2ID;
 
     class name_doubling;
@@ -37,7 +41,7 @@ private:
 public:
     void add(const NamedEntity* named, const MathType* type, Definition* where);
 
-    std::vector<const AbstractName*> getNames(const MathType* type = nullptr) const;
+    NamesSameType getNames(const MathType* type) const;
     std::vector<std::string> getNamesStr(const MathType* type = nullptr) const;
     Definition* get(const AbstractName* name) const;
 };
