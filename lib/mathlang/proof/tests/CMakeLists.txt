@@ -1,2 +1,4 @@
 add_executable(theorem_example theorem_example.cpp)
 target_link_libraries(theorem_example LINK_PUBLIC gtest mathlang)
+add_executable(real_numbers real_numbers.cpp)
+target_link_libraries(real_numbers LINK_PUBLIC gtest mathlang)

@@ -236,12 +236,12 @@ void NamesTree::debugPrint() {
 }
 
 
-std::vector<const AbstractName*> Parser::collectNames(const NameSpaceIndex& index)
-{ return index.getNames(); }
+//std::vector<const AbstractName*> Parser::collectNames(const NameSpaceIndex& index)
+//{ return index.getNames(); } // fixme
 
 Parser::Parser(Node* where)
-    : _where(where),
-      namesDefined(collectNames(where->index())) {}
+    : _where(where)/*,
+      namesDefined(collectNames(where->index()))*/ {}
 
 AbstractTerm* Parser::parse(CurAnalysisData& source) {
     NamesTree namesTree(source.filtered, namesDefined);

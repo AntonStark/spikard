@@ -204,7 +204,7 @@ public:
     const Node* _where;
     std::vector<const AbstractName*> namesDefined;
 
-    std::vector<const AbstractName*> collectNames(const NameSpaceIndex& index);
+//    std::vector<const AbstractName*> collectNames(const NameSpaceIndex& index);
 
     Parser(Node* where);
 
