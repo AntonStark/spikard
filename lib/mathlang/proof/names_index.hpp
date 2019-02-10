@@ -46,14 +46,24 @@ public:
     Definition* get(const AbstractName* name) const;
 };
 
+struct Indices
+{
+    NameSpaceIndex names;
+    NameSpaceIndex connectives;
+};
+
 class NameStoringStrategy
 /// Интерфейс работы с именами со стороны узлов
 {
 public:
     enum class BasicNSSTypes {Appending, Hidden};
-    virtual const NameSpaceIndex& index() const = 0;
+    typedef std::set<std::pair<const AbstractName*, const AbstractName*> > PrioritySet;
+
+    virtual const Indices& index() const = 0;
+    virtual PrioritySet getPriority() const = 0;
     friend class Definition;
     virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) = 0;
+    virtual void prioritize(const NamedEntity* name2, const NamedEntity* name1) = 0;
 
     virtual std::string printType() const = 0;
 };

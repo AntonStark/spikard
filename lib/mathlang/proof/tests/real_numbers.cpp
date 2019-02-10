@@ -13,20 +13,27 @@ int main() {
     auto real = DefType::create(lect1, "R");
     DefConnective::create(lect1, "+", BinaryOperation::Notation::INFIX, real, real, real);
     DefConnective::create(lect1, "-", BinaryOperation::Notation::INFIX, real, real, real);
+    DefAtom::create(lect1, "x", real);
 
     PrimaryNode* lect2 = PrimaryNode::create(main, "Лекция2", NameStoringStrategy::BasicNSSTypes::Appending);
     auto mult = DefConnective::create(lect1, "*", BinaryOperation::Notation::INFIX, real, real, real);
 
-    auto namesR = lect2->index().getNames(real->use(nullptr));
+    cout << "Имена: " << endl;
+    auto namesTypeR = lect2->index().names.getNames(real->use(nullptr));
+    for (const auto& n : namesTypeR)
+        cout << n->toStr() << endl;
+
+    cout << "Связки: " << endl;
+    auto connTypeR = lect2->index().connectives.getNames(real->use(nullptr));
+    for (const auto& n : connTypeR)
+        cout << n->toStr() << endl;
     /**
      * lect2 "сфотографировала" индекс lect1
      * mult создана в lect1 после этого
-     * поэтому не видна в lect2 (вряд ли это полезное или предстказуемое поведение)
+     * поэтому не видна в lect2 (вряд ли это полезное или предсказуемое поведение) fixme
      */
-    for (const auto& n : namesR)
-        cout << n->toStr() << endl;
 
-    cout << "Uses of R" << endl;
+    cout << endl << "Uses of R" << endl;
 
     auto usesR = real->uses();
     for (const auto& u: usesR) {

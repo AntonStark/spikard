@@ -31,20 +31,27 @@ class Hidden : public NameStoringStrategy
 /// Стратегия внутреннего хранения имён как в Теоремах и Курсах
 {
 private:
-    /*  Здесь хранится NSI, соответствующее концу Node,
-        потому что запись ведётся именно в конец.
-        Вставки Def-ов влекут обновление. */
-    NameSpaceIndex atTheEnd;
+    Indices indices;
+    PrioritySet priority;
 public:
     Hidden() : Hidden(nullptr) {}
     explicit Hidden(Node* parent) {
-        if (parent)
-            atTheEnd = parent->index();
+        if (parent) {
+            indices = parent->index();
+            priority = parent->getPriority();
+        }
     }
 
-    const NameSpaceIndex& index() const override { return atTheEnd; }
-    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override
-    { atTheEnd.add(named, type, where); }
+    const Indices& index() const override { return indices; }
+    PrioritySet getPriority() const override { return priority; }
+    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override {
+        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
+            indices.connectives.add(named, type, where);
+        else
+            indices.names.add(named, type, where);
+    }
+    void prioritize(const NamedEntity* name2, const NamedEntity* name1) override
+    { priority.insert(std::make_pair(name1->getName(), name2->getName())); }
     std::string printType() const override { return "Hidden"; }
 };
 
@@ -52,21 +59,31 @@ class Appending : public NameStoringStrategy
 /// Стратегия внешнего хранения имён как в Лекциях и Разделах
 {
 private:
-    /*  Здесь хранится NSI, соответствующее концу Node,
-    потому что запись ведётся именно в конец.
-    Вставки Def-ов влекут обновление. */
-    NameSpaceIndex atTheEnd;
+    Indices indices;
+    /// (name1, name2) \in priority означает name1 < name2
+    PrioritySet priority;
     Node* _parent;
 public:
     explicit Appending(Node* parent) : _parent(parent) {
-        if (parent)
-            atTheEnd = parent->index();
+        indices = parent->index();
+        priority = parent->getPriority();
+        /// отдельный индекс для связок нужен, потому что связка
+        /// автоматически приоритетнее всякого имени
     }
 
-    const NameSpaceIndex& index() const override { return atTheEnd; }
+    const Indices& index() const override { return indices; }
+    PrioritySet getPriority() const override { return priority; }
     void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override {
         _parent->registerNamed(named, type, where);
-        atTheEnd.add(named, type, where);
+
+        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
+            indices.connectives.add(named, type, where);
+        else
+            indices.names.add(named, type, where);
+    }
+    void prioritize(const NamedEntity* name2, const NamedEntity* name1) override {
+        _parent->prioritize(name1, name2);
+        priority.insert(std::make_pair(name1->getName(), name2->getName()));
     }
     std::string printType() const override { return "Appending"; }
 };

@@ -89,10 +89,15 @@ public:
     using ListStorage::forget;
     Hierarchy* getByPass(Path path) override;
 
-    virtual const NameSpaceIndex& index() const
+    virtual const Indices& index() const
     { return _naming->index(); }
+    virtual NameStoringStrategy::PrioritySet getPriority() const
+    { return _naming->getPriority(); }
+
     virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where)
     { _naming->registerNamed(named, type, where); }
+    virtual void prioritize(const NamedEntity* name1, const NamedEntity* name2)
+    { _naming->prioritize(name1, name2); }
 
     Definition* get(const std::string& name);
     virtual std::string print(Representation* r, bool incremental = true) const override
