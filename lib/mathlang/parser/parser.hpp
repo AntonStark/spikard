@@ -208,10 +208,10 @@ public:
 
     Parser(Node* where);
 
-    AbstractTerm* parse(CurAnalysisData& source);
+    AbstractTerm* parse(CurAnalysisData& source, const MathType* exprType, Item* container);
 };
 
-AbstractTerm* parse(Node* where, std::string source);
+AbstractTerm* parse(Item* container, std::string expr, const MathType* exprType);
 }
 
 #endif //SPIKARD_PARSER_HPP

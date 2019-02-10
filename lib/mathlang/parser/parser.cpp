@@ -243,15 +243,22 @@ Parser::Parser(Node* where)
     : _where(where)/*,
       namesDefined(collectNames(where->index()))*/ {}
 
-AbstractTerm* Parser::parse(CurAnalysisData& source) {
+AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, Item* container) {
+    // todo container используется двояко.
+    // 1) получение имён нужного типа от Node parent(),
+    // 2) use при сборке из дерева в терм
+    /**
+     * парсер получает подсказку какой тип exprType должен получиться
+     * не запрашивать сразу все имена. только по необходимости делать запрос с конкретным типом
+     */
     NamesTree namesTree(source.filtered, namesDefined);
     namesTree.grow();
 }
 
-AbstractTerm* parse(Node* where, std::string source) {
-    Parser texParser(where);
-    auto cad = texLexer.recognize(source);
-    return texParser.parse(cad);
+AbstractTerm* parse(Item* container, std::string expr, const MathType* exprType) {
+    Parser texParser(container->getParent());
+    auto cad = texLexer.recognize(expr);
+    return texParser.parse(cad, exprType, container);
 }
 
 }
