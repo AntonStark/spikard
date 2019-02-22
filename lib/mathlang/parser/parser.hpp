@@ -118,6 +118,7 @@ struct NamesTreeElem
     NamesTree* tree;
     size_t _id;
     ElemBounds _bounds;
+    const MathType* _type;
     bool _nameExpected;
 
     bool isBundle;
@@ -125,8 +126,8 @@ struct NamesTreeElem
     bool isSymbolVars;
     std::vector<const AbstractName*> _ownNS;
 
-    NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds, bool nameExected)
-        : tree(tree), _id(id), _bounds(bounds), _nameExpected(nameExected) {}
+    NamesTreeElem(NamesTree* tree, size_t id, const ElemBounds& bounds, const MathType* resType, bool nameExected)
+        : tree(tree), _id(id), _bounds(bounds), _type(resType), _nameExpected(nameExected) {}
 
     NamesTreeElem& _getParent() const;
     std::vector<const AbstractName*> index() const;
@@ -148,6 +149,7 @@ struct NamesTreeElem
  * Список потомков аналогично - vector<Childrens>, где Childrens = vector<size_t>
  */
 
+class Parser;
 struct NamesTree
 {
     struct Links
@@ -179,6 +181,7 @@ struct NamesTree
     std::vector<Links> _links;
     std::priority_queue<std::pair<bool, size_t> > _forProcess;
 
+    Parser* _parser;
     std::pair<bool, std::string> errorStatus;
 
     size_t _create(size_t parentId, const ElemBounds& bounds, bool name = false);
@@ -187,7 +190,7 @@ struct NamesTree
     LexemeSequence part(const ElemBounds& bouds) const;
     void setError(const std::string& mess);
 
-    NamesTree(const LexemeSequence& input, const std::vector<const AbstractName*>& namedDefined);
+    NamesTree(const LexemeSequence& input, const Node* where, const MathType* resType);
     void grow();
 
     void createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo);

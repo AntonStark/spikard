@@ -98,6 +98,8 @@ public:
     { _naming->registerNamed(named, type, where); }
     virtual void prioritize(const NamedEntity* name1, const NamedEntity* name2)
     { _naming->prioritize(name1, name2); }
+    NameSpaceIndex::NamesSameType getNames(const MathType* type) const
+    { return _naming->getNames(type); }
 
     Definition* get(const std::string& name);
     virtual std::string print(Representation* r, bool incremental = true) const override

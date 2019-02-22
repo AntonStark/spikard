@@ -68,3 +68,37 @@ Definition* NameSpaceIndex::get(const AbstractName* name) const {
         return definitions[name2ID.at(str)];
     throw no_name(name->toStr());
 }
+
+std::vector<const AbstractName*>::const_iterator
+find(
+    const std::vector<const AbstractName*>& vec,
+    const AbstractName* name)
+{
+    for (auto it = vec.begin(); it != vec.end(); ++it)
+        if (**it == *name)
+            return it;
+    return vec.end();
+}
+
+NameSpaceIndex::NamesSameType NameStoringStrategy::getNames(const MathType* type) const {
+    auto indices = index();
+    auto priority = getPriority();
+
+    auto conn = indices.connectives.getNames(type);
+    /// утверждения о приоритетах применяем в порядке их ввода
+    /// применяем = если с2 > c1 с2 переставляется непосредственно перед c1 и всё
+    for (const auto& p : priority) {      /// (name1, name2) \in priority означает name1 < name2
+        const AbstractName* name1 = p.first;
+        const AbstractName* name2 = p.second;
+        auto it1 = find(conn, name1);
+        auto it2 = find(conn, name2);
+        /// требуется, чтобы приоритет name2 был выше name1 т.е. it2 должен быть меньше it1
+        if (it1 != conn.end() && it2 != conn.end() && it1 < it2) {  // нужна перестановка *it2 перед *it1
+            conn.erase(it2);
+            conn.insert(it1, name2);
+        }
+    }
+    auto names = indices.names.getNames(type);
+    conn.insert(conn.end(), names.begin(), names.end());
+    return conn;
+}

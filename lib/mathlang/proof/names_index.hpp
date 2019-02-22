@@ -64,6 +64,7 @@ public:
     friend class Definition;
     virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) = 0;
     virtual void prioritize(const NamedEntity* name2, const NamedEntity* name1) = 0;
+    virtual NameSpaceIndex::NamesSameType getNames(const MathType* type) const;
 
     virtual std::string printType() const = 0;
 };

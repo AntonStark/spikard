@@ -112,7 +112,13 @@ void NamesTreeElem::becomeBundle(const std::vector<NameMatchInfo>& matches) {
 
 /// Метод обработки отдельного узла, вызывается при появлении новых необработанных (под)строк
 void NamesTreeElem::process() {
-    auto namesDefined = index();
+    auto inplaceDefined = index();
+    auto namesThatType = tree->_parser->_where->getNames(_type);
+    /**
+     * чтобы получить типы подвыражений нужно обращаться к самому терму, а это
+     * значит NSI::get(AbstractName*)-> Definition* и Definition::use()
+     * но если это тупиковая ветвь разбора, use окажется ложным хммм
+     */
     const LexemeSequence& input = tree->_input;
     std::vector<NameMatchInfo> matches = filter(namesDefined, input, _bounds);
 
@@ -159,11 +165,11 @@ LexemeSequence NamesTree::part(const ElemBounds& bouds) const
 void NamesTree::setError(const std::string& mess)
 { errorStatus = std::make_pair(true, mess); }
 
-NamesTree::NamesTree(const LexemeSequence& input, const std::vector<const AbstractName*>& namedDefined) : _input(input) {
-    _treeStorage.emplace_back(this, 0, std::make_pair(0, input.size()), false);
+NamesTree::NamesTree(const LexemeSequence& input, Parser* parser, const MathType* resType)
+: _input(input), _parser(parser) {
+    _treeStorage.emplace_back(this, 0, std::make_pair(0, input.size()), resType, false);
     _links.emplace_back(size_t(-1));
 
-    _treeStorage.back()._ownNS = namedDefined;
     _forProcess.push(std::make_pair(false, 0));
 }
 
@@ -248,10 +254,10 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, I
     // 1) получение имён нужного типа от Node parent(),
     // 2) use при сборке из дерева в терм
     /**
-     * парсер получает подсказку какой тип exprType должен получиться
+     * парсер получает подсказку exprType какой тип должен получиться
      * не запрашивать сразу все имена. только по необходимости делать запрос с конкретным типом
      */
-    NamesTree namesTree(source.filtered, namesDefined);
+    NamesTree namesTree(source.filtered, _where, exprType);
     namesTree.grow();
 }
 
