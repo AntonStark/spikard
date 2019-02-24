@@ -113,12 +113,12 @@ void NamesTreeElem::becomeBundle(const std::vector<NameMatchInfo>& matches) {
 /// Метод обработки отдельного узла, вызывается при появлении новых необработанных (под)строк
 void NamesTreeElem::process() {
     auto inplaceDefined = index();
-    auto namesThatType = tree->_parser->_where->getNames(_type);
     /**
-     * чтобы получить типы подвыражений нужно обращаться к самому терму, а это
-     * значит NSI::get(AbstractName*)-> Definition* и Definition::use()
-     * но если это тупиковая ветвь разбора, use окажется ложным хммм
+     * обходим сначала связки. затем внутренние имена, затем внешние
+     * для связой вызываем see()->check()
+     * todo нужен метод связок для проверки LexemeSequence
      */
+    auto namesThatType = tree->_parser->_where->getNames(_type);
     const LexemeSequence& input = tree->_input;
     std::vector<NameMatchInfo> matches = filter(namesDefined, input, _bounds);
 
@@ -130,7 +130,7 @@ void NamesTreeElem::process() {
             becomeNamed(matches.front());
         else {
             LexemeSequence name = tree->part(_bounds);
-            auto* texName = new TexName(name);  // fixme имя, объявленное таким образом, сдыхает as soon as
+            auto* texName = new TexName(name);
             registerName(texName);
             becomeNamed(texName);
         }
@@ -257,7 +257,7 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, I
      * парсер получает подсказку exprType какой тип должен получиться
      * не запрашивать сразу все имена. только по необходимости делать запрос с конкретным типом
      */
-    NamesTree namesTree(source.filtered, _where, exprType);
+    NamesTree namesTree(source.filtered, this, exprType);
     namesTree.grow();
 }
 

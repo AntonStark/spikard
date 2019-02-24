@@ -80,7 +80,7 @@ find(
     return vec.end();
 }
 
-NameSpaceIndex::NamesSameType NameStoringStrategy::getNames(const MathType* type) const {
+NamesFamily NameStoringStrategy::getNames(const MathType* type) const {
     auto indices = index();
     auto priority = getPriority();
 
@@ -99,6 +99,8 @@ NameSpaceIndex::NamesSameType NameStoringStrategy::getNames(const MathType* type
         }
     }
     auto names = indices.names.getNames(type);
-    conn.insert(conn.end(), names.begin(), names.end());
-    return conn;
+    NamesFamily result;
+    result.connectives = conn;
+    result.names = names;
+    return result;
 }

@@ -44,6 +44,8 @@ public:
     virtual NamedEntity* use(Item* in) = 0;
     std::set<Item*> uses() const
     { return _use; }
+    NamedEntity* see()
+    { return _get(); }
 };
 
 class DefType : public Item, public Definition

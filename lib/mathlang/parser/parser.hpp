@@ -6,6 +6,7 @@
 #define SPIKARD_PARSER_HPP
 
 #include <vector>
+#include <queue>
 
 #include "lexer.hpp"
 #include "../proof/named_node.hpp"
@@ -190,7 +191,7 @@ struct NamesTree
     LexemeSequence part(const ElemBounds& bouds) const;
     void setError(const std::string& mess);
 
-    NamesTree(const LexemeSequence& input, const Node* where, const MathType* resType);
+    NamesTree(const LexemeSequence& input, Parser* parser, const MathType* resType);
     void grow();
 
     void createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo);
