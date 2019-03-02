@@ -20,8 +20,9 @@ struct NameArgInfo
 {
     ElemBounds bounds;
     bool nameExpected;
-    NameArgInfo(size_t from, size_t to, bool name)
-    : bounds(std::make_pair(from, to)), nameExpected(name) {}
+    const MathType* _type;
+    NameArgInfo(size_t from, size_t to, bool name, const MathType* type)
+    : bounds(std::make_pair(from, to)), nameExpected(name), _type(type) {}
 };
 
 /// Отвечает за описание границ имени и его аргументных мест
@@ -34,7 +35,7 @@ struct NameMatchInfo
 
     explicit NameMatchInfo(const AbstractName* name)
         : _name(name), _varPlaces(false) {}
-    void add(size_t from, size_t to, bool isVarPlace = false);
+    void add(size_t from, size_t to, const MathType* type, bool isVarPlace = false);
     bool hasVarPlaces() const
     { return _varPlaces; }
 };
@@ -185,7 +186,7 @@ struct NamesTree
     Parser* _parser;
     std::pair<bool, std::string> errorStatus;
 
-    size_t _create(size_t parentId, const ElemBounds& bounds, bool name = false);
+    size_t _create(size_t parentId, const ElemBounds& bounds, const MathType* type, bool name = false);
     bool hasParent(size_t id) const;
     NamesTreeElem& elem(size_t id);
     LexemeSequence part(const ElemBounds& bouds) const;

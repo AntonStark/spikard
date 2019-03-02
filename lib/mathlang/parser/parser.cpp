@@ -7,8 +7,8 @@
 namespace Parser2
 {
 
-void NameMatchInfo::add(size_t from, size_t to, bool isVarPlace) {
-    _args.emplace_back(from, to, isVarPlace);
+void NameMatchInfo::add(size_t from, size_t to, const MathType* type, bool isVarPlace) {
+    _args.emplace_back(from, to, isVarPlace, type);
     if (isVarPlace)
         _varPlaces = true;
 }
@@ -44,7 +44,7 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
             bool variantEnding = (v == variantLexems.size() - 1);
             // пропуск может стоять в конце (напр. \\cdot=\\cdot), тогда сразу успех
             if (variantEnding) {
-                nameMatch.add(i, end, isVarPlace);
+                nameMatch.add(i, end, &any_mt, isVarPlace); // fixme any_mt просто заглушка поскольку мы тут не имеем доступа к Connective
                 ++v;
                 i = end;
             } else {
@@ -53,7 +53,7 @@ void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>&
                 if (matchThat == size_t(-1)) {
                     return;
                 } else {
-                    nameMatch.add(i, matchThat, isVarPlace);
+                    nameMatch.add(i, matchThat, &any_mt, isVarPlace);
                     v+=2;   // впереди совпадение input и variant, проходим "argument_place" и само совпадение
                     i = matchThat + 1;
                 }
@@ -145,9 +145,9 @@ void NamesTreeElem::process() {
 }
 
 
-size_t NamesTree::_create(size_t parentId, const ElemBounds& bounds, bool name) {
+size_t NamesTree::_create(size_t parentId, const ElemBounds& bounds, const MathType* type, bool name) {
     size_t thatElemId = _treeStorage.size();
-    _treeStorage.emplace_back(this, thatElemId, bounds, name);
+    _treeStorage.emplace_back(this, thatElemId, bounds, type, name);
     _links.emplace_back(parentId);
     _links[parentId].childrens.push_back(thatElemId);
     return thatElemId;
@@ -188,7 +188,7 @@ void NamesTree::grow() {
 /// Этот метод вызывается когда нужно создать потомков именного узла
 void NamesTree::createArgs(size_t namedId, bool nameExpAcsedant, const NameMatchInfo& matchInfo) {
     for (const auto& argInfo : matchInfo._args) {
-        size_t elemCreatedId = _create(namedId, argInfo.bounds, argInfo.nameExpected | nameExpAcsedant);
+        size_t elemCreatedId = _create(namedId, argInfo.bounds, argInfo._type, argInfo.nameExpected | nameExpAcsedant);
         _forProcess.push(std::make_pair(argInfo.nameExpected, elemCreatedId)); // это вызовет рекурсивнй вызов process для соответсвующей подстроки
     }
 }
@@ -198,8 +198,9 @@ void NamesTree::createNamed(size_t parentId, const NameMatchInfo& matchInfo) {
     // для узла ветвления на случаи (bounds установлен) вызывается becomeBundle
     // далее вызывается NamesTree::createCases, который просто объединяет несколько вызовов NamesTree::createNamed
     // короче, bounds можно получить из parent, который becomeBundle
+    // и ожидаемый тип, стало быть, тоже такой как у parent
     NamesTreeElem parent = elem(parentId);
-    size_t elemId = _create(parentId, parent._bounds);
+    size_t elemId = _create(parentId, parent._bounds, parent._type);
     elem(elemId).becomeNamed(matchInfo);
 }
 
