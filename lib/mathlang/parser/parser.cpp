@@ -7,12 +7,6 @@
 namespace Parser2
 {
 
-void NameMatchInfo::add(size_t from, size_t to, const MathType* type, bool isVarPlace) {
-    _args.emplace_back(from, to, isVarPlace, type);
-    if (isVarPlace)
-        _varPlaces = true;
-}
-
 void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>& bounds,
                    const AbstractName* variant, std::vector<NameMatchInfo>& forResults) {
     auto findFirstFrom = [&input] (const Lexeme& find, size_t from, size_t to) -> size_t {
@@ -110,17 +104,48 @@ void NamesTreeElem::becomeBundle(const std::vector<NameMatchInfo>& matches) {
     tree->createCases(_id, matches);
 }
 
+std::vector<NameMatchInfo> select(Parser* parser, const LexemeSequence& input, std::pair<size_t, size_t> bounds,
+    NameSpaceIndex::NamesSameType connectives, std::vector<const AbstractName*> local_names, NameSpaceIndex::NamesSameType names) {
+    /**
+     * обходим сначала связки. затем внутренние имена, затем внешние
+     *
+     * На векторе имён связок последовательно вызвать see()->match()
+     * Успех даёт NMI/vector<NMI>(for binary)
+     *
+     * Если нет переходим к именам.
+     * AbstractName is TexName is LexemeSequence так что это просто сопоставление двух векторов поэлементно.
+     * Сначала для локальных имён, потом внешних
+     * Если и эти два этапа прошли возвращаем пустой вектор - будет создано новое локальное имя.
+     */
+     NameSpaceIndex conIndex = parser->_where->index().connectives;
+     for (const auto& cN : connectives) {
+         auto c = dynamic_cast<const MatchCheckingConnective*>(conIndex.get(cN)->see());
+         auto res = c->match(input, bounds);
+         if (not res.empty())
+             return res;
+     }
+     for (const auto& lN : local_names) {
+         const LexemeSequence& variant = dynamic_cast<const TexName*>(lN)->getSeq();
+         if (bounds.second - bounds.first == variant.size()
+         && std::equal(variant.begin(), variant.end(), input.begin() + bounds.first))
+             return {NameMatchInfo(lN)};
+     }
+    for (const auto& lN : names) {
+        const LexemeSequence& variant = dynamic_cast<const TexName*>(lN)->getSeq();
+        if (bounds.second - bounds.first == variant.size()
+            && std::equal(variant.begin(), variant.end(), input.begin() + bounds.first))
+            return {NameMatchInfo(lN)};
+    }
+    return {};
+}
+
 /// Метод обработки отдельного узла, вызывается при появлении новых необработанных (под)строк
 void NamesTreeElem::process() {
     auto inplaceDefined = index();
-    /**
-     * обходим сначала связки. затем внутренние имена, затем внешние
-     * для связой вызываем see()->check()
-     * todo нужен метод связок для проверки LexemeSequence
-     */
     auto namesThatType = tree->_parser->_where->getNames(_type);
     const LexemeSequence& input = tree->_input;
-    std::vector<NameMatchInfo> matches = filter(namesDefined, input, _bounds);
+    std::vector<NameMatchInfo> matches = select(tree->_parser, input, _bounds,
+        namesThatType.connectives, inplaceDefined, namesThatType.names);
 
     if (_nameExpected) {
         if (matches.size() > 1)
@@ -260,6 +285,12 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, I
      */
     NamesTree namesTree(source.filtered, this, exprType);
     namesTree.grow();
+    /**
+     * после того как (если) получили удачное дерево получаем (use(container)) термы по
+     * их именам в узлах и собираем терм
+     * если в выражении использовались внутренние переменные нужно будет
+     * создать их термы, но мы не знаем тип!
+     */
 }
 
 AbstractTerm* parse(Item* container, std::string expr, const MathType* exprType) {

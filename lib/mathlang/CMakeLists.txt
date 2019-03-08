@@ -10,7 +10,7 @@ add_library(mathlang
         proof/names_index.cpp proof/names_index.hpp proof/names_strategies.cpp proof/names_strategies.hpp
         proof/structure.cpp proof/structure.hpp proof/named_node.cpp proof/named_node.hpp view.cpp view.hpp
         proof/definition.cpp proof/definition.hpp proof/statement.cpp proof/statement.hpp
-        proof/theorem_node.cpp proof/theorem_node.hpp)
+        proof/theorem_node.cpp proof/theorem_node.hpp basics/argument_place.cpp basics/argument_place.hpp)
 set_target_properties(mathlang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_subdirectory(parser/parser_tests)
 add_subdirectory(proof/tests)

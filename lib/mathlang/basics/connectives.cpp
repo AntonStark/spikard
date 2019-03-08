@@ -37,6 +37,31 @@ const AbstractName* UnaryOperation::produceSymForm(const AbstractName* ownName, 
         return new TexName("\\cdot" + name);
 }
 
+std::vector<NameMatchInfo>
+UnaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const {
+    size_t targetLen = bounds.second - bounds.first;
+    auto nameSeq = dynamic_cast<const TexName*>(_name)->getSeq();
+    if (not (targetLen > nameSeq.size()))
+        return {};
+
+    /**
+     * если операция префиксная, значит операнд правее
+     * проверяем совпадение начала _name с target[*bounds], иначе с конца
+     */
+    auto targetCompStart = (_prefix
+        ? target.begin() + bounds.first
+        : target.begin() + (bounds.second - nameSeq.size()));
+    if (std::equal(nameSeq.begin(), nameSeq.end(), targetCompStart)) {
+        NameMatchInfo result(_name);
+        if (_prefix)
+            result.add(bounds.first + nameSeq.size(), bounds.second, _operandType);
+        else
+            result.add(bounds.first, bounds.second - nameSeq.size(), _operandType);
+        return {result};
+    } else
+        return {};
+}
+
 
 BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
                                  const MathType* resultType, BinaryOperation::Notation notation)
@@ -73,6 +98,42 @@ const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName,
     }
 }
 
+std::vector<NameMatchInfo>
+BinaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const {
+    size_t targetLen = bounds.second - bounds.first;
+    auto nameSeq = dynamic_cast<const TexName*>(_name)->getSeq();
+    if (not (targetLen > nameSeq.size()))
+        return {};
+
+    /**
+     * в случае не инфиксной бинарной операции не очень понятно как эффективно
+     * разделить остальную строку на два аргумента
+     *
+     * тупое решение: генерировать вектор совпадений со всеми возможными разбиениями. среди
+     * них будет верное и дерево рано или поздно придет к успеху. причем большинство
+     * разбиений не будут иметь смысла, так что тупикове ветви будут коротки
+     */
+    NameMatchInfo result(_name);
+    switch (_notation) {
+        case Notation::PREFIX : {
+
+
+            break;
+        }
+        case Notation::INFIX : {
+
+
+            break;
+        }
+        case Notation::POSTFIX : {
+
+
+            break;
+        }
+    }
+    return {result};
+}
+
 
 bool SpecialConnective::check(AbstractTerm::Vector args) const {
     if (args.size() != getArity())
@@ -86,6 +147,12 @@ bool SpecialConnective::check(AbstractTerm::Vector args) const {
 
 std::string SpecialConnective::print(AbstractTerm::Vector args) const {
     return std::string(); // todo
+}
+
+std::vector<NameMatchInfo>
+SpecialConnective::match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const {
+    return std::vector<NameMatchInfo>();
+    // todo использовать matchWithGaps
 }
 
 BinaryOperation* cartesian_product = new BinaryOperation(new StringName("\\times"), typeOfTypes, typeOfTypes, typeOfTypes);

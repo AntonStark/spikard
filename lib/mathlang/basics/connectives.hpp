@@ -8,10 +8,20 @@
 #include "../consepts/abstract_name.hpp"
 #include "../consepts/abstract_connective.hpp"
 
+#include "../parser/lexeme.hpp"
+
 #include "complex.hpp"
 #include "tex_name.hpp"
+#include "argument_place.hpp"
 
-class UnaryOperation : public PrintableConnective
+class MatchCheckingConnective {
+public:
+    virtual std::vector<NameMatchInfo> match(
+        const Parser2::LexemeSequence& target,
+        const std::pair<size_t, size_t>& bounds) const = 0;
+};
+
+class UnaryOperation : public PrintableConnective, public MatchCheckingConnective
 {
 private:
     const AbstractName* _name;
@@ -38,9 +48,12 @@ public:
     { return 1; }
 
     static const AbstractName* produceSymForm(const AbstractName* ownName, bool prefix);
+
+    std::vector<NameMatchInfo>
+    match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const override;
 };
 
-class BinaryOperation : public PrintableConnective
+class BinaryOperation : public PrintableConnective, public MatchCheckingConnective
 {
 public:
     enum class Notation {PREFIX, INFIX, POSTFIX};
@@ -68,11 +81,14 @@ public:
     { return 2; }
 
     static const AbstractName* produceSymForm(const AbstractName* ownName, Notation notation);
+
+    std::vector<NameMatchInfo>
+    match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const override;
 };
 extern BinaryOperation* cartesian_product;
 extern BinaryOperation* map_symbol;
 
-class SpecialConnective : public PrintableConnective
+class SpecialConnective : public PrintableConnective, public MatchCheckingConnective
 {
 private:
     const AbstractName* _form;
@@ -95,6 +111,9 @@ public:
     std::string print(AbstractTerm::Vector args) const override;
     size_t getArity() const override
     { return _argTypes.size(); }
+
+    std::vector<NameMatchInfo>
+    match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const override;
 };
 
 #endif //SPIKARD_CONNECTIVES_HPP
