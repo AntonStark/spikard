@@ -100,8 +100,9 @@ const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName,
 
 std::vector<NameMatchInfo>
 BinaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const {
-    size_t targetLen = bounds.second - bounds.first;
     auto nameSeq = dynamic_cast<const TexName*>(_name)->getSeq();
+    size_t targetLen = bounds.second - bounds.first;
+    size_t argsPartLen = targetLen - nameSeq.size();
     if (not (targetLen > nameSeq.size()))
         return {};
 
@@ -113,25 +114,49 @@ BinaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<si
      * них будет верное и дерево рано или поздно придет к успеху. причем большинство
      * разбиений не будут иметь смысла, так что тупикове ветви будут коротки
      */
-    NameMatchInfo result(_name);
     switch (_notation) {
         case Notation::PREFIX : {
-
-
-            break;
+            auto targetCompStart = target.begin() + bounds.first;
+            if (std::equal(nameSeq.begin(), nameSeq.end(), targetCompStart)) {
+                // все возможные разбиения оставшейся подстроки
+                std::vector<NameMatchInfo> results(argsPartLen - 1, NameMatchInfo(_name));
+                for (size_t l = 1; l < argsPartLen; ++l) {
+                    results[l-1].add(bounds.first + nameSeq.size(), bounds.first + nameSeq.size() + l, _leftType);
+                    results[l-1].add(bounds.first + nameSeq.size() + l, bounds.second, _rightType);
+                }
+                return results;
+            }
+            else
+                return {};
         }
         case Notation::INFIX : {
-
-
-            break;
+            std::vector<NameMatchInfo> results;
+            // перебираем все возможные сдвиги имени собственно внутри target[bounds]
+            for (size_t l = 1; l < argsPartLen; ++l) {
+                if (std::equal(nameSeq.begin(), nameSeq.end(), target.begin() + bounds.first + l)) {
+                    auto res = NameMatchInfo(_name);
+                    res.add(bounds.first, bounds.first + l, _leftType);
+                    res.add(bounds.first + l + nameSeq.size(), bounds.second, _rightType);
+                    results.push_back(res);
+                }
+            }
+            return results;
         }
         case Notation::POSTFIX : {
-
-
-            break;
+            auto targetCompStart = target.begin() + (bounds.second - nameSeq.size());
+            if (std::equal(nameSeq.begin(), nameSeq.end(), targetCompStart)) {
+                // все возможные разбиения оставшейся подстроки
+                std::vector<NameMatchInfo> results(argsPartLen - 1, NameMatchInfo(_name));
+                for (size_t l = 1; l < argsPartLen; ++l) {
+                    results[l-1].add(bounds.first, bounds.first + l, _leftType);
+                    results[l-1].add(bounds.first + l, bounds.second - nameSeq.size(), _rightType);
+                }
+                return results;
+            }
+            else
+                return {};
         }
     }
-    return {result};
 }
 
 
@@ -146,13 +171,59 @@ bool SpecialConnective::check(AbstractTerm::Vector args) const {
 }
 
 std::string SpecialConnective::print(AbstractTerm::Vector args) const {
-    return std::string(); // todo
+    return std::string("<special connective print not implemented yet>"); // todo
 }
 
 std::vector<NameMatchInfo>
 SpecialConnective::match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const {
-    return std::vector<NameMatchInfo>();
-    // todo использовать matchWithGaps
+    auto findFirstFrom = [&target] (const Parser2::Lexeme& find, size_t from, size_t to) -> size_t {
+        for (size_t i = from; i < to; ++i)
+            if (target[i] == find)
+                return i;
+        return size_t(-1);
+    };
+
+    size_t start = bounds.first, end = bounds.second;
+    NameMatchInfo nameMatch(_form);
+    const Parser2::LexemeSequence& synFormSeq = dynamic_cast<const TexName*>(_form)->getSeq();
+    size_t i = start, v = 0;
+    size_t nArg = 0;
+    while (v < synFormSeq.size()) {
+        bool inputEnd = (i == end);
+        if (inputEnd)
+            return {};
+
+        auto lexCat = texLexer.storage.which(synFormSeq[v]._id);
+        bool isArgPlace = (lexCat == "argument_place");
+        bool isVarPlace = (lexCat == "variable_place");
+        if (not (isArgPlace || isVarPlace)) {
+            if (synFormSeq[v] == target[i]) {
+                ++i;
+                ++v;
+            } else
+                return {};
+        } else {
+            bool variantEnding = (v == synFormSeq.size() - 1);
+            // пропуск может стоять в конце (напр. \\cdot=\\cdot), тогда сразу успех
+            if (variantEnding) {
+                nameMatch.add(i, end, _argTypes[nArg++], isVarPlace);
+                ++v;
+                i = end;
+            } else {
+                const Parser2::Lexeme& nextLexeme = synFormSeq[v+1];
+                size_t matchThat = findFirstFrom(nextLexeme, i, end);
+                if (matchThat == size_t(-1)) {
+                    return {};
+                } else {
+                    nameMatch.add(i, matchThat, _argTypes[nArg++], isVarPlace);
+                    v+=2;   // впереди совпадение target и variant, проходим "argument_place" и само совпадение
+                    i = matchThat + 1;
+                }
+            }
+        }
+    }
+    if (i == end)
+        return {nameMatch};
 }
 
 BinaryOperation* cartesian_product = new BinaryOperation(new StringName("\\times"), typeOfTypes, typeOfTypes, typeOfTypes);
