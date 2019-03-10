@@ -110,8 +110,9 @@ public:
     inline std::string print(const Lexeme& l) const
     { return (l._tok == Token::w ? storage.get(l._id) : tokenPrints.at(l._tok)); }
     std::string print(const LexemeSequence& lSeq) const;
+    std::string print(const LexemeSequence& lSeq, std::pair<size_t, size_t> bounds) const;
 
-    ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
+        ParseStatus splitTexUnits(const std::string& input, LexemeSequence& lexems);
     void filterNotPtintableCmds(const LexemeSequence& lexems, LexemeSequence& filtered);
     bool hasBlanks(const LexemeSequence& lexems);
     void dropBlanks(LexemeSequence& lexems);

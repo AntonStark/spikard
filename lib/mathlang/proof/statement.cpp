@@ -5,8 +5,8 @@
 #include "statement.hpp"
 
 TermsBox::TermsBox(Node* parent, std::string source)
-    : Node(parent, new Hidden(parent)),
-      data(Parser2::parse(this, std::move(source), &logical_mt)) {}
+    : Item(parent)/*,
+      data(Parser2::parse(this, std::move(source), &logical_mt)) */{}
 
 class Inference::bad_inf : public std::invalid_argument
 {

@@ -47,8 +47,6 @@ public:
     size_t getArity() const override
     { return 1; }
 
-    static const AbstractName* produceSymForm(const AbstractName* ownName, bool prefix);
-
     std::vector<NameMatchInfo>
     match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const override;
 };
@@ -79,8 +77,6 @@ public:
     std::string print(AbstractTerm::Vector args) const override;
     size_t getArity() const override
     { return 2; }
-
-    static const AbstractName* produceSymForm(const AbstractName* ownName, Notation notation);
 
     std::vector<NameMatchInfo>
     match(const Parser2::LexemeSequence& target, const std::pair<size_t, size_t>& bounds) const override;

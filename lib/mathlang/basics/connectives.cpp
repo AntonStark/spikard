@@ -6,17 +6,9 @@
 #include "primary.hpp"
 #include "string_name.hpp"
 
-/**
- * // fixme оптимизировать регистрацию Connectives в NSI
- * Поскольку в PrintableConnective передаётся symForm, приходится
- * во-1 генерировать её
- * во-2 хранить для печати имя в чистом виде
- *  двойная работа
-*/
-
 UnaryOperation::UnaryOperation(const AbstractName* name, const MathType* operandType,
                                const MathType* resultType, bool prefix)
-    : PrintableConnective(produceSymForm(name, prefix)), _name(name), _operandType(operandType),
+    : PrintableConnective(name), _name(name), _operandType(operandType),
       _resultType(resultType), _prefix(prefix) {}
 std::string UnaryOperation::print(AbstractTerm::Vector args) const {
     if (!check(args))
@@ -27,14 +19,6 @@ std::string UnaryOperation::print(AbstractTerm::Vector args) const {
         else
             return (args.front()->print() + _name->toStr());
     }
-}
-
-const AbstractName* UnaryOperation::produceSymForm(const AbstractName* ownName, bool prefix) {
-    auto name = ownName->toStr();
-    if (prefix)
-        return new TexName(name + "\\cdot");
-    else
-        return new TexName("\\cdot" + name);
 }
 
 std::vector<NameMatchInfo>
@@ -65,7 +49,7 @@ UnaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<siz
 
 BinaryOperation::BinaryOperation(const AbstractName* name, const MathType* leftType, const MathType* rightType,
                                  const MathType* resultType, BinaryOperation::Notation notation)
-    : PrintableConnective(produceSymForm(name, notation)), _name(name), _leftType(leftType), _rightType(rightType),
+    : PrintableConnective(name), _name(name), _leftType(leftType), _rightType(rightType),
       _resultType(resultType), _notation(notation) {}
 bool BinaryOperation::check(AbstractTerm::Vector args) const {
     return (args.size() == 2
@@ -84,17 +68,6 @@ std::string BinaryOperation::print(AbstractTerm::Vector args) const {
             case Notation::POSTFIX :
                 return (args.at(0)->print() + args.at(1)->print() + _name->toStr());
         }
-    }
-}
-
-const AbstractName* BinaryOperation::produceSymForm(const AbstractName* ownName, BinaryOperation::Notation notation) {
-    switch (notation) {
-        case Notation::PREFIX :
-            return new TexName(ownName->toStr() + R"(\cdot\cdot)");
-        case Notation::INFIX :
-            return new TexName("\\cdot" + ownName->toStr() + "\\cdot");
-        case Notation::POSTFIX :
-            return new TexName(R"(\cdot\cdot)" + ownName->toStr());
     }
 }
 

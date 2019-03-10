@@ -134,24 +134,25 @@ struct NamesTree
     struct Links
     {
         size_t parent;
-        std::vector<size_t> childrens;
+        std::vector<size_t> children;
 
         explicit Links(size_t parentId)
         : parent(parentId) {}
         void _detach(size_t child) {
-            for (auto it = childrens.begin(); it != childrens.end(); ++it) {
+            for (auto it = children.begin(); it != children.end(); ++it) {
                 if (*it == child) {
-                    childrens.erase(it);
+                    children.erase(it);
                     return;
                 }
             }
         }
 
         bool hasOthers(size_t child) {
-            for (const auto& ch : childrens) {
+            for (const auto& ch : children) {
                 if (ch != child)
                     return true;
             }
+            return false;
         }
     };
 
@@ -166,6 +167,7 @@ struct NamesTree
     size_t _create(size_t parentId, const ElemBounds& bounds, const MathType* type, bool name = false);
     bool hasParent(size_t id) const;
     NamesTreeElem& elem(size_t id);
+    const NamesTreeElem& elem(size_t id) const;
     LexemeSequence part(const ElemBounds& bouds) const;
     void setError(const std::string& mess);
 
@@ -190,10 +192,11 @@ public:
 
     Parser(Node* where);
 
-    AbstractTerm* parse(CurAnalysisData& source, const MathType* exprType, Item* container);
+    AbstractTerm* generateTerm(Item* container, const NamesTree& namesTree, size_t id = 0);
+    AbstractTerm* parse(CurAnalysisData& source, DefType* exprType, Item* container);
 };
 
-AbstractTerm* parse(Item* container, std::string expr, const MathType* exprType);
+AbstractTerm* parse(Item* container, std::string expr, DefType* exprType);
 }
 
 #endif //SPIKARD_PARSER_HPP

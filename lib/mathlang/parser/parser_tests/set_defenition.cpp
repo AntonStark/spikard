@@ -2,43 +2,48 @@
 // Created by anton on 27.10.18.
 //
 
+#include "../../basics/tex_name.hpp"
+
 #include "../../proof/named_node.hpp"
 #include "../../proof/definition.hpp"
+
 #include "../parser.hpp"
 
 int main() {
-    BranchNode* cource = new BranchNode("Курс");
-    PrimaryNode* lecture = PrimaryNode::create(cource, "Лекция",
+    BranchNode* course = new BranchNode("Курс");
+    PrimaryNode* lecture = PrimaryNode::create(course, "Лекция",
                                                NameStoringStrategy::BasicNSSTypes::Appending);
 
     auto typeAny = DefType::create(lecture, "any");
 
     auto typeSet = DefType::create(lecture, "Set");
+    DefAtom::create(lecture, "Nat", typeSet);
     auto typeLogical = DefType::create(lecture, "Logical");
     DefConnective::create(lecture, "\\in", BinaryOperation::Notation::INFIX, typeAny, typeSet, typeLogical);
 
     auto typeN = DefType::create(lecture, "\\mathbb{N}");
+    DefConnective::create(lecture, R"(( \cdot ))", {typeN}, typeN); // todo вообще говоря, это семейство связок ([type]) -> [type]
     DefAtom::create(lecture, "2", typeN);
     DefFunct::create(lecture, "dvs", typeN, typeSet);
 
     DefConnective::create(lecture, "\\#", true, typeSet, typeN);
     DefConnective::create(lecture, "=", BinaryOperation::Notation::INFIX, typeN, typeN, typeLogical);
 
-    DefConnective::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeAny}, typeSet);
+    DefConnective::create(lecture, R"(\{ \_ | \cdot \})", {typeAny, typeLogical}, typeSet);
     // быть тип P: elem(Set) -> Logical, где elem(Set) обозначает тип элементов множества из второго аргумента
 
 //    lecture->addTerm(R"(\{ n \in \mathbb{N} | #dvs(n) = 2 \})");      // { n \in \mathbb{N} | dvs(n) = {1, n} }
-    std::string input = R"(\{ n \in \mathbb{N} | \#dvs(n) = 2 \})";
-    Parser2::CurAnalysisData source = Parser2::texLexer.recognize(input);
+    std::string input = R"(\{ n \in Nat | \#dvs(n) = 2 \})";
+    Parser2::CurAnalysisData source = texLexer.recognize(input);
 
     Parser2::Parser texParser(lecture);
-    Parser2::NamesTree namesTree(source.filtered, texParser.namesDefined);
-    /*for (const auto& n : texParser.namesDefined)
-        std::cout << n->toStr() << std::endl;*/
+    /*Parser2::NamesTree namesTree(source.filtered, &texParser, typeSet->use(nullptr));
+    *//*for (const auto& n : texParser.namesDefined)
+        std::cout << n->toStr() << std::endl;*//*
     namesTree.grow();
 
-    namesTree.debugPrint();
-
-    delete cource;
+    namesTree.debugPrint();*/
+    auto res = texParser.parse(source, typeSet, nullptr);
+    delete course;
     return 0;
 }

@@ -174,7 +174,7 @@ size_t NamesTree::_create(size_t parentId, const ElemBounds& bounds, const MathT
     size_t thatElemId = _treeStorage.size();
     _treeStorage.emplace_back(this, thatElemId, bounds, type, name);
     _links.emplace_back(parentId);
-    _links[parentId].childrens.push_back(thatElemId);
+    _links[parentId].children.push_back(thatElemId);
     return thatElemId;
 }
 
@@ -183,6 +183,9 @@ bool NamesTree::hasParent(size_t id) const
 
 NamesTreeElem& NamesTree::elem(size_t id)
 { return _treeStorage[id]; }
+
+const NamesTreeElem& NamesTree::elem(size_t id) const
+{ return _treeStorage.at(id); }
 
 LexemeSequence NamesTree::part(const ElemBounds& bouds) const
 { return LexemeSequence(_input.begin()+bouds.first, _input.begin()+bouds.second); }
@@ -249,8 +252,12 @@ void NamesTree::detach(size_t id) {
             _links[parentId]._detach(id);
         } else
             detach(parentId);
-    } else
-        detach(parentId); // todo проверка что parent есть, а то ошибка разбора
+    } else {
+        if (not hasParent(parentId))
+            setError("Все варианты разбора безуспешны.");
+        else
+            detach(parentId); // todo проверка что parent есть, а то ошибка разбора
+    }
 }
 
 void NamesTree::debugPrint() {
@@ -260,7 +267,7 @@ void NamesTree::debugPrint() {
         for (const auto& n : elem._ownNS)
             std::cout << n->toStr() << ", ";
         std::cout << std::endl << "\t{";
-        for (const auto& ch : _links[elem._id].childrens)
+        for (const auto& ch : _links[elem._id].children)
             std::cout << ch << ',';
         std::cout << "}";
         std::cout << std::endl << "\t" << texLexer.print(part(elem._bounds)) << std::endl;
@@ -275,7 +282,34 @@ Parser::Parser(Node* where)
     : _where(where)/*,
       namesDefined(collectNames(where->index()))*/ {}
 
-AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, Item* container) {
+AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& namesTree, size_t id) {
+    if (namesTree.elem(id).isBundle)
+        id = namesTree._links[id].children.front();
+
+    const AbstractName* elemName = namesTree.elem(id)._name;
+    auto indices = namesTree._parser->_where->index();
+    if (namesTree._links[id].children.empty()) {
+        Definition* defTerm = indices.names.get(elemName);
+        if (defTerm != nullptr) {
+            PrimaryTerm* term = dynamic_cast<PrimaryTerm*>(defTerm->use(container));
+            return term;
+        }
+        else
+            return new Variable(elemName, &any_mt);
+    }
+    else {
+        const std::vector<size_t>& children = namesTree._links[id].children;
+        AbstractTerm::Vector args;
+        for (auto ch : children)
+            args.push_back(generateTerm(container, namesTree, ch));
+
+        Definition* defCon = indices.connectives.get(namesTree.elem(id)._name);
+        AbstractConnective* conn = dynamic_cast<AbstractConnective*>(defCon->use(container));
+        return new ComplexTerm(conn, args);
+    }
+}
+
+AbstractTerm* Parser::parse(CurAnalysisData& source, DefType* exprType, Item* container) {
     // todo container используется двояко.
     // 1) получение имён нужного типа от Node parent(),
     // 2) use при сборке из дерева в терм
@@ -283,17 +317,20 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, const MathType* exprType, I
      * парсер получает подсказку exprType какой тип должен получиться
      * не запрашивать сразу все имена. только по необходимости делать запрос с конкретным типом
      */
-    NamesTree namesTree(source.filtered, this, exprType);
+    NamesTree namesTree(source.filtered, this, exprType->use(container));
     namesTree.grow();
     /**
      * после того как (если) получили удачное дерево получаем (use(container)) термы по
      * их именам в узлах и собираем терм
      * если в выражении использовались внутренние переменные нужно будет
-     * создать их термы, но мы не знаем тип!
+     * создать их термы пока типа any
+     * в узлах bundle, имеющих больше одного child, берём первый
      */
+    AbstractTerm* result = generateTerm(container, namesTree);
+    return result;
 }
 
-AbstractTerm* parse(Item* container, std::string expr, const MathType* exprType) {
+AbstractTerm* parse(Item* container, std::string expr, DefType* exprType) {
     Parser texParser(container->getParent());
     auto cad = texLexer.recognize(expr);
     return texParser.parse(cad, exprType, container);

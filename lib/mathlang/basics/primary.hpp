@@ -52,7 +52,7 @@ class Variable : public NamedEntity, public PrimaryTerm
 private:
     const MathType* _type;
 public:
-    Variable(AbstractName* name, const MathType* type)
+    Variable(const AbstractName* name, const MathType* type)
         : NamedEntity(name), _type(type) {}
     Variable(const Variable& one)
         : NamedEntity(one) { _type = one.getType()->clone(); }

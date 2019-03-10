@@ -19,7 +19,7 @@ public:
     virtual const AbstractTerm* get() const = 0;
 };
 
-class TermsBox : public Node, public Statement
+class TermsBox : public Item, public Statement
 /// Этот класс представляет аксиомы.
 /// Наследование от Node из-за необходиомости хранить имена при кванторах
 {

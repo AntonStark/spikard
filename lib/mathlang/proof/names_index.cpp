@@ -3,6 +3,7 @@
 //
 
 #include "names_index.hpp"
+#include "../basics/primary.hpp"
 
 class NameSpaceIndex::name_doubling : public std::invalid_argument
 {
@@ -44,6 +45,13 @@ void NameSpaceIndex::add(const NamedEntity* named, const MathType* type, Definit
 }
 
 NameSpaceIndex::NamesSameType NameSpaceIndex::getNames(const MathType* type) const {
+    if (type->comp(&any_mt)) {
+        NamesSameType buf;
+        for (const auto& nV : names)
+            buf.insert(buf.end(), nV.begin(), nV.end());
+        return buf;
+    }
+
     const auto& typeName = type->getName();
     auto search = type2Storage.find(typeName);
     if (search != type2Storage.end())
@@ -66,7 +74,7 @@ Definition* NameSpaceIndex::get(const AbstractName* name) const {
     const auto& str = name->toStr();
     if (exists(str))
         return definitions[name2ID.at(str)];
-    throw no_name(name->toStr());
+    return nullptr;
 }
 
 std::vector<const AbstractName*>::const_iterator

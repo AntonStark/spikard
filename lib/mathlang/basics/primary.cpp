@@ -18,8 +18,10 @@ PrimaryType logical_mt(new StringName("Logical"));
 std::string PrimaryType::print() const
 { return getName(); }
 bool PrimaryType::comp(const AbstractTerm* other) const {
+    if (getName() == "any" && dynamic_cast<const MathType*>(other) != nullptr)
+        return true;
     if (auto otherPrimary = dynamic_cast<const PrimaryType*>(other))
-        return (getName() == otherPrimary->getName());
+        return (otherPrimary->getName() == "any" || getName() == otherPrimary->getName());
     else
         return false;
 }

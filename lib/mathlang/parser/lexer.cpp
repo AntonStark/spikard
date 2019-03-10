@@ -244,4 +244,11 @@ std::string Lexer::print(const Parser2::LexemeSequence& lSeq) const {
     return buf.str();
 }
 
+std::string Lexer::print(const Parser2::LexemeSequence& lSeq, std::pair<size_t, size_t> bounds) const {
+    std::stringstream buf;
+    for (size_t i = bounds.first; i < bounds.second; ++i)
+        buf << print(lSeq[i]);
+    return buf.str();
+}
+
 }
