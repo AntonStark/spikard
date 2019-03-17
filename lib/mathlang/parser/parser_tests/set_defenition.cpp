@@ -44,6 +44,7 @@ int main() {
 
     namesTree.debugPrint();*/
     auto res = texParser.parse(source, typeSet, nullptr);
+    std::cout << res->print() << std::endl; /// подтерм, соотв. n при вызове _name->toStr() "Cannot access memory at address 0x0"
     delete course;
     return 0;
 }

@@ -95,7 +95,7 @@ protected:
     AbstractTerm::Vector compose(AbstractTerm::Vector args) const override
     { return args; }
 public:
-    SpecialConnective(const AbstractName* form,
+    SpecialConnective(const AbstractName* form, // todo нужно проверка согласованности числа пропусков в form и размера argT
                       MathType::Vector argT, const MathType* retT) 
         : PrintableConnective(form), _form(form), _argTypes(std::move(argT)), _resultType(retT) {}
     ~SpecialConnective() override = default;

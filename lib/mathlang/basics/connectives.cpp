@@ -85,7 +85,7 @@ BinaryOperation::match(const Parser2::LexemeSequence& target, const std::pair<si
      *
      * тупое решение: генерировать вектор совпадений со всеми возможными разбиениями. среди
      * них будет верное и дерево рано или поздно придет к успеху. причем большинство
-     * разбиений не будут иметь смысла, так что тупикове ветви будут коротки
+     * разбиений не будут иметь смысла, так что тупиковые ветви будут коротки
      */
     switch (_notation) {
         case Notation::PREFIX : {
@@ -144,7 +144,30 @@ bool SpecialConnective::check(AbstractTerm::Vector args) const {
 }
 
 std::string SpecialConnective::print(AbstractTerm::Vector args) const {
-    return std::string("<special connective print not implemented yet>"); // todo
+    if (!check(args))
+        return "";
+    else {
+        std::stringstream buf;
+        /// процедура check должна обеспечивать согласованность вектора аргументов и числа пропусков
+        if (auto fTN = dynamic_cast<const TexName*>(_form)) {
+            auto argIt = args.begin();
+            for (const auto& l : fTN->getSeq()) {
+                auto lexCat = texLexer.storage.which(l._id);
+                bool isArgPlace = (lexCat == "argument_place");
+                bool isVarPlace = (lexCat == "variable_place");
+                if (not (isArgPlace || isVarPlace))
+                    buf << texLexer.print(l);
+                else
+                    buf << (*(argIt++))->print();
+            }
+        } else {
+            buf << _form->toStr() << "(";
+            for (const auto& a : args)
+                buf << a->print() << ", ";
+            buf << ")";
+        }
+        return buf.str();
+    }
 }
 
 std::vector<NameMatchInfo>

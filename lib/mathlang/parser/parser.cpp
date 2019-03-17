@@ -291,7 +291,7 @@ AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& na
     if (namesTree._links[id].children.empty()) {
         Definition* defTerm = indices.names.get(elemName);
         if (defTerm != nullptr) {
-            PrimaryTerm* term = dynamic_cast<PrimaryTerm*>(defTerm->use(container));
+            auto* term = dynamic_cast<PrimaryTerm*>(defTerm->use(container));
             return term;
         }
         else
@@ -304,7 +304,7 @@ AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& na
             args.push_back(generateTerm(container, namesTree, ch));
 
         Definition* defCon = indices.connectives.get(namesTree.elem(id)._name);
-        AbstractConnective* conn = dynamic_cast<AbstractConnective*>(defCon->use(container));
+        auto* conn = dynamic_cast<AbstractConnective*>(defCon->use(container));
         return new ComplexTerm(conn, args);
     }
 }

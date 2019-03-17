@@ -38,7 +38,7 @@ public:
     { return nullptr; } // fixme заглушка, убрать вовсе
 
     std::string print() const override
-    { _symbol->print(_args); }
+    { return _symbol->print(_args); }
 };
 
 class ComplexType : public MathType, public ComplexTerm

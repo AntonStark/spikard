@@ -45,14 +45,15 @@ void NameSpaceIndex::add(const NamedEntity* named, const MathType* type, Definit
 }
 
 NameSpaceIndex::NamesSameType NameSpaceIndex::getNames(const MathType* type) const {
-    if (type->comp(&any_mt)) {
+    const auto& typeName = type->getName();
+    if (typeName == "any") {        // type->comp(&any_mt) здесь не подходит так как вообще всё == any
         NamesSameType buf;
         for (const auto& nV : names)
             buf.insert(buf.end(), nV.begin(), nV.end());
         return buf;
     }
 
-    const auto& typeName = type->getName();
+    // было бы лучше поддерживать отображение для any во все хранилища сразу
     auto search = type2Storage.find(typeName);
     if (search != type2Storage.end())
         return names[search->second];
