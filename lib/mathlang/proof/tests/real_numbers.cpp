@@ -17,6 +17,11 @@ int main() {
 
     PrimaryNode* lect2 = PrimaryNode::create(main, "Лекция2", NameStoringStrategy::BasicNSSTypes::Appending);
     auto mult = DefConnective::create(lect1, "*", BinaryOperation::Notation::INFIX, real, real, real);
+    /**
+     * lect2 "сфотографировала" индекс lect1
+     * mult создана в lect1 после этого
+     * поэтому не видна в lect2 (вряд ли это полезное или предсказуемое поведение) fixme
+     */
 
     cout << "Имена: " << endl;
     auto namesTypeR = lect2->index().names.getNames(real->use(nullptr));
@@ -27,11 +32,6 @@ int main() {
     auto connTypeR = lect2->index().connectives.getNames(real->use(nullptr));
     for (const auto& n : connTypeR)
         cout << n->toStr() << endl;
-    /**
-     * lect2 "сфотографировала" индекс lect1
-     * mult создана в lect1 после этого
-     * поэтому не видна в lect2 (вряд ли это полезное или предсказуемое поведение) fixme
-     */
 
     cout << endl << "Uses of R" << endl;
 

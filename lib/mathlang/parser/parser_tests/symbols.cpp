@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "../lexer.hpp"
+#include "../../basics/tex_name.hpp"
 
 using namespace std;
 using namespace Parser2;
@@ -34,8 +35,5 @@ int main () {
         cout << endl;
     }
     cout << flush;
-
-    // todo негативные тесты
-    
     return 0;
 }

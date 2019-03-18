@@ -27,8 +27,6 @@ public:
     PrimaryType(const PrimaryType&) = default;
     ~PrimaryType() override = default;
 
-    bool isPrimary() const override
-    { return true; }
     const MathType* getType() const override
     { return typeOfTypes; }
     bool comp(const AbstractTerm* other) const override;

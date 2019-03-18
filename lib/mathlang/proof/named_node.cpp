@@ -4,19 +4,6 @@
 
 #include "named_node.hpp"
 
-/*void PrimaryNode::defType(const std::string& typeName)
-{ new Definition(this, typeName); }
-void PrimaryNode::defVar(const std::string& varName, const std::string& typeName)
-{ new Definition(this, varName, getType(typeName)); }
-void PrimaryNode::defSym( // todo следует разделить метод ввода функций и
-// ввода связок вообще - вторые не термы, а для первых как раз не нужен приоритет - у вызова функции он, кажется, наименьший
-    const std::string& symForm, const std::vector<std::string>& argT,
-    const std::string& retT) {
-    std::vector<const MathType*> argMT;
-    for (auto& a : argT)
-        argMT.push_back(getType(a));
-    new Definition(this, symForm, argMT, getType(retT));
-}*/
 
 /*void PrimaryNode::addTerm(const std::string& term)
 { new TermsBox(this, term); }*/

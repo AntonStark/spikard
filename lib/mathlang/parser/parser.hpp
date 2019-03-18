@@ -17,9 +17,6 @@
 namespace Parser2
 {
 
-std::vector<NameMatchInfo> filter(const std::vector<const AbstractName*>& variants,
-                                  const LexemeSequence& target, const std::pair<size_t, size_t>& bounds);
-
 /**
  * Задача данного этапа - построить дерево разбора имён. Точнее семейство всех возможных деревьев.
  *

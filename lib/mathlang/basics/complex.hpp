@@ -48,8 +48,6 @@ public:
         : ComplexTerm(symbol, args) {}
     ~ComplexType() override = default;
 
-    bool isPrimary() const override
-    { return false; }
     const MathType* getType() const override
     { return typeOfTypes; }
 

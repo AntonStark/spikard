@@ -7,65 +7,6 @@
 namespace Parser2
 {
 
-void matchWithGaps(const LexemeSequence& input, const std::pair<size_t, size_t>& bounds,
-                   const AbstractName* variant, std::vector<NameMatchInfo>& forResults) {
-    auto findFirstFrom = [&input] (const Lexeme& find, size_t from, size_t to) -> size_t {
-        for (size_t i = from; i < to; ++i)
-            if (input[i] == find)
-                return i;
-        return size_t(-1);
-    };
-
-    size_t start = bounds.first, end = bounds.second;
-    NameMatchInfo nameMatch(variant);
-    const LexemeSequence& variantLexems = dynamic_cast<const TexName*>(variant)->getSeq(); // todo вместо AbstractName лучше явно везде использовать TexName
-    size_t i = start, v = 0;
-    while (v < variantLexems.size()) {
-        bool inputEnd = (i == end);
-        if (inputEnd)
-            return;
-
-        auto lexCat = texLexer.storage.which(variantLexems[v]._id);
-        bool isArgPlace = (lexCat == "argument_place");
-        bool isVarPlace = (lexCat == "variable_place");
-        if (not (isArgPlace || isVarPlace)) {
-            if (variantLexems[v] == input[i]) {
-                ++i;
-                ++v;
-            } else
-                return;
-        } else {
-            bool variantEnding = (v == variantLexems.size() - 1);
-            // пропуск может стоять в конце (напр. \\cdot=\\cdot), тогда сразу успех
-            if (variantEnding) {
-                nameMatch.add(i, end, &any_mt, isVarPlace); // fixme any_mt просто заглушка поскольку мы тут не имеем доступа к Connective
-                ++v;
-                i = end;
-            } else {
-                const Lexeme& nextLexeme = variantLexems[v+1];
-                size_t matchThat = findFirstFrom(nextLexeme, i, end);
-                if (matchThat == size_t(-1)) {
-                    return;
-                } else {
-                    nameMatch.add(i, matchThat, &any_mt, isVarPlace);
-                    v+=2;   // впереди совпадение input и variant, проходим "argument_place" и само совпадение
-                    i = matchThat + 1;
-                }
-            }
-        }
-    }
-    if (i == end)
-        forResults.push_back(nameMatch);
-}
-
-std::vector<NameMatchInfo> filter(const std::vector<const AbstractName*>& variants,
-                                  const LexemeSequence& target, const std::pair<size_t, size_t>& bounds) {
-    std::vector<NameMatchInfo> filtered;
-    for (const auto& variant : variants)
-        matchWithGaps(target, bounds, variant, filtered);
-    return filtered;
-}
-
 NamesTreeElem& NamesTreeElem::_getParent() const {
     size_t parentId = tree->_links[_id].parent;
     return tree->elem(parentId);
@@ -84,7 +25,7 @@ void NamesTreeElem::registerName(const AbstractName* name) {
     if (isSymbolVars)
         _ownNS.push_back(name);
     else
-        _getParent().registerName(name); // todo определять через дерево в каком узле регистрировать
+        _getParent().registerName(name);
 }
 
 void NamesTreeElem::becomeNamed(const AbstractName* name) {
@@ -256,7 +197,7 @@ void NamesTree::detach(size_t id) {
         if (not hasParent(parentId))
             setError("Все варианты разбора безуспешны.");
         else
-            detach(parentId); // todo проверка что parent есть, а то ошибка разбора
+            detach(parentId);
     }
 }
 
@@ -274,15 +215,15 @@ void NamesTree::debugPrint() {
     }
 }
 
-
-//std::vector<const AbstractName*> Parser::collectNames(const NameSpaceIndex& index)
-//{ return index.getNames(); } // fixme
-
 Parser::Parser(Node* where)
-    : _where(where)/*,
-      namesDefined(collectNames(where->index()))*/ {}
+    : _where(where) {}
 
 AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& namesTree, size_t id) {
+    /**
+     * После того как (если) получили удачное дерево получаем (use(container)) термы по
+     * их именам в узлах и собираем терм. Если в выражении использовались внутренние переменные
+     * создаются Variable пока типа any. В узлах bundle, имеющих больше одного child, берётся первый.
+     */
     if (namesTree.elem(id).isBundle)
         id = namesTree._links[id].children.front();
 
@@ -310,22 +251,19 @@ AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& na
 }
 
 AbstractTerm* Parser::parse(CurAnalysisData& source, DefType* exprType, Item* container) {
-    // todo container используется двояко.
-    // 1) получение имён нужного типа от Node parent(),
-    // 2) use при сборке из дерева в терм
     /**
-     * парсер получает подсказку exprType какой тип должен получиться
-     * не запрашивать сразу все имена. только по необходимости делать запрос с конкретным типом
+     * container используется двояко:
+     *   1) получение имён нужного типа от Node parent(),
+     *   2) use при сборке из дерева в терм
+     *
+     * парсер получает подсказку exprType какой тип должен
+     * получиться и запрашивает имена данного типа по необходимости
+     *
      */
     NamesTree namesTree(source.filtered, this, exprType->use(container));
     namesTree.grow();
-    /**
-     * после того как (если) получили удачное дерево получаем (use(container)) термы по
-     * их именам в узлах и собираем терм
-     * если в выражении использовались внутренние переменные нужно будет
-     * создать их термы пока типа any
-     * в узлах bundle, имеющих больше одного child, берём первый
-     */
+    if (namesTree.errorStatus.first)
+        throw std::runtime_error(namesTree.errorStatus.second);
     AbstractTerm* result = generateTerm(container, namesTree);
     return result;
 }

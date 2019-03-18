@@ -22,7 +22,8 @@ struct IndexCollection
             primary.add(var, var->getType(), where);
         else if (auto pty = dynamic_cast<const PrimaryType*>(named))
             primary.add(pty, pty->getType(), where);
-        // fixme возможно, тут должно быть исключение
+        else
+            throw std::logic_error("конкретный тип named какой-то ещё");
     }
 };
 

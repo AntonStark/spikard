@@ -40,10 +40,6 @@ class MathType : public virtual AbstractTerm
 {
 public:
     virtual ~MathType() {};
-    virtual bool isPrimary() const = 0;
-//    virtual bool operator== (const MathType& other) const = 0;
-//    bool operator!= (const MathType& other) const
-//    { return !(*this == other); }
 //    virtual bool operator< (const MathType& other) const = 0;
 
     virtual MathType* clone() const = 0;
@@ -51,12 +47,6 @@ public:
     typedef std::vector<const MathType*> Vector;
 
 //    const MathType* getType() const override;
-//    std::string print() const override;
-
-    // fixme временные заглушки
-//    const AbstractTerm* get(Path path) const override;
-//    AbstractTerm* replace(Path path, const AbstractTerm* by) const override;
-//    AbstractTerm* replace(const AbstractTerm* x, const AbstractTerm* t) const override;
 };
 
 #endif //TEST_BUILD_LOGIC_HPP
