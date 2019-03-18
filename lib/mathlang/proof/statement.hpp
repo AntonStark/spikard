@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by anton on 21.09.18.
 //
@@ -21,11 +23,11 @@ public:
 
 class TermsBox : public Item, public Statement
 /// Этот класс представляет аксиомы.
-/// Наследование от Node из-за необходиомости хранить имена при кванторах
 {
 private:
     const AbstractTerm* data;
-    TermsBox(Node* parent, std::string source);
+    TermsBox(Node* parent, std::string source, DefType* exprType = nullptr)
+    : Item(parent), data(Parser2::parse(this, std::move(source), exprType)) {}
 
 //    static Hierarchy* fromJson(const json& j, Node* parent = nullptr);
 public:
@@ -36,8 +38,8 @@ public:
     const AbstractTerm* get() const override { return data; }
     std::string print(Representation* r, bool incremental) const override
     { r->process(this); return r->str(); }
-    static TermsBox* create(PrimaryNode* parent, std::string source)
-    { return new TermsBox(parent, source); }
+    static TermsBox* create(PrimaryNode* parent, std::string source, DefType* exprType = nullptr)
+    { return new TermsBox(parent, std::move(source), exprType); }
 };
 
 class Inference : public Item, public Statement

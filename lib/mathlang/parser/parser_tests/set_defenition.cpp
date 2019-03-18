@@ -6,6 +6,7 @@
 
 #include "../../proof/named_node.hpp"
 #include "../../proof/definition.hpp"
+#include "../../proof/statement.hpp"
 
 #include "../parser.hpp"
 
@@ -34,17 +35,22 @@ int main() {
 
 //    lecture->addTerm(R"(\{ n \in \mathbb{N} | #dvs(n) = 2 \})");      // { n \in \mathbb{N} | dvs(n) = {1, n} }
     std::string input = R"(\{ n \in Nat | \#dvs(n) = 2 \})";
-    Parser2::CurAnalysisData source = texLexer.recognize(input);
 
-    Parser2::Parser texParser(lecture);
+//    Parser2::CurAnalysisData source = texLexer.recognize(input);
+//    Parser2::Parser texParser(lecture);
     /*Parser2::NamesTree namesTree(source.filtered, &texParser, typeSet->use(nullptr));
     *//*for (const auto& n : texParser.namesDefined)
         std::cout << n->toStr() << std::endl;*//*
     namesTree.grow();
 
     namesTree.debugPrint();*/
-    auto res = texParser.parse(source, typeSet, nullptr);
-    std::cout << res->print() << std::endl; /// подтерм, соотв. n при вызове _name->toStr() "Cannot access memory at address 0x0"
+
+//    auto res = texParser.parse(nullptr, source, typeSet->use(nullptr));
+//    std::cout << res->print() << std::endl;
+    auto inputed = TermsBox::create(lecture, input, typeSet);
+    std::cout << "===RESULT===" << std::endl;
+    std::cout << inputed->get()->print() << std::endl;
+    std::cout << "===RESULT===" << std::endl;
     delete course;
     return 0;
 }

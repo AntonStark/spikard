@@ -190,10 +190,11 @@ public:
     Parser(Node* where);
 
     AbstractTerm* generateTerm(Item* container, const NamesTree& namesTree, size_t id = 0);
-    AbstractTerm* parse(CurAnalysisData& source, DefType* exprType, Item* container);
+    AbstractTerm* parse(Item* container, CurAnalysisData& source, const MathType* resType);
 };
 
-AbstractTerm* parse(Item* container, std::string expr, DefType* exprType);
+/// если третий аргумент отсутствует, будет распознан логический тип
+AbstractTerm* parse(Item* container, std::string expr, DefType* exprType = nullptr);
 }
 
 #endif //SPIKARD_PARSER_HPP

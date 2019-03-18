@@ -250,7 +250,7 @@ AbstractTerm* Parser::generateTerm(Item* container, const Parser2::NamesTree& na
     }
 }
 
-AbstractTerm* Parser::parse(CurAnalysisData& source, DefType* exprType, Item* container) {
+AbstractTerm* Parser::parse(Item* container, CurAnalysisData& source, const MathType* resType) {
     /**
      * container используется двояко:
      *   1) получение имён нужного типа от Node parent(),
@@ -260,7 +260,7 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, DefType* exprType, Item* co
      * получиться и запрашивает имена данного типа по необходимости
      *
      */
-    NamesTree namesTree(source.filtered, this, exprType->use(container));
+    NamesTree namesTree(source.filtered, this, resType);
     namesTree.grow();
     if (namesTree.errorStatus.first)
         throw std::runtime_error(namesTree.errorStatus.second);
@@ -269,9 +269,12 @@ AbstractTerm* Parser::parse(CurAnalysisData& source, DefType* exprType, Item* co
 }
 
 AbstractTerm* parse(Item* container, std::string expr, DefType* exprType) {
+    const MathType* resType = (exprType != nullptr
+                               ? exprType->use(container)
+                               : &logical_mt);
     Parser texParser(container->getParent());
     auto cad = texLexer.recognize(expr);
-    return texParser.parse(cad, exprType, container);
+    return texParser.parse(container, cad, resType);
 }
 
 }
