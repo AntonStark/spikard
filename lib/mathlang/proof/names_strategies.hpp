@@ -45,12 +45,8 @@ public:
 
     const Indices& index() const override { return indices; }
     PrioritySet getPriority() const override { return priority; }
-    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override {
-        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
-            indices.connectives.add(named, type, where);
-        else
-            indices.names.add(named, type, where);
-    }
+    void registerNamed(const NamedEntity* named, Definition* where) override 
+    { indices.add(named, where); }
     void prioritize(const NamedEntity* name2, const NamedEntity* name1) override
     { priority.insert(std::make_pair(name1->getName(), name2->getName())); }
     std::string printType() const override { return "Hidden"; }
@@ -74,13 +70,9 @@ public:
 
     const Indices& index() const override { return indices; }
     PrioritySet getPriority() const override { return priority; }
-    void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) override {
-        _parent->registerNamed(named, type, where);
-
-        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
-            indices.connectives.add(named, type, where);
-        else
-            indices.names.add(named, type, where);
+    void registerNamed(const NamedEntity* named, Definition* where) override {
+        _parent->registerNamed(named, where);
+        indices.add(named, where);
     }
     void prioritize(const NamedEntity* name2, const NamedEntity* name1) override {
         _parent->prioritize(name1, name2);

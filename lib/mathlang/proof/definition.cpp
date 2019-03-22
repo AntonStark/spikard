@@ -28,7 +28,7 @@ DefType::DefType(Node* parent, const std::string& typeName)
     : Item(parent) {
     auto* name = new TexName(typeName, true);
     type = new PrimaryType(name);
-    parent->registerNamed(type, type->getType(), this);
+    parent->registerNamed(type, this);
 }
 PrimaryType* DefType::use(Item* in) {
     addUsage(in);
@@ -44,7 +44,7 @@ DefAtom::DefAtom(Node* parent, const std::string& varName, DefType* mathType)
     auto* name = new TexName(varName, true);
     auto* type = mathType->use(this);
     atom = new Variable(name, type);
-    parent->registerNamed(atom, type, this);
+    parent->registerNamed(atom, this);
 }
 Variable* DefAtom::use(Item* in) {
     addUsage(in);
@@ -61,7 +61,7 @@ DefFunct::DefFunct(Node* parent, const std::string& fName, DefType* argT, DefTyp
     auto retType = retT->use(this);
     auto* name = new TexName(fName);
     funct = new Function(name, argType, retType);
-    parent->registerNamed(funct, funct->getType(), this);
+    parent->registerNamed(funct, this);   // todo подавать тип при вызове больше не нужно
     // todo двойная регистрация: с возвращаемым типом как связки и как переменной функционального типа
 }
 Function* DefFunct::use(Item* in) {
@@ -80,7 +80,7 @@ DefConnective::DefConnective(Node* parent, const std::string& sym, bool prefix,
     auto retType = retT->use(this);
     auto* name = new TexName(sym);
     connective = new UnaryOperation(name, argType, retType, prefix);
-    parent->registerNamed(connective, connective->resultType(), this);
+    parent->registerNamed(connective, this);
 }
 DefConnective::DefConnective(Node* parent, const std::string& sym, BinaryOperation::Notation notation,
     DefType* leftT, DefType* rightT, DefType* retT)
@@ -90,7 +90,7 @@ DefConnective::DefConnective(Node* parent, const std::string& sym, BinaryOperati
     auto retType = retT->use(this);
     auto* name = new TexName(sym);
     connective = new BinaryOperation(name, leftType, rightType, retType, notation);
-    parent->registerNamed(connective, connective->resultType(), this);
+    parent->registerNamed(connective, this);
 }
 DefConnective::DefConnective(Node* parent, const std::string& form, const std::vector<DefType*>& argT, DefType* retT)
     : Item(parent) {
@@ -100,7 +100,7 @@ DefConnective::DefConnective(Node* parent, const std::string& form, const std::v
     auto retType = retT->use(this);
     auto* name = new TexName(form);
     connective = new SpecialConnective(name, argTypes, retType);
-    parent->registerNamed(connective, connective->resultType(), this);
+    parent->registerNamed(connective, this);
 }
 NamedEntity* DefConnective::use(Item* in) {
     addUsage(in);

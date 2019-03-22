@@ -24,7 +24,7 @@ public:
     ~Function() override = default;
 
     const MathType* getType() const override
-    { return /*_mapType*/resultType(); } // fixme заглушка
+    { return _mapType; }
     bool comp(const AbstractTerm* other) const override;
     Function* clone() const override
     { return new Function(*this); }

@@ -50,6 +50,13 @@ struct Indices
 {
     NameSpaceIndex names;
     NameSpaceIndex connectives;
+
+    void add(const NamedEntity* named, Definition* where) {
+        if (auto conn = dynamic_cast<const PrintableConnective*>(named))
+            connectives.add(named, conn->resultType(), where);
+        if (auto term = dynamic_cast<const AbstractTerm*>(named))
+            names.add(named, term->getType(), where);
+    }
 };
 
 struct NamesFamily
@@ -68,7 +75,7 @@ public:
     virtual const Indices& index() const = 0;
     virtual PrioritySet getPriority() const = 0;
     friend class Definition;
-    virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where) = 0;
+    virtual void registerNamed(const NamedEntity* named, Definition* where) = 0;
     virtual void prioritize(const NamedEntity* name2, const NamedEntity* name1) = 0;
     virtual NamesFamily getNames(const MathType* type) const;
 

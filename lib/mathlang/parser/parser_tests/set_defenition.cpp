@@ -10,6 +10,8 @@
 
 #include "../parser.hpp"
 
+using namespace std;
+
 int main() {
     BranchNode* course = new BranchNode("Курс");
     PrimaryNode* lecture = PrimaryNode::create(course, "Лекция",
@@ -48,9 +50,19 @@ int main() {
 //    auto res = texParser.parse(nullptr, source, typeSet->use(nullptr));
 //    std::cout << res->print() << std::endl;
     auto inputed = TermsBox::create(lecture, input, typeSet);
-    std::cout << "===RESULT===" << std::endl;
-    std::cout << inputed->get()->print() << std::endl;
-    std::cout << "===RESULT===" << std::endl;
+    cout << "===RESULT===" << endl;
+    cout << inputed->get()->print() << endl;
+    cout << "===RESULT===" << endl;
+
+    cout << endl << "Имена: " << endl;
+    auto namesTypeR = lecture->index().names.getNames(&any_mt);
+    for (const auto& n : namesTypeR)
+        cout << n->toStr() << endl;
+
+    cout << endl << "Связки: " << endl;
+    auto connTypeR = lecture->index().connectives.getNames(&any_mt);
+    for (const auto& n : connTypeR)
+        cout << n->toStr() << endl;
     delete course;
     return 0;
 }

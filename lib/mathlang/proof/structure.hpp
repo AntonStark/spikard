@@ -94,8 +94,8 @@ public:
     virtual NameStoringStrategy::PrioritySet getPriority() const
     { return _naming->getPriority(); }
 
-    virtual void registerNamed(const NamedEntity* named, const MathType* type, Definition* where)
-    { _naming->registerNamed(named, type, where); }
+    virtual void registerNamed(const NamedEntity* named, Definition* where)
+    { _naming->registerNamed(named, where); }
     virtual void prioritize(const NamedEntity* name1, const NamedEntity* name2)
     { _naming->prioritize(name1, name2); }
     NamesFamily getNames(const MathType* type) const
