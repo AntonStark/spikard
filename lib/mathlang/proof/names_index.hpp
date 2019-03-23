@@ -44,6 +44,7 @@ public:
     NamesSameType getNames(const MathType* type) const;
     std::vector<std::string> getNamesStr(const MathType* type = nullptr) const;
     Definition* get(const AbstractName* name) const;
+    std::string debugPrint() const;
 };
 
 struct Indices

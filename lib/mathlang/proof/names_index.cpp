@@ -78,6 +78,16 @@ Definition* NameSpaceIndex::get(const AbstractName* name) const {
     return nullptr;
 }
 
+std::string NameSpaceIndex::debugPrint() const {
+    std::stringstream buf;
+    for (const auto& tS : type2Storage) {
+        buf << tS.first << std::endl;
+        for (const auto& n : names.at(tS.second))
+            buf << "\t" << n->toStr() << std::endl;
+    }
+    return buf.str();
+}
+
 std::vector<const AbstractName*>::const_iterator
 find(
     const std::vector<const AbstractName*>& vec,

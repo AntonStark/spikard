@@ -55,14 +55,11 @@ int main() {
     cout << "===RESULT===" << endl;
 
     cout << endl << "Имена: " << endl;
-    auto namesTypeR = lecture->index().names.getNames(&any_mt);
-    for (const auto& n : namesTypeR)
-        cout << n->toStr() << endl;
+    cout << lecture->index().names.debugPrint();
 
     cout << endl << "Связки: " << endl;
-    auto connTypeR = lecture->index().connectives.getNames(&any_mt);
-    for (const auto& n : connTypeR)
-        cout << n->toStr() << endl;
+    cout << lecture->index().connectives.debugPrint();
+
     delete course;
     return 0;
 }

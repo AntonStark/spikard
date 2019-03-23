@@ -24,14 +24,10 @@ int main() {
      */
 
     cout << "Имена: " << endl;
-    auto namesTypeR = lect2->index().names.getNames(real->use(nullptr));
-    for (const auto& n : namesTypeR)
-        cout << n->toStr() << endl;
+    cout << lect2->index().names.debugPrint();
 
     cout << "Связки: " << endl;
-    auto connTypeR = lect2->index().connectives.getNames(real->use(nullptr));
-    for (const auto& n : connTypeR)
-        cout << n->toStr() << endl;
+    cout << lect2->index().connectives.debugPrint();
 
     cout << endl << "Uses of R" << endl;
 
